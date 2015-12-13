@@ -16,6 +16,9 @@ config = ConfigParser()
 config.read(PATTERNFILE)
 
 example = "PFFilt_PhysicsFiltering_Run00127080_Subrun00000000_00000244.tar.bz2"
+gcd = "Level2_IC86.2015_data_Run00127178_1129_7_213_GCD.i3.gz"
+
+
 def _regex_compiler(cfgsection,cfgname,transform = lambda x : x
 ):
     
@@ -37,7 +40,8 @@ def _regex_compiler(cfgsection,cfgname,transform = lambda x : x
 ENDING     = lambda filename : _regex_compiler("files","ENDING")(filename)
 DS_ID      = lambda filename : _regex_compiler("datasets","DS_ID",transform=int)(filename)
 EXP_RUN_ID = lambda filename : _regex_compiler("dataruns","EXP_RUN_ID",transform=int)(filename)
-SIM_RUN_ID = lambda filename : _regex_compiler("simruns","SIM_RUN_ID",transform=int)
+SIM_RUN_ID = lambda filename : _regex_compiler("simruns","SIM_RUN_ID",transform=int)(filename)
+GCD = lambda filename : _regex_compiler("metainfo","GCD",transform = lambda x: x == "GCD")(filename)
 
 def strip_all_endings(filename):
     """
@@ -96,10 +100,46 @@ def harvest_files(path,ending=".bz2",sanitizer=lambda x : x,use_ls=False,prefix=
 
 ##############################################################
 
+def group_names_by_regex(names,regex=EXP_RUN_ID,firstpattern=GCD,estimate_first=lambda x : x[0]):
+    """
+    Generate sublists with files which all have the same 
+    name patterns
+    Group by regex,
+    :firstpattern: the leading element of each group
+    :estimate_first: if there are several elements which match
+    firstpattern, estimate which is the first with a given fct
+    """
+    identifiers        = map(regex,names)
+    unique_identifiers = set(identifiers)
+    meta_names         = zip(identifiers,names)
+    meta_names         = sorted(meta_names)
+    groupdict          = dict()
+    for i in unique_identifiers:
+        groupdict[i] = [j[1] for j in meta_names if j[0] == i]
+
+    if firstpattern is not None:
+        for k in groupdict.keys():
+            first = filter(firstpattern,groupdict[k])
+            if len(first) > 1: 
+                Logger.info("First entry is not unique! %s" %first.__repr__())  
+                for j in first:
+                    groupdict[k].remove(j)
+                first = estimate_first(first)
+                Logger.info("Picked %s by given estimate_first fct!" %first[0])
+        
+            else:
+                first = first[0]
+                groupdict[k].remove(first)
+            groupdict[k] = [first] + groupdict[k]
+    
+    return groupdict
+
+##############################################################
+
 print ENDING(example)
 print EXP_RUN_ID(example)
 print strip_all_endings(example)
 print harvest_files(".",ending=".py",use_ls=False)
 print harvest_files(".",ending=".py",use_ls=True)
-
+print GCD(gcd)
 

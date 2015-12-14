@@ -11,7 +11,7 @@ import os.path
 import subprocess as sub
 import os
 
-PATTERNFILE = "PATTERNS.cfg"
+PATTERNFILE = os.path.join(os.path.dirname(__file__), 'PATTERNS.cfg')
 config = ConfigParser()
 config.read(PATTERNFILE)
 

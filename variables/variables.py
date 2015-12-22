@@ -17,24 +17,26 @@ from utils import files as f
 
 ################################################################
 
-class Variable:
+class Variable(object):
     """
     Container class holding variable
     properties
     """
-    def __init__(self,name,bins=None,label="",transform=lambda x : x,definition=[]):
+    def __init__(self,name,bins=None,label="",transform=lambda x : x,definitions=[]):
         
-        assert len(definition) <= 2, "Can not understand variable definition %s!" %self.definition
+        assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions %s!" %definitions
+        self.defsize = len(definitions[0])
+        assert not (False in [len(x) == self.defsize for x in definitions]), "All definitions must have the same length!"
 
-        self.name       = name
-        self.bins       = bins # when histogrammed
-        self.label      = label
-        self.transform  = transform
-        self.definition = definition
-        if len(self.definition) == 1:
-            self.data       = pd.DataFrame()
-        if len(self.definition) == 2:
-            self.data       = pd.Series()    
+        self.name        = name
+        self.bins        = bins # when histogrammed
+        self.label       = label
+        self.transform   = transform
+        self.definitions = definitions
+        if self.defsize  == 1:
+            self.data    = pd.DataFrame()
+        if self.defsize  == 2:
+            self.data    = pd.Series()    
 
     def __repr__(self):
         return """<Variable: %s>""" %self.name
@@ -56,23 +58,32 @@ class Variable:
             ext = f.strip_all_endings(filename)[1]
             assert ext in REGISTERED_FILEEXTENSIONS, "Filetype %s not know" %ext
             assert os.path.exists(filename), "File %s does not exist!" %ext
-            if ext == ".h5":
-                store = pd.HDFStore(filename)
-                if len(self.definition) == 2:
-                    data = store.select_column(*self.definition)
-                elif len(self.definition) == 1:
-                    data = store.select(self.definition[0])
+            data = []
+            defindex = 0
+            while not len(data):
+                if defindex == len(self.definitions):
+                    raise ValueError("No data for definitions %s found!" %self.definitions)
+                if ext == ".h5":
+                    store = pd.HDFStore(filename)
+                    if self.defsize == 2:
+                        data = store.select_column(*self.definitions[defindex])
+                    elif self.defsize == 1:
+                        data = store.select(self.definitions[defindex][0])
 
-            elif ext == ".root":
-                data = rn.root2rec(filename,*self.definition)
-                if len(self.definition) == 2:
-                    data = pd.Series(data)
-                elif len(self.definition) == 1:
-                    data = pd.DataFrame(data)
+                elif ext == ".root":
+                    data = rn.root2rec(filename,*self.definitions[defindex])
+                    if self.defsize == 2:
+                        data = pd.Series(data)
+                    elif self.defsize == 1:
+                        data = pd.DataFrame(data)
     
-            print ext,filename,data
-            self.data = self.data.append(data.map(self.transform))
+                print ext,filename,data
+                self.data = self.data.append(data.map(self.transform))
+                defindex += 1
+
             del data
+
+
 
 ##########################################################
 

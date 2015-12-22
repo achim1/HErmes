@@ -5,17 +5,24 @@ import variable_defs
 import utils.files as f
 from variables.variables import GetVariablesFromModule
 from variables.variables import FreedmanDiaconisBins
+from variables.categories import *
 
-datafiles = f.harvest_files("/home/achim/scripts/devel/testdata/",prefix="",ending=".h5",sanitizer=lambda x : "signal" in x)
+signal = Signal("nue",label=r"$\nu_e$")
+signal.get_files("/home/achim/scripts/devel/testdata/",prefix="",ending=".h5",sanitizer=lambda x : "signal" in x)
+
 rootfiles = f.harvest_files("/home/achim/scripts/devel/testdata/",prefix="",ending=".root")
+signal.files.extend(rootfiles)
+print signal
+#datafiles = f.harvest_files("/home/achim/scripts/devel/testdata/",prefix="",ending=".h5",sanitizer=lambda x : "signal" in x)
 variables = GetVariablesFromModule(variable_defs)
-
-print datafiles
-print rootfiles
+signal.read_variables(variables)
+#print datafiles
+#print rootfiles
 print variables
-allfiles = datafiles + rootfiles
+#allfiles = datafiles + rootfiles
+vardict = {}
 for var in variables:
     #var.harvest(datafiles[0])
-    var.harvest(*allfiles)
-    print var,var.data
-
+    var.harvest(*signal.files)
+vardict[signal] = var
+print vardict 

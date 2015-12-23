@@ -9,6 +9,7 @@ import numpy as n
 import inspect
 import os
 import pandas as pd
+import tables
 try:
     import root_numpy as rn
 except ImportError:
@@ -64,27 +65,38 @@ class Variable(object):
             assert os.path.exists(filename), "File %s does not exist!" %ext
             data = []
             defindex = 0
-            while not len(data):
+            if ext == ".h5":
+                #store = pd.HDFStore(filename)
+                store = tables.openFile(filename)
+
+            found_data = False
+            while not found_data:
                 if defindex == len(self.definitions):
                     raise ValueError("No data for definitions %s found!" %self.definitions)
                 if ext == ".h5":
-                    store = pd.HDFStore(filename)
                     if self.defsize == 2:
                         try:
-                            data = store.select_column(*self.definitions[defindex])
+                            #data = store.select_column(*self.definitions[defindex])
+                            data = store.getNode("/" + self.definitions[defindex][0]).col(self.definitions[defindex][1])
+                            data = pd.Series(data)
+                            found_data = True
                         except AttributeError:
                             defindex += 1
                             continue
                     elif self.defsize == 1:
-                        data = store.select(self.definitions[defindex][0])
-
+                        #data = store.select(self.definitions[defindex][0])
+                        data = store.getNode("/" + self.definitions[defindex][0].read())
+                        data = pd.DataFrame(data)
                 elif ext == ".root":
+                    #FIXME: What happens if it is not found in the rootfile
+                    found_data = True #FIXME
                     data = rn.root2rec(filename,*self.definitions[defindex])
                     if self.defsize == 2:
                         data = pd.Series(data)
                     elif self.defsize == 1:
                         data = pd.DataFrame(data)
-    
+               
+ 
                 self.data = self.data.append(data.map(self.transform))
                 defindex += 1
 
@@ -120,28 +132,4 @@ def FreedmanDiaconisBins(data,leftedge,rightedge,minbins=20,maxbins=70):
         Logger.warn("Calculate Freedman-Draconis bins failed, calculated nan bins, returning 70")
         bins = DEFAULT_BINS
     return bins
-
-#####################################################
-
-def GetVariablesFromModule(module):
-    """
-    Extract the variables from a python module with
-    variable definitions in it
-    """
-
-    def cleaner(x):
-        try:
-            return not(x.__name__.startswith("_"))
-        except:
-            return False
-
-    all_vars = inspect.getmembers(module)#,cleaner)
-    print all_vars
-    all_vars = [x[1] for x in all_vars if isinstance(x[1],Variable)]
-    return all_vars
-
-#####################################################
-
-
- 
 

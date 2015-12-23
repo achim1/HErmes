@@ -5,6 +5,10 @@ Categories of data, like "signal" of "background" etc
 from pyevsel.utils.files import harvest_files,DS_ID,EXP_RUN_ID
 import variables
 import pandas as pd
+import inspect
+
+
+from copy import deepcopy as copy
 
 class Category(object):
     
@@ -24,6 +28,28 @@ class Category(object):
 
     def set_weightfunction(self,func):
         self._weightfunction = func
+
+
+    def load_vardefs(self,module):
+        """
+        Load the variable definitions from a module
+        """
+
+        def cleaner(x):
+            try:
+                return not(x.__name__.startswith("_"))
+            except:
+                return False
+        
+        all_vars = inspect.getmembers(module)#,cleaner)
+        all_vars = [x[1] for x in all_vars if isinstance(x[1],variables.Variable)]
+        for v in all_vars:
+            new_v = copy(v)
+            self.vardict[new_v.name] = new_v
+
+    def add_variable(self,variable):
+        thisvar = copy(variable)
+        self.vardict[thisvar.name] = thisvar
 
     def get_files(self,*args,**kwargs):
         """
@@ -69,18 +95,35 @@ class Category(object):
 
         self.files = files
         del files
-        del self.vardict
-        self.vardict = {}    
 
-    def read_variables(self,varlist):
+    def get(self,varkey):
+        """        
+        Shortcut for quick data access
+        """
+
+        if not self.vardict.has_key(varkey):
+            raise KeyError("%s not found!" %varkey)
+
+        return self.vardict[varkey].data
+
+    def read_variables(self,names=[]):
+        """
+        Harvest the variables in self.vardict
+        :names: only variables with this names 
+                will be harvested
+        """    
+    
+        #assert len([x for x in varlist if isinstance(x,variables.Variable)]) == len(varlist), "All variables must be instances of variables.Variable!"
+        if not names:
+            names = self.vardict.keys()
         
-        assert len([x for x in varlist if isinstance(x,variables.Variable)]) == len(varlist), "All variables must be instances of variables.Variable!"
-
-        for var in varlist:
-            var.harvest(*self.files)
-            self.vardict[var.name] = var
+        for varname in names:
+        #for var in varlist:
+            self.vardict[varname].harvest(*self.files)
+            #var.harvest(*self.files)
+            #self.vardict[var.name] = var
             
-        del var
+        #del var
     
     def get_weights(self,model,mc_p_energy="mc_p_en",mc_p_type="mc_p_ty"):
         """

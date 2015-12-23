@@ -50,11 +50,8 @@ def strip_all_endings(filename):
     characters (including the dot) as "ending"
     """
     ending = ENDING(filename)
-    print ending
-    print ending[0]
     while ENDING(ending[0]) is not None:
         ending = ENDING(ending[0]) + ending[1:]
-        print ending
     return [ending[0],"".join(ending[1:])]
 
 #############################################
@@ -136,10 +133,10 @@ def group_names_by_regex(names,regex=EXP_RUN_ID,firstpattern=GCD,estimate_first=
 
 ##############################################################
 
-print ENDING(example)
-print EXP_RUN_ID(example)
-print strip_all_endings(example)
-print harvest_files(".",ending=".py",use_ls=False)
-print harvest_files(".",ending=".py",use_ls=True)
-print GCD(gcd)
-
+#print ENDING(example)
+#print EXP_RUN_ID(example)
+#print strip_all_endings(example)
+#print harvest_files(".",ending=".py",use_ls=False)
+#print harvest_files(".",ending=".py",use_ls=True)
+#print GCD(gcd)
+#

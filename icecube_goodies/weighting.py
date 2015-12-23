@@ -50,6 +50,6 @@ def GetCorsikaWeight(model,datasets,mc_prim,mc_type):
 ###############################################
 
 def PrintFluxes():
-    return "".join(ALLOWED_FLUXES)
+    return "".join(ALLOWED_FLUXES.keys())
 
 

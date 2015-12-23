@@ -125,14 +125,34 @@ class Category(object):
             
         #del var
     
-    def get_weights(self,model,mc_p_energy="mc_p_en",mc_p_type="mc_p_ty"):
+    def get_weights(self,model,\
+                    mc_p_energy="mc_p_en",\
+                    mc_p_type="mc_p_ty",\
+                    mc_p_zenith="mc_p_zen",\
+                    powerlaw_index=2,\
+                    flux_norm=1e-8):
         """
         Calculate weights for the
         variables in this category
         """
+        func_kwargs = {"mc_p_energy" : self.get(mc_p_energy),\
+                       "mc_p_type" :self.get(mc_p_type),\
+                       "powerlaw_index" : powerlaw_index,\
+                       "flux_norm" : flux_norm}
+
+        try:
+            func_kwargs["mc_p_zenith"] = self.get(mc_p_zenith)
+        except KeyError:
+            "No MCPrimary zenith informatiion! Trying to omit.."
+
+        for key in func_kwargs.keys():
+            if not key in self._weightfunction.func_code.co_varnames:
+                func_kwargs.pop(key)
+
         self.weights = pd.Series(self._weightfunction(model,self.datasets,\
-                                 self.vardict[mc_p_energy].data,\
-                                 self.vardict[mc_p_type].data))
+                                 **func_kwargs))
+                                 #self.vardict[mc_p_energy].data,\
+                                 #self.vardict[mc_p_type].data))
 
 
     def __radd__(self,other):

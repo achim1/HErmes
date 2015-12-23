@@ -76,7 +76,7 @@ def harvest_files(path,ending=".bz2",sanitizer=lambda x : x,use_ls=False,prefix=
         files = []
         ls = sub.Popen(["ls","-a",path],stdout=sub.PIPE,stdin=sub.PIPE).communicate()[0].split()
         # remove by-products
-        ls = filter(lambda x : (x != ".") or (x != ".."),ls)
+        ls = filter(lambda x : (x != ".") and (x != ".."),ls)
         for subpath in ls:
             if os.path.isdir(os.path.join(path,subpath)):
                 sub_ls = sub.Popen(["ls","-a",os.path.join(path,subpath)],stdout=sub.PIPE,stdin=sub.PIPE).communicate()[0].split()

@@ -2,10 +2,10 @@
 import numpy as n
 import variable_defs
 
-import utils.files as f
-from variables.variables import GetVariablesFromModule
-from variables.variables import FreedmanDiaconisBins
-from variables.categories import *
+import pyevsel.utils.files as f
+from pyevsel.variables.variables import GetVariablesFromModule
+from pyevsel.variables.variables import FreedmanDiaconisBins
+from pyevsel.variables.categories import *
 
 signal = Signal("nue",label=r"$\nu_e$")
 signal.get_files("/home/achim/scripts/devel/testdata/",prefix="",ending=".h5",sanitizer=lambda x : "signal" in x)

@@ -9,9 +9,13 @@ import numpy as n
 import inspect
 import os
 import pandas as pd
-import root_numpy as rn
+try:
+    import root_numpy as rn
+except ImportError:
+    print "No root_numpy found, root support is limited!"
+    REGISTERED_FILEEXTENSIONS.remove(".root")
 
-from utils import files as f 
+from pyevsel.utils import files as f 
 
 
 
@@ -66,7 +70,11 @@ class Variable(object):
                 if ext == ".h5":
                     store = pd.HDFStore(filename)
                     if self.defsize == 2:
-                        data = store.select_column(*self.definitions[defindex])
+                        try:
+                            data = store.select_column(*self.definitions[defindex])
+                        except AttributeError:
+                            defindex += 1
+                            continue
                     elif self.defsize == 1:
                         data = store.select(self.definitions[defindex][0])
 
@@ -77,7 +85,6 @@ class Variable(object):
                     elif self.defsize == 1:
                         data = pd.DataFrame(data)
     
-                print ext,filename,data
                 self.data = self.data.append(data.map(self.transform))
                 defindex += 1
 

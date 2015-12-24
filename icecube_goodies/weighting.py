@@ -96,6 +96,7 @@ def PowerLawFlux(fluxconst=1e-8,gamma=2):
         # weighting API requires second argument even if we
         # don't need it
         flux = fluxconst * n.power(mc_p_energy, gamma)
+        return flux
     return flux 
 
 ###############################################

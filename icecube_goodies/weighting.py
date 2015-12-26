@@ -25,14 +25,14 @@ class Weight(object):
         self.gen = generator
         self.flux = flux
 
-    def __call__(self,energy,ptype,zenith=None,mapping=False):
+    def __call__(self,energy,ptype,zenith=[],mapping=False):
 
         #type mapping
         if mapping:
             pmap = {14:ParticleType.PPlus, 402:ParticleType.He4Nucleus, 1407:ParticleType.N14Nucleus, 2713:ParticleType.Al27Nucleus, 5626:ParticleType.Fe56Nucleus}
             ptype = map(lambda x : pmap[x], ptype )
-        if zenith is not None:
-            return self.flux(energy,ptype)/self.gen(energy,particle_type=ptype,cos_theta=zenith)
+        if len(zenith) > 0:
+            return self.flux(energy,ptype,zenith)/self.gen(energy,particle_type=ptype,cos_theta=zenith)
         else:
             return self.flux(energy,ptype)/self.gen(energy,particle_type=ptype)
 
@@ -65,7 +65,7 @@ def HowManyFilesDB(dataset):
 
 ##########d##################################
 
-def GetModelWeight(model,datasets,mc_p_energy=[],mc_p_type=[],zenith=None,model_kwargs={}):
+def GetModelWeight(model,datasets,mc_p_energy=[],mc_p_type=[],mc_p_zenith=[],model_kwargs={}):
     """
     Compute weights for CORSIKA datasets    
     """
@@ -83,7 +83,7 @@ def GetModelWeight(model,datasets,mc_p_energy=[],mc_p_type=[],zenith=None,model_
 
     gen  = GetGenerator(datasets)
     weight = Weight(gen,flux)
-    return weight(mc_p_energy,mc_p_type,zenith=zenith)
+    return weight(mc_p_energy,mc_p_type,zenith=mc_p_zenith,mapping=True)
 
 ###############################################
 
@@ -101,10 +101,12 @@ def PowerLawFlux(fluxconst=1e-8,gamma=2):
 
 ###############################################
 
-def AtmosphericFlux(model,fluxconst=1.):
+def AtmosphericFlux(model='honda2006',fluxconst=1.):
     nuwflux = NewNuFlux.makeFlux(model)
     def flux(mc_p_energy,mc_p_type,mc_p_zenith):
-        return fluxconst*nuwflux.getFlux(mc_p_energy,mc_p_type,mc_p_zenith)
+        mc_p_type = n.int32(mc_p_type)
+        mc_p_type = map(dataclasses.I3Particle.ParticleType,mc_p_type)
+        return fluxconst*nuwflux.getFlux(mc_p_type,mc_p_energy,mc_p_zenith)
 
     return flux
       

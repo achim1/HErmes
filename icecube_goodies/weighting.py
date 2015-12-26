@@ -6,7 +6,7 @@ from icecube import icetray,dataclasses,NewNuFlux
 from icecube.weighting.weighting import from_simprod, EnergyWeight,ParticleType
 from icecube.weighting.fluxes import *
 
-from conversions import ParticleType
+from conversions import ParticleType,ConvertPrimaryFromPDG
 import inspect
 
 import numpy as n
@@ -32,6 +32,10 @@ class Weight(object):
             pmap = {14:ParticleType.PPlus, 402:ParticleType.He4Nucleus, 1407:ParticleType.N14Nucleus, 2713:ParticleType.Al27Nucleus, 5626:ParticleType.Fe56Nucleus}
             ptype = map(lambda x : pmap[x], ptype )
         if len(zenith) > 0:
+            #print energy,ptype,zenith
+            #print self.flux(energy,ptype,zenith)
+            #ptype = n.array([67]*len(ptype))
+            print self.flux(energy,ptype,zenith)
             return self.flux(energy,ptype,zenith)/self.gen(energy,particle_type=ptype,cos_theta=zenith)
         else:
             return self.flux(energy,ptype)/self.gen(energy,particle_type=ptype)
@@ -83,7 +87,7 @@ def GetModelWeight(model,datasets,mc_p_energy=[],mc_p_type=[],mc_p_zenith=[],mod
 
     gen  = GetGenerator(datasets)
     weight = Weight(gen,flux)
-    return weight(mc_p_energy,mc_p_type,zenith=mc_p_zenith,mapping=True)
+    return weight(mc_p_energy,mc_p_type,zenith=mc_p_zenith)
 
 ###############################################
 
@@ -92,8 +96,8 @@ def PowerLawFlux(fluxconst=1e-8,gamma=2):
         gamma *= -1
 
     # closure:)
-    def flux(mc_p_energy,mc_p_type):
-        # weighting API requires second argument even if we
+    def flux(mc_p_energy,mc_p_type,mc_p_zenith):
+        # weighting API requires second and third argument even if we
         # don't need it
         flux = fluxconst * n.power(mc_p_energy, gamma)
         return flux
@@ -105,7 +109,10 @@ def AtmosphericFlux(model='honda2006',fluxconst=1.):
     nuwflux = NewNuFlux.makeFlux(model)
     def flux(mc_p_energy,mc_p_type,mc_p_zenith):
         mc_p_type = n.int32(mc_p_type)
-        mc_p_type = map(dataclasses.I3Particle.ParticleType,mc_p_type)
+        print mc_p_type,"atm"
+        mc_p_type = ConvertPrimaryFromPDG(mc_p_type)
+        print mc_p_type,"atm from pdg"
+        #mc_p_type = map(dataclasses.I3Particle.ParticleType,mc_p_type)
         return fluxconst*nuwflux.getFlux(mc_p_type,mc_p_energy,mc_p_zenith)
 
     return flux

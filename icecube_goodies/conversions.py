@@ -2,7 +2,7 @@
 Unit conversions and such
 """
 
-from numpy import vectorize
+from numpy import vectorize,int32
 
 ####################################################
 
@@ -77,11 +77,24 @@ def ConvertPrimaryToPDG(pid):
     """
     def _convert(pid):
         if ptype_to_pdg.has_key(pid):
-            return ptype_to_pdg[pid]
+            return int32(ptype_to_pdg[pid])
         else:
-             return pid
+             return int32(pid)
 
     return vectorize(_convert)(pid)
 
 ###############################
+
+def ConvertPrimaryFromPDG(pid):
+    """
+    Convert a primary id in an i3 file to the new values
+    given by the pdg
+    """
+    def _convert(pid):
+        if pdg_to_ptype.has_key(pid):
+            return int32(pdg_to_ptype[pid])
+        else:
+             return int32(pid)
+
+    return vectorize(_convert)(pid)
 

@@ -12,8 +12,9 @@ from copy import deepcopy as copy
 
 class Category(object):
     
-    def __init__(self,name,label=""):
+    def __init__(self,name,label="",plotcolor=''):
         self.name = name
+        self.plotcolor = plotcolor
         self.label = label
         self.datasets = dict()
         self.files = []
@@ -140,14 +141,15 @@ class Category(object):
                        "powerlaw_index" : powerlaw_index,\
                        "flux_norm" : flux_norm}
 
-        try:
-            func_kwargs["mc_p_zenith"] = self.get(mc_p_zenith)
-        except KeyError:
-            "No MCPrimary zenith informatiion! Trying to omit.."
-
         for key in func_kwargs.keys():
             if not key in self._weightfunction.func_code.co_varnames:
                 func_kwargs.pop(key)
+
+        try:
+            func_kwargs["mc_p_zenith"] = self.get(mc_p_zenith)
+        except KeyError:
+            print "No MCPrimary zenith informatiion! Trying to omit.."
+
 
         self.weights = pd.Series(self._weightfunction(model,self.datasets,\
                                  **func_kwargs))
@@ -175,21 +177,39 @@ class Category(object):
 
     
 
-class Signal(Category):
+class Simulation(Category):
 
-   def __repr__(self):
-        return """<Category: Signal %s>""" %self.name
+    def __repr__(self):
+        return """<Category: Simulation %s>""" %self.name
+    
+    def set_mc_primary(self,energy_var,type_var,zenith_var):
+        """
+        Let the simulation category know which 
+        are the paramters describing the primary
+        """
+        self.mc_primary_energy = energy_var
+        self.mc_primary_type   = type_var
+        self.mc_primary_zenith = zenith_var
+        
+        # set aliases
+        self.vardict["mc_p_en"] = self.mc_primary_energy
+        self.vardict["mc_p_ty"] = self.mc_primary_type
+        self.vardict["mc_p_ze"] = self.mc_primary_zenith
 
-class Background(Category):
 
-       def __repr__(self):
-        return """<Category: Background %s>""" %self.name
+    def read_mc_primary(self):
+        """
+        Trigger the readout of MC Primary information
+        """
+        for var in 'mc_p_en','mc_p_ty','mc_p_ze':
+            self.get(var)
+
 
 class Data(Category):
 
-    def __init__(self,name,label=""):
+    def __init__(*args,**kwargs):
         print "Runs are considered as datasets..."
-        Category.__init__(self,name,label=label)    
+        Category.__init__(*args,**kwargs)    
 
     @staticmethod
     def _ds_regexp(filename):

@@ -235,20 +235,23 @@ class Simulation(Category):
                                  #self.vardict[mc_p_type].data))
 
 
+
 class ReweightedSimulation(Simulation):
     """
     A proxy for simulation dataset, when only the weighting differs
     """
 
-    def __init__(self,name,mother,label="")
+    def __init__(self,name,mother,label=""):
         Simulation.__init__(self,name,label)
         self._mother = mother
 
-    def __getattribute__(self,attr):
-        if attr == "get_weights":
-            self.get_weights()
-        else:
-            self._mother.__getattribute__(self,attr)
+
+    def get_weights(self,model,model_kwargs={}):
+        print "yay"
+        Simulation.get_weights(self,model,model_kwargs)
+
+    def __getattr__(self,attr):
+        self._mother.__getattribute__(self,attr)
 
 
     def __repr__(self):

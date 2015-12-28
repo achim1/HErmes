@@ -46,7 +46,8 @@ class Weight(object):
             args = inspect.getargs(self.flux.func_code) 
             if len(args.args) == 3:
                 can_use_zenith = True       
-    
+
+        print can_use_zenith    
         if (len(zenith) > 0) and can_use_zenith:
             #print energy,ptype,zenith
             #print self.flux(energy,ptype,zenith)

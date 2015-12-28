@@ -10,6 +10,11 @@ import inspect
 
 from copy import deepcopy as copy
 
+MC_P_EN = "mc_p_en"
+MC_P_TY = "mc_p_ty"
+MC_P_ZE = "mc_p_ze"
+
+
 class Category(object):
     
     def __init__(self,name,label="",plotcolor=''):
@@ -45,6 +50,9 @@ class Category(object):
         all_vars = inspect.getmembers(module)#,cleaner)
         all_vars = [x[1] for x in all_vars if isinstance(x[1],variables.Variable)]
         for v in all_vars:
+            if self.vardict.has_key(v.name):
+                print "Variable %s already defined,skipping!" %v.name
+                continue
             new_v = copy(v)
             self.vardict[new_v.name] = new_v
 
@@ -120,41 +128,18 @@ class Category(object):
         
         for varname in names:
         #for var in varlist:
-            self.vardict[varname].harvest(*self.files)
+            try:
+                self.vardict[varname].harvest(*self.files)
+            except KeyError:
+                print "Cannot find %s in variables!" %varname
+                continue
             #var.harvest(*self.files)
             #self.vardict[var.name] = var
             
         #del var
     
-    def get_weights(self,model,\
-                    mc_p_energy="mc_p_en",\
-                    mc_p_type="mc_p_ty",\
-                    mc_p_zenith="mc_p_zen",\
-                    powerlaw_index=2,\
-                    flux_norm=1e-8):
-        """
-        Calculate weights for the
-        variables in this category
-        """
-        func_kwargs = {"mc_p_energy" : self.get(mc_p_energy),\
-                       "mc_p_type" :self.get(mc_p_type),\
-                       "powerlaw_index" : powerlaw_index,\
-                       "flux_norm" : flux_norm}
-
-        for key in func_kwargs.keys():
-            if not key in self._weightfunction.func_code.co_varnames:
-                func_kwargs.pop(key)
-
-        try:
-            func_kwargs["mc_p_zenith"] = self.get(mc_p_zenith)
-        except KeyError:
-            print "No MCPrimary zenith informatiion! Trying to omit.."
-
-
-        self.weights = pd.Series(self._weightfunction(model,self.datasets,\
-                                 **func_kwargs))
-                                 #self.vardict[mc_p_energy].data,\
-                                 #self.vardict[mc_p_type].data))
+    def get_weights(self):
+        raise NotImplementedError("Not implemented for base class!")
 
 
     def __radd__(self,other):
@@ -179,30 +164,95 @@ class Category(object):
 
 class Simulation(Category):
 
+    def __init__(*args,**kwargs):
+        Category.__init__(*args,**kwargs)    
+        self = args[0]
+        self._mc_p_set     = False
+        self._mc_p_readout = False
+
     def __repr__(self):
         return """<Category: Simulation %s>""" %self.name
     
-    def set_mc_primary(self,energy_var,type_var,zenith_var):
+    def set_mc_primary(self,energy_var=variables.Variable(None),type_var=variables.Variable(None),zenith_var=variables.Variable(None)):
         """
         Let the simulation category know which 
         are the paramters describing the primary
         """
-        self.mc_primary_energy = energy_var
-        self.mc_primary_type   = type_var
-        self.mc_primary_zenith = zenith_var
-        
-        # set aliases
-        self.vardict["mc_p_en"] = self.mc_primary_energy
-        self.vardict["mc_p_ty"] = self.mc_primary_type
-        self.vardict["mc_p_ze"] = self.mc_primary_zenith
+        for var,name in [(energy_var,MC_P_EN),(type_var,MC_P_TY),(zenith_var,MC_P_ZE)]:
+            if var.name is None:
+                print "No %s available" %name
+            elif self.vardict.has_key(name):
+                print "..%s already defined, skipping..."
+                continue
+            
+            else:
+                if var.name != name:
+                    print "..renaming %s to %s.." %(var.name,name)        
+                    var.name = name
+                newvar = copy(var)
+                self.vardict[name] = newvar
 
+        self._mc_p_set = True
 
     def read_mc_primary(self):
         """
         Trigger the readout of MC Primary information
         """
-        for var in 'mc_p_en','mc_p_ty','mc_p_ze':
-            self.get(var)
+        if not self._mc_p_set:
+            raise ValueError("Variable for MC Primary are not defined! Run set_m_primary first!")
+        self.read_variables([MC_P_EN,MC_P_TY,MC_P_ZE])
+        self._mc_p_readout = True
+
+    #def read_variables(self,names=[])
+    #    super(Simulation,self).read_variable(names)
+    #    for k in self.vardict.keys()
+
+    def get_weights(self,model,model_kwargs = {}):
+        """
+        Calculate weights for the
+        variables in this category
+        """
+        if not self._mc_p_readout:
+            self.read_mc_primary()
+
+        func_kwargs = {"mc_p_energy" : self.get(MC_P_EN),\
+                       "mc_p_type" :self.get(MC_P_TY)}
+
+        #for key in func_kwargs.keys():
+        #    if not key in self._weightfunction.func_code.co_varnames:
+        #        func_kwargs.pop(key)
+
+        try:
+            func_kwargs["mc_p_zenith"] = self.get(MC_P_ZE)
+        except KeyError:
+            print "No MCPrimary zenith informatiion! Trying to omit.."
+
+        func_kwargs.update(model_kwargs)
+
+        self.weights = pd.Series(self._weightfunction(model,self.datasets,\
+                                 **func_kwargs))
+                                 #self.vardict[mc_p_energy].data,\
+                                 #self.vardict[mc_p_type].data))
+
+
+class ReweightedSimulation(Simulation):
+    """
+    A proxy for simulation dataset, when only the weighting differs
+    """
+
+    def __init__(self,name,mother,label="")
+        Simulation.__init__(self,name,label)
+        self._mother = mother
+
+    def __getattribute__(self,attr):
+        if attr == "get_weights":
+            self.get_weights()
+        else:
+            self._mother.__getattribute__(self,attr)
+
+
+    def __repr__(self):
+        return """<Category: ReweightedSimulation %s from %s>""" %(self.name,self._mother)
 
 
 class Data(Category):

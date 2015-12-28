@@ -28,14 +28,30 @@ class Weight(object):
     def __call__(self,energy,ptype,zenith=[],mapping=False):
 
         #type mapping
+        print zenith
         if mapping:
             pmap = {14:ParticleType.PPlus, 402:ParticleType.He4Nucleus, 1407:ParticleType.N14Nucleus, 2713:ParticleType.Al27Nucleus, 5626:ParticleType.Fe56Nucleus}
             ptype = map(lambda x : pmap[x], ptype )
-        if len(zenith) > 0:
+
+        # FIXME: This is too ugly and not general
+        can_use_zenith = False
+        if hasattr(self.flux,"__call__"):
+            if hasattr(self.flux.__call__,"im_func"):
+                args = inspect.getargs(self.flux.__call__.im_func.func_code)
+                if len(args.args) == 4: # account for self
+                    can_use_zenith = True
+            else:
+                can_use_zenith = True # method wrapper created by NewNuflux 
+        else:
+            args = inspect.getargs(self.flux.func_code) 
+            if len(args.args) == 3:
+                can_use_zenith = True       
+    
+        if (len(zenith) > 0) and can_use_zenith:
             #print energy,ptype,zenith
             #print self.flux(energy,ptype,zenith)
             #ptype = n.array([67]*len(ptype))
-            print self.flux(energy,ptype,zenith)
+            #print self.flux(energy,ptype,zenith)
             return self.flux(energy,ptype,zenith)/self.gen(energy,particle_type=ptype,cos_theta=zenith)
         else:
             return self.flux(energy,ptype)/self.gen(energy,particle_type=ptype)
@@ -69,7 +85,7 @@ def HowManyFilesDB(dataset):
 
 ##########d##################################
 
-def GetModelWeight(model,datasets,mc_p_energy=[],mc_p_type=[],mc_p_zenith=[],model_kwargs={}):
+def GetModelWeight(model,datasets,mc_p_energy=[],mc_p_type=[],mc_p_zenith=[],**model_kwargs):
     """
     Compute weights for CORSIKA datasets    
     """
@@ -105,15 +121,18 @@ def PowerLawFlux(fluxconst=1e-8,gamma=2):
 
 ###############################################
 
-def AtmosphericFlux(model='honda2006',fluxconst=1.):
-    nuwflux = NewNuFlux.makeFlux(model)
+def AtmosphericNuFlux(modelname='honda2006',knee="",fluxconst=1.):
+    nuflux = NewNuFlux.makeFlux(modelname)
+    if knee:
+        nuflux.knee_reweighting_model = knee
+
     def flux(mc_p_energy,mc_p_type,mc_p_zenith):
         mc_p_type = n.int32(mc_p_type)
         print mc_p_type,"atm"
         mc_p_type = ConvertPrimaryFromPDG(mc_p_type)
         print mc_p_type,"atm from pdg"
         #mc_p_type = map(dataclasses.I3Particle.ParticleType,mc_p_type)
-        return fluxconst*nuwflux.getFlux(mc_p_type,mc_p_energy,mc_p_zenith)
+        return fluxconst*nuflux.getFlux(mc_p_type,mc_p_energy,mc_p_zenith)
 
     return flux
       

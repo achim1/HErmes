@@ -30,8 +30,11 @@ class Variable(object):
     def __init__(self,name,bins=None,label="",transform=lambda x : x,definitions=[]):
         
         assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions %s!" %definitions
-        self.defsize = len(definitions[0])
-        assert not (False in [len(x) == self.defsize for x in definitions]), "All definitions must have the same length!"
+        if definitions:
+            self.defsize = len(definitions[0])
+            assert not (False in [len(x) == self.defsize for x in definitions]), "All definitions must have the same length!"
+        else:
+            self.defsize = 0
 
         self.name        = name
         self.bins        = bins # when histogrammed

@@ -23,7 +23,10 @@ class Category(object):
         self.label = label
         self.datasets = dict()
         self.files = []
-        self.vardict = {}
+        try:
+            self.vardict = {}
+        except AttributeError:
+            pass #This happens for our ReweightedSimulation class
         self._is_harvested = False
         self.weights     = pd.Series()
         self._weightfunction = None
@@ -241,17 +244,58 @@ class ReweightedSimulation(Simulation):
     A proxy for simulation dataset, when only the weighting differs
     """
 
-    def __init__(self,name,mother,label=""):
-        Simulation.__init__(self,name,label)
+    def __init__(self,name,mother,label="",plotcolor="red"):
         self._mother = mother
+        self.name = name
+        self.plotcolor = plotcolor
+        self.label = label
+        self.weights     = pd.Series()
+        self._weightfunction = None
+
+    #proxy the stuff by hand
+    #FIXME: there must be a better way
+
+    @property
+    def vardict(self):
+        return self._mother.vardict
+
+    #def __getattr__(self,attr):
+    #    self._mother.__getattribute__(self,attr)
+
+    @property
+    def datasets(self):
+        return self._mother.datasets
+
+    @property
+    def files(self):
+        return self._mother.files
+
+    @property
+    def _is_harvested(self):
+        return self._mother._is_harvested
+
+    @property
+    def _mc_p_set(self):
+        return self._mother._mc_p_set
+
+    @property
+    def _mc_p_readout(self):
+        return self._mother._mc_p_readout 
 
 
-    def get_weights(self,model,model_kwargs={}):
-        print "yay"
-        Simulation.get_weights(self,model,model_kwargs)
+    def read_variables(self,names=[]):
+        raise NotImplementedError("Use read_variables of the mother categorz")
 
-    def __getattr__(self,attr):
-        self._mother.__getattribute__(self,attr)
+    def __radd__(self,other):
+        raise NotImplementedError
+ 
+    def set_mc_primary(self,energy_var=variables.Variable(None),type_var=variables.Variable(None),zenith_var=variables.Variable(None)):
+        raise NotImplementedError
+
+    def read_mc_primary(self):
+        raise NotImplementedError
+
+
 
 
     def __repr__(self):

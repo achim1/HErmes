@@ -4,7 +4,7 @@ Convenience function to provide easy logging
 
 import logging
 
-LOGFORMAT = '%(levelname)s:%(message)s:%(    module)s:%(funcName)s:%(lineno)d'
+LOGFORMAT = '%(levelname)s:%(message)s:%(module)s:%(funcName)s:%(lineno)d'
 
 alertstring = lambda x :  "\033[0;31m" + x + "\033[00m"
 

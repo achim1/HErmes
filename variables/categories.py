@@ -128,18 +128,21 @@ class Category(object):
         #assert len([x for x in varlist if isinstance(x,variables.Variable)]) == len(varlist), "All variables must be instances of variables.Variable!"
         if not names:
             names = self.vardict.keys()
-        
+        compound_variables = [] #harvest them later        
         for varname in names:
-        #for var in varlist:
             try:
-                self.vardict[varname].harvest(*self.files)
+                if isinstance(self.vardict[varname],variables.CompoundVariable):
+                    compound_variables.append(varname)
+                    continue
             except KeyError:
                 print "Cannot find %s in variables!" %varname
                 continue
-            #var.harvest(*self.files)
-            #self.vardict[var.name] = var
-            
-        #del var
+            self.vardict[varname].harvest(*self.files)
+
+        for varname in compound_variables:
+            #FIXME check if this causes a memory leak
+            self.vardict[varname]._rewire_variables(self.vardict)
+            self.vardict[varname].harvest()
     
     def get_weights(self):
         raise NotImplementedError("Not implemented for base class!")
@@ -307,10 +310,66 @@ class Data(Category):
     def __init__(*args,**kwargs):
         print "Runs are considered as datasets..."
         Category.__init__(*args,**kwargs)    
+        self._livetime = 0
 
     @staticmethod
     def _ds_regexp(filename):
         return EXP_RUN_ID(filename)
+
+    def set_livetime(self,livetime):
+        self._livetime = livetime
+
+    # livetime is read-only
+    @property
+    def livetime(self):
+        return self._livetime
+
+
+    def set_run_start_stop(self,energy_var=variables.Variable(None),type_var=variables.Variable(None),zenith_var=variables.Variable(None)):
+        """
+        Let the simulation category know which 
+        are the paramters describing the primary
+        """
+        #FIXME
+        for var,name in [(energy_var,MC_P_EN),(type_var,MC_P_TY),(zenith_var,MC_P_ZE)]:
+            if var.name is None:
+                print "No %s available" %name
+            elif self.vardict.has_key(name):
+                print "..%s already defined, skipping..."
+                continue
+            
+            else:
+                if var.name != name:
+                    print "..renaming %s to %s.." %(var.name,name)        
+                    var.name = name
+                newvar = copy(var)
+                self.vardict[name] = newvar
+
+        self._mc_p_set = True
+        
+
+
+    def calculate_livetime(self):
+        """
+        Calculate the livetime from the eventheaders
+        """
+
+        h = self.nodes["header"].read()
+        h0 = h[:-1]
+        h1 = h[1:]
+        #FIXME
+        lengths = ((h["time_end_mjd_day"] - h["time_start_mjd_day"]) * 24. * 3600. +
+                   (h["time_end_mjd_sec"] - h["time_start_mjd_sec"]) +
+                   (h["time_end_mjd_ns"] - h["time_start_mjd_ns"])*1e-9 )
+ 
+        gaps = ((h1["time_start_mjd_day"] - h0["time_end_mjd_day"]) * 24.  * 3600. +
+                (h1["time_start_mjd_sec"] - h0["time_end_mjd_sec"]) +
+                (h1["time_start_mjd_ns"] - h0["time_end_mjd_ns"])*1e-9)
+ 
+
+
+
+
 
     def __repr__(self):
         return """<Category: Data %s>""" %self.name

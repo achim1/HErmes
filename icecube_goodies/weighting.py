@@ -28,7 +28,7 @@ class Weight(object):
     def __call__(self,energy,ptype,zenith=[],mapping=False):
 
         #type mapping
-        print zenith
+        #print zenith
         if mapping:
             pmap = {14:ParticleType.PPlus, 402:ParticleType.He4Nucleus, 1407:ParticleType.N14Nucleus, 2713:ParticleType.Al27Nucleus, 5626:ParticleType.Fe56Nucleus}
             ptype = map(lambda x : pmap[x], ptype )
@@ -47,12 +47,7 @@ class Weight(object):
             if len(args.args) == 3:
                 can_use_zenith = True       
 
-        print can_use_zenith    
         if (len(zenith) > 0) and can_use_zenith:
-            #print energy,ptype,zenith
-            #print self.flux(energy,ptype,zenith)
-            #ptype = n.array([67]*len(ptype))
-            #print self.flux(energy,ptype,zenith)
             return self.flux(energy,ptype,zenith)/self.gen(energy,particle_type=ptype,cos_theta=zenith)
         else:
             return self.flux(energy,ptype)/self.gen(energy,particle_type=ptype)

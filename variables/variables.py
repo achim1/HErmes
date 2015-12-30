@@ -17,7 +17,7 @@ except ImportError:
     REGISTERED_FILEEXTENSIONS.remove(".root")
 
 from pyevsel.utils import files as f 
-
+from pyevsel.utils.logger import Logger
 
 
 ################################################################
@@ -27,6 +27,12 @@ class Variable(object):
     Container class holding variable
     properties
     """
+    name  = None
+    bins  = None
+    label = None
+    _is_harvested = False
+
+
     def __init__(self,name,bins=None,label="",transform=lambda x : x,definitions=[]):
         
         assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions %s!" %definitions
@@ -45,6 +51,7 @@ class Variable(object):
             self.data    = pd.DataFrame()
         if self.defsize  == 2:
             self.data    = pd.Series()    
+        self._is_harvested = False
 
     def __repr__(self):
         return """<Variable: %s>""" %self.name
@@ -60,7 +67,9 @@ class Variable(object):
         """
         Get the variable from a datafile
         """
-        
+        if self._is_harvested:
+            return        
+
         for filename in filenames:
         
             ext = f.strip_all_endings(filename)[1]
@@ -75,7 +84,8 @@ class Variable(object):
             found_data = False
             while not found_data:
                 if defindex == len(self.definitions):
-                    raise ValueError("No data for definitions %s found!" %self.definitions)
+                    Logger.warning("No data for definitions %s found!" %self.definitions)
+                    return
                 if ext == ".h5":
                     if self.defsize == 2:
                         try:
@@ -104,8 +114,49 @@ class Variable(object):
                 defindex += 1
 
             del data
+        self._is_harvested = True
+        return
 
+##########################################################
 
+class CompoundVariable(Variable):
+    """
+    A variable which can not be read out, but is calculated
+    from other variables
+    """
+
+    def __init__(self,name,variables=[],label="",bins=None,operation=lambda x,y : x + y):
+        self.name = name
+        self.label = label
+        self.bins = bins
+        self._variables = variables
+        self._operation = operation
+        self.data = pd.Series()
+
+    def _rewire_variables(self,vardict):
+        """
+        Use to avoid the necesity to read out variables twice
+        as the variables are copied over by the categories, 
+        the refernce is lost. Can be rewired though
+        """
+        newvars = []
+        for var in self._variables:
+            newvars.append(vardict[var.name])
+        self._variables = newvars
+
+    def __repr__(self):
+        return """<CompoundVariable %s created from: %s>""" %(self.name,"".join([x.name for x in self._variables ]))
+
+    def harvest(self):
+        if self._is_harvested:
+            return
+        print self._variables
+        harvestable = filter(lambda var : var._is_harvested, self._variables)
+        if not len(harvestable) == len(self._variables):
+            Logger.error("Variables have to be harvested for compound variable %s first!" %self.name)
+            return
+        self.data = reduce(self._operation,[var.data for var in self._variables])
+        self._is_harvested = True
 
 ##########################################################
 

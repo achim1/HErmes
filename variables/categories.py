@@ -3,17 +3,19 @@ Categories of data, like "signal" of "background" etc
 """
 
 from pyevsel.utils.files import harvest_files,DS_ID,EXP_RUN_ID
+from pyevsel.utils.logger import Logger
 import variables
 import pandas as pd
 import inspect
-
+import numpy as n
 
 from copy import deepcopy as copy
 
-MC_P_EN = "mc_p_en"
-MC_P_TY = "mc_p_ty"
-MC_P_ZE = "mc_p_ze"
-
+MC_P_EN   = "mc_p_en"
+MC_P_TY   = "mc_p_ty"
+MC_P_ZE   = "mc_p_ze"
+RUN_START = "run_start_mjd"
+RUN_STOP  = "run_stop_mjd"
 
 class Category(object):
     
@@ -307,10 +309,11 @@ class ReweightedSimulation(Simulation):
 
 class Data(Category):
 
-    def __init__(*args,**kwargs):
+    def __init__(self,*args,**kwargs):
         print "Runs are considered as datasets..."
-        Category.__init__(*args,**kwargs)    
+        Category.__init__(self,*args,**kwargs)    
         self._livetime = 0
+        self._runstartstop_set = False
 
     @staticmethod
     def _ds_regexp(filename):
@@ -325,50 +328,82 @@ class Data(Category):
         return self._livetime
 
 
-    def set_run_start_stop(self,energy_var=variables.Variable(None),type_var=variables.Variable(None),zenith_var=variables.Variable(None)):
+    def set_run_start_stop(self,runstart_var=variables.Variable(None),runstop_var=variables.Variable(None)):
         """
         Let the simulation category know which 
         are the paramters describing the primary
         """
         #FIXME
-        for var,name in [(energy_var,MC_P_EN),(type_var,MC_P_TY),(zenith_var,MC_P_ZE)]:
+        for var,name in [(runstart_var,RUN_START),(runstop_var,RUN_STOP)]:
             if var.name is None:
-                print "No %s available" %name
+                Logger.warning("No %s available" %name)
             elif self.vardict.has_key(name):
-                print "..%s already defined, skipping..."
+                Logger.info("..%s already defined, skipping..." %name)
                 continue
             
             else:
                 if var.name != name:
-                    print "..renaming %s to %s.." %(var.name,name)        
+                    Logger.info("..renaming %s to %s.." %(var.name,name))        
                     var.name = name
                 newvar = copy(var)
                 self.vardict[name] = newvar
 
-        self._mc_p_set = True
+        self._runstartstop_set = True
         
 
 
-    def calculate_livetime(self):
+    def estimate_livetime(self,force=False):
         """
-        Calculate the livetime from the eventheaders
+        Calculate the livetime from run start/stop times, account for gaps
         """
+        if self.livetime:
+            Logger.warning("There is already a livetime of %4.2f " %self.livetime)
+            if force:
+                Logger.warning("Applying force...")
+            else:
+                Logger.warning("If you really want to do this, use force = True")
+                return
+        
+        if not self._runstartstop_set:
+            if (RUN_STOP in self.vardict.keys()) and (RUN_START in self.vardict.keys()):
+                self._runstartstop_set = True
+            else:
+                Logger.warning("Need to set run start and stop times first! use object.set_run_start_stop")
+                return
 
-        h = self.nodes["header"].read()
-        h0 = h[:-1]
-        h1 = h[1:]
-        #FIXME
-        lengths = ((h["time_end_mjd_day"] - h["time_start_mjd_day"]) * 24. * 3600. +
-                   (h["time_end_mjd_sec"] - h["time_start_mjd_sec"]) +
-                   (h["time_end_mjd_ns"] - h["time_start_mjd_ns"])*1e-9 )
+        Logger.warning("This is a crude estimate! Rather use a good run list or something!")
+        lengths = self.get(RUN_STOP) - self.get(RUN_START)
+        gaps    = self.get(RUN_START)[1:] - self.get(RUN_STOP)[:-1] #trust me!
+        #h = self.nodes["header"].read()
+        #h0 = h[:-1]
+        #h1 = h[1:]
+        ##FIXME
+        #lengths = ((h["time_end_mjd_day"] - h["time_start_mjd_day"]) * 24. * 3600. +
+        #           (h["time_end_mjd_sec"] - h["time_start_mjd_sec"]) +
+        #           (h["time_end_mjd_ns"] - h["time_start_mjd_ns"])*1e-9 )
  
-        gaps = ((h1["time_start_mjd_day"] - h0["time_end_mjd_day"]) * 24.  * 3600. +
-                (h1["time_start_mjd_sec"] - h0["time_end_mjd_sec"]) +
-                (h1["time_start_mjd_ns"] - h0["time_end_mjd_ns"])*1e-9)
+        #gaps = ((h1["time_start_mjd_day"] - h0["time_end_mjd_day"]) * 24.  * 3600. +
+        #        (h1["time_start_mjd_sec"] - h0["time_end_mjd_sec"]) +
+        #        (h1["time_start_mjd_ns"] - h0["time_end_mjd_ns"])*1e-9)
  
 
+        # detector livetime is the duration of all events + the length of      all
+        # gaps between events that are short enough to be not downtime. (     guess: 30s)
+        est_ltime =  ( lengths.sum() + gaps[(0<gaps) & (gaps<30)].sum() )
+        self.set_livetime(est_ltime)
+        return 
 
+    def get_weights(self):
+        
+        # get a random variable
+        for k in self.vardict.keys():
+            datalen = len(self.get(k))
+            if datalen:
+                break
+            else:
+                Logger.warning("Read out variables first!")        
 
+        self.weights = pd.Series(n.ones(datalen,dtype=n.float64)/self.livetime)
 
 
     def __repr__(self):

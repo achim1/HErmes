@@ -7,6 +7,8 @@ import numpy as n
 
 from pyevsel.variables.variables import Variable as V
 from pyevsel.variables.variables import CompoundVariable as CV
+from pyevsel.variables.categories import RUN_START,RUN_STOP
+
 from pyevsel.icecube_goodies import conversions as conv
 # abbreviations
 nbins = 70
@@ -97,7 +99,7 @@ endtime_ns     = V("endtime_ns",definitions=[("I3EventHeader","time_end_mjd_ns")
 starttime_day  = V("starttime_day",definitions=[("I3EventHeader","time_start_mjd_day")],transform= lambda x: 24*3600.*x)
 starttime_sec  = V("starttime_sec",definitions=[("I3EventHeader","time_start_mjd_sec")]) 
 starttime_ns   = V("starttime_ns",definitions=[("I3EventHeader","time_start_mjd_ns")],transform=lambda x : x*1e-9)
-runstart       = CV("runstart",variables=[starttime_day,starttime_sec,starttime_ns],operation=lambda x,y : x + y  )
-runsend        = CV("runend",variables=[endtime_day,endtime_sec,endtime_ns],operation=lambda x,y : x + y  )
+runstart       = CV(RUN_START,variables=[starttime_day,starttime_sec,starttime_ns],operation=lambda x,y : x + y  )
+runsend        = CV(RUN_STOP,variables=[endtime_day,endtime_sec,endtime_ns],operation=lambda x,y : x + y  )
 
 

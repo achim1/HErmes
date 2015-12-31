@@ -149,6 +149,9 @@ class Category(object):
     def get_weights(self):
         raise NotImplementedError("Not implemented for base class!")
 
+    def get_datacube(self,variablenames=[]):
+        pass
+
 
     def __radd__(self,other):
         
@@ -168,7 +171,18 @@ class Category(object):
         else:
             return False
 
-    
+    def __len__(self):
+        """
+        Return the longest variable element
+        FIXME: introduce check?
+        """    
+        
+        lengths = n.array([len(self.vardict[v].data) for v in self.vardict.keys()])
+        lengths = lengths[lengths > 0]
+        selflen = list(set(lengths))
+        assert len(selflen) == 1, "Different variable lengths!"
+        return selflen[0]
+
 
 class Simulation(Category):
 
@@ -241,6 +255,10 @@ class Simulation(Category):
                                  **func_kwargs))
                                  #self.vardict[mc_p_energy].data,\
                                  #self.vardict[mc_p_type].data))
+
+        @property
+        def livetime(self):
+            return self.weights.sum() / n.power(self.weights, 2).sum()
 
 
 
@@ -409,29 +427,31 @@ class Data(Category):
     def __repr__(self):
         return """<Category: Data %s>""" %self.name
 
-# needs enum34
-#
-#from enum import Enum
-#
-#class Categories(Enum):
-#
-#    def __init__(self,*args,**kwargs):
-#        Enum.__init__(self,*args,**kwargs)
-#        self.signaltypes = []
-#        self.backgroundtypes = []
-#
-#
-#    def define_signal(self,*args):
-#        self.signaltypes = args
-#
-#    def get_signal(self):
-#        for i in self.signaltypes:
-#            pass            
-#
-#if __name__ == "__main__":
-#
-#    data = Categories("Cats","nue numu mu")
-#    print data
-#    print data.nue
-#
-#
+#################################################################
+
+class Dataset(object):
+    """
+    Holds many different categories
+    """
+    _categories = dict()
+
+    def __init__(self,categories=[]):
+        
+        if categories:
+            for c in categories:
+                self._categories[c.name] = category
+        self._weights_available = False
+
+    def add_category(self,category):
+        self._categories[category.name] = category
+
+    @property
+    def weights(self):
+        pass
+
+    def get(self,varname):
+        pass
+
+    
+        
+

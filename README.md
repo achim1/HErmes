@@ -23,8 +23,7 @@ was needed to keep track of which variable was read out from
 which file. In principle, `dashi.datasets.hub` proved to be suitable for the task and was used for the analysis in the first place.
 
 
-#However, while trying to improve the analysis, especially if 
-#new machine learning methods should be tested (which can be interfaced with python), the `bundle` architecture came to its limits.
+[//]: #However, while trying to improve the analysis, especially if new machine learning methods should be tested (which can be interfaced with python), the `bundle` architecture came to its limits.
 
 
 

@@ -19,6 +19,7 @@ Provide bookkeeping tools for large data structures
 used in HEP analysis
 
 .. automodule:: pyevsel.utils
+   :mambers:
 
 
 Indices and tables

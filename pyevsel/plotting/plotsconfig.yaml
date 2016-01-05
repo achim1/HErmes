@@ -1,0 +1,161 @@
+#some 'reasonable' defaults
+canvas: {
+        leftpadding: 0.15,
+        rightpadding: 0.05,
+        toppadding:  0.0,
+        bottompadding: 0.1,
+        }
+
+savefig: {
+        dpi: 350,
+        facecolor: "w",
+        edgecolor: "w",
+        transparent: False,
+        bbox_inches: "tight"       
+}
+
+
+categories: [{name: "data",
+    dashistyle:{
+         color: "k",
+         linewidth: 3,
+         alpha: 1.,
+         filled: False,
+         },
+    dashistylescatter:{
+         color: "k",
+         linewidth: 3,
+         alpha: 1.,
+         marker: "o",
+         },
+    histscatter: "scatter"
+    },
+    {name: "corsika",
+    dashistyle:{
+         color: 0,
+         linewidth: 3,
+         alpha: .6,
+         filled: True,
+         hatch: False         
+         },
+    dashistylescatter:{
+        marker: "None"
+        },
+    histscatter: "overlay"
+    },
+    {name: "corsika_coinc",
+    dashistyle:{
+         color: -1,
+         linewidth: 3,
+         alpha: .8,
+         filled: True,
+         linestyle: "-",
+         hatch: "//"         
+         },
+    histscatter: "line"
+    },
+    {name: "signal",
+    dashistyle:{
+         color: 2,
+         linewidth: 3,
+         alpha: 1.,
+         filled: False,
+         linestyle: "-",
+         },
+    histscatter: "line"
+    },
+    {name: "conv_nu",
+    dashistyle:{
+         color: 1,
+         linewidth: 3,
+         alpha: 1.,
+         filled: False,
+         linestyle: "-",
+         },
+    histscatter: "line"
+    },
+    {name: "prompt_nu",
+    dashistyle:{
+         color: 3,
+         linewidth: 3,
+         alpha: 1.,
+         filled: False,
+         linestyle: "-",
+         },
+    histscatter: "line"
+    },
+    {name: "astro_nue",
+    dashistyle:{
+         color: 2,
+         linewidth: 3,
+         alpha: 1.,
+         filled: False,
+         linestyle: "-",
+         },
+    histscatter: "line"
+    },
+    {name: "astro_numu",
+    dashistyle:{
+         color: 0,
+         linewidth: 3,
+         alpha: 1.,
+         filled: False,
+         linestyle: "-",
+         },
+    histscatter: "line"
+    },
+    {name: "astro_nutau",
+    dashistyle:{
+         color: 2,
+         linewidth: 3,
+         alpha: 1.,
+         filled: False,
+         linestyle: "-",
+         },
+    histscatter: "line"
+    },
+    {name: "conv_nue",
+    dashistyle:{
+         color: 1,
+         linewidth: 3,
+         alpha: 1.,
+         filled: False,
+         linestyle: "-",
+         },
+    histscatter: "line"
+    },
+    {name: "conv_numu",
+    dashistyle:{
+         color: 1,
+         linewidth: 3,
+         alpha: 1.,
+         filled: False,
+         },
+    histscatter: "line"
+    },
+    {name: "prompt_nue",
+    dashistyle:{
+         color: 3,
+         linewidth: 3,
+         alpha: 1.,
+         filled: False,
+         linestyle: "-",
+         },
+    histscatter: "line"
+    },
+    {name: "prompt_numu",
+    dashistyle:{
+         color: 3,
+         linewidth: 3,
+         alpha: 1.,
+         filled: False,
+         linestyle: "-",
+         },
+    histscatter: "line"
+    } 
+] 
+
+
+# Default plot styles (color, linewidth, etc
+# for a couple of cases
+

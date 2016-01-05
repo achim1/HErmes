@@ -68,10 +68,15 @@ class YStackedCanvas(object):
         height = 1. - top - bot
         
         heights = [height*h for h in heights]
-        abs_bot = 0. + bot
-    
+        heights.reverse()
+        print heights
+        abs_bot = 0 +bot     
         axes = [p.axes([left,abs_bot,width,heights[0]])]
-        for h in heights[1:]:
+        restheights = heights[1:]
+        abs_bot = bot + heights[0]
+        #restheights.reverse()
+        for h in restheights:
+            print abs_bot, h
             theaxes = p.axes([left,abs_bot,width,h])
             p.setp(theaxes.get_xticklabels(), visible=False)
             axes.append(theaxes)

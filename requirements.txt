@@ -13,7 +13,6 @@ pytz>=2014.10
 scipy>=0.15.1
 six>=1.9.0
 wsgiref>=0.1.2
-dashi>=0.3.0
 pandas>=0.17.1
 root_numpy>=4.4.0
 seaborn>=0.6.0

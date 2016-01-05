@@ -18,10 +18,21 @@ RUN_START = "run_start_mjd"
 RUN_STOP  = "run_stop_mjd"
 
 class Category(object):
+    """
+    An interface to variables from a certain 
+    type of file
+    """
+
     
     def __init__(self,name,label="",plotcolor=''):
+        """
+        Args:
+            name (str): a descriptive, unique name
+
+        Keyword Args:
+            label (str): a label used for plotting
+        """
         self.name = name
-        self.plotcolor = plotcolor
         self.label = label
         self.datasets = dict()
         self.files = []
@@ -35,15 +46,32 @@ class Category(object):
 
     @staticmethod
     def _ds_regexp(filename):
+        """
+        A container for matching a dataset number against a filename
+
+        Args:
+            filename (str): An filename of a datafile
+        Returns:
+            dataset (int): A dataset number extracted from the filename
+        """
         return DS_ID(filename)
 
     def set_weightfunction(self,func):
+        """
+        Register a function used for weighting
+        
+        Args:
+            func (func): the function to be used
+        """
         self._weightfunction = func
 
 
     def load_vardefs(self,module):
         """
         Load the variable definitions from a module
+
+        Args:
+            module (python module): Needs to contain variable definitions
         """
 
         def cleaner(x):
@@ -62,23 +90,28 @@ class Category(object):
             self.vardict[new_v.name] = new_v
 
     def add_variable(self,variable):
+        """
+        Add a variable to this category
+
+        Args: 
+            variable (pyevsel.variables.variables.Variable): A Variable instalce
+        """
         thisvar = copy(variable)
         self.vardict[thisvar.name] = thisvar
 
     def get_files(self,*args,**kwargs):
         """
-        get_files(path,force=False,**kwargs)
-        load files for this datatype with
-        utils.files.harvest_files
-        :datasets = dict(dataset_id : nfiles): 
-                if given, load only files from dataset dataset_id
-                set nfiles parameter to amount of L2 files
-                the loaded files will represent
-        :force = True|False: forcible reload filelist, even
-                if variables have been read out
-                already
-        all other kwargs will be passed to
-        utils.files.harvest_files
+        Load files for this category
+        uses pyevsel.utils.files.harvest_files
+        
+        Args:
+            *args (list of strings): Path to possible files
+        
+        Keyword Args:
+            datasets (dict(dataset_id : nfiles)): i given, load only files from dataset dataset_id  set nfiles parameter to amount of L2 files the loaded files will represent
+            force (bool): forcibly reload filelist (pre-readout vars will be lost)
+            all other kwargs will be passed to
+            utils.files.harvest_files
         """
         force = False
         if kwargs.has_key("force"):
@@ -112,7 +145,11 @@ class Category(object):
 
     def get(self,varkey):
         """        
-        Shortcut for quick data access
+        Retrieve the data of a variable
+        
+        Args:
+            varkey (str): The name of the variable
+        
         """
 
         if not self.vardict.has_key(varkey):
@@ -123,8 +160,9 @@ class Category(object):
     def read_variables(self,names=[]):
         """
         Harvest the variables in self.vardict
-        :names: only variables with this names 
-                will be harvested
+
+        Keyword Args:
+            names (list): if != [], havest variables these variables
         """    
     
         #assert len([x for x in varlist if isinstance(x,variables.Variable)]) == len(varlist), "All variables must be instances of variables.Variable!"
@@ -199,6 +237,11 @@ class Simulation(Category):
         """
         Let the simulation category know which 
         are the paramters describing the primary
+
+        Keyword Args:
+            energy_var (pyevself.variables.variables.Variable): simulated primary energy
+            type_var (pyevself.variables.variables.Variable): simulated primary type
+            zenith_var (pyevself.variables.variables.Variable): simulated primary zenith
         """
         for var,name in [(energy_var,MC_P_EN),(type_var,MC_P_TY),(zenith_var,MC_P_ZE)]:
             if var.name is None:
@@ -231,8 +274,13 @@ class Simulation(Category):
 
     def get_weights(self,model,model_kwargs = {}):
         """
-        Calculate weights for the
-        variables in this category
+        Calculate weights for the variables in this category
+
+        Args:
+            model (callable): A model to be evaluated
+
+        Keyword Args:
+            model_kwargs (dict): Will be passed to model
         """
         if not self._mc_p_readout:
             self.read_mc_primary()
@@ -350,6 +398,11 @@ class Data(Category):
         """
         Let the simulation category know which 
         are the paramters describing the primary
+
+        Keyword Args:
+            runstart_var (pyevself.variables.variables.Variable): beginning of a run
+            runstop_var (pyevself.variables.variables.Variable): beginning of a run
+
         """
         #FIXME
         for var,name in [(runstart_var,RUN_START),(runstop_var,RUN_STOP)]:
@@ -373,6 +426,9 @@ class Data(Category):
     def estimate_livetime(self,force=False):
         """
         Calculate the livetime from run start/stop times, account for gaps
+        
+        Keyword Args:
+            force (bool): overide existing livetime
         """
         if self.livetime:
             Logger.warning("There is already a livetime of %4.2f " %self.livetime)

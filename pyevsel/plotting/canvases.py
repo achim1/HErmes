@@ -1,4 +1,6 @@
-
+"""
+Provides canvases for multi axes plots
+"""
 
 import os.path
 import dashi as d
@@ -16,8 +18,6 @@ STD_CONF=os.path.join(os.path.split(__file__)[0],"plotsconfig.yaml")
 # CW = current width of my thesis (adjust
 CW = 5.78851
 S  = 1.681
-
-
 
 def GetCanvasConfig(filename=STD_CONF):
     data = yaml.load(open(filename,"r"))
@@ -84,11 +84,50 @@ class YStackedCanvas(object):
     
         self.axes = axes
 
+    def limit_yrange(self,ymin=10**(-12)):
+        """
+        Walk through all axes and adjust ymin
+
+        Keyword Args:
+            ymin (float): min ymin value
+        """
+        for ax in self.axes:
+            p.sca(ax)
+            axymin,__ =  ax.get_ylim()    
+            if abs(axymin) < ymin:
+                ax.set_ylim(ymin=ymin)
+
+    def eliminate_lower_yticks(self):
+        """
+        Eliminate the lowest y tick on each axes 
+        which is not the lowest
+        """    
+        for ax in self.axes[1:]:
+            p.sca(ax)
+            ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
+
 
     def select_axes(self, axes):
         ax = self.axes[axes]
         p.sca(ax)
         return ax
+
+    def global_legend(self, *args, **kwargs):
+        """
+        A combined legend for all axes
+        """
+        handles, labels = self.select_axes(-1).get_legend_handles_labels()
+        if args:
+            args = [i[1] for i in args]
+        self.legend = p.legend(*args,**kwargs)
+        #else:
+        #    self.legend = p.legend([i[0] for i in legitems],
+        #             [i[1] for i in legitems],**kwargs)
+            #        bbox_to_anchor=self.leg_bbox,
+            #        bbox_transform=self.figure.transFigure,
+            #        mode="expand", borderaxespad=0,
+            #        loc="lower left",
+            #        **kwargs)
 
     def save(self,path,name,endings=["pdf","png"],**kwargs):
         """

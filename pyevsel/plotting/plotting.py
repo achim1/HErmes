@@ -31,6 +31,11 @@ def WritePlotsConfig(config,filename=""):
 def GetConfig(name,filename=STD_CONF):
     """
     Get a certain config from a file
+    Args:
+        name (string): Name of a category to search for
+    Keyword Args:
+        filename (str): A filename with valid yaml
+
     """
 
     configs = yaml.load(open(filename,"r"))
@@ -44,21 +49,32 @@ def GetConfig(name,filename=STD_CONF):
 ################################################
 
 def PlotVariableDistribution(categories,name,ratio=([],[])):
+    """
+    One shot short-cut for one of the most used
+    plots in eventselections
+
+    Args:
+        categories (list): A list of categories which should be plotted
+        name (string): The name of the variable to plot
+    
+    Keyword Args:
+        ratio (list): A ratio plot of these categories will be crated
+    """
     plot = VariableDistributionPlot()
     for cat in categories:
         plot.add_variable(cat,name)
         plot.add_cumul(cat.name)
     plot.add_ratio(ratio[0],ratio[1])
-    plot.plot()
-    plot.canvas.save("","deletemenow")
-    return plot.canvas.show()
-
+    plot.plot(heights=[.4,.2,.2])
+    plot.add_legend()
+    plot.canvas.save("","deletemenow",dpi=350)
+    return plot
 ###############################################
 
 class VariableDistributionPlot(object):
     """
-    Plot the typical 3 fold variable
-    distribution plot
+    A container class to hold histograms
+    and ratio plots for variables
     """
 
     def __init__(self):
@@ -73,22 +89,40 @@ class VariableDistributionPlot(object):
         #for k in categories.keys():
         #    self.categories[k] = categories[k]
 
-    def _add_data(self,dataname,variable_data,bins,weights=None,label="_nolegend_"):
+    def _add_data(self,dataname,variable_data,bins,weights=None,label=""):
+        """
+        Histogram the added data and store internally
+        
+        Args:
+            dataname (string): the name of a category
+            variable_data (array): the actual data
+            bins (array): histogram binning
+        
+        Keyword Args:
+            weights (array): weights for the histogram
+            label (string): A label to put on the histogram      
+        """
         if weights is None:
             weights = n.ones(len(variable_data))
+        print weights,dataname
         self.histograms[dataname] = d.factory.hist1d(variable_data,bins,weights=weights)
         self.labels[dataname] = label
 
     def add_variable(self,category,variable_name):
         """
-        Convenience interface if data is sorted in categories
-        allready
+        Convenience interface if data is sorted in categories already
+
+        Args:
+           category (pyevsel.variables.category.Category): Get variable from this category
+           variable_name (string): The name of the variable
+
         """
-        self._add_data(category.name,category.get(variable_name),category.vardict[variable_name].bins,weights=category.weights)
+        self._add_data(category.name,category.get(variable_name),category.vardict[variable_name].bins,weights=category.weights,label=category.label)
 
     def add_ratio(self,names_upper,names_under,total_ratio=None,total_ratio_errors=None,log=False,label="data/$\Sigma$ bg"):
         """
         Add a ratio plot to the canvas
+
         """
         if not isinstance(names_upper,list):
             names_upper = [names_upper]
@@ -122,6 +156,12 @@ class VariableDistributionPlot(object):
         return name
 
     def add_cumul(self,name):
+        """
+        Add a cumulative distribution to the plto
+
+        Args:
+            name (str): the name of the category
+        """
         self.cumuls[name] = self.histograms[name].normalized()
         
 
@@ -131,22 +171,23 @@ class VariableDistributionPlot(object):
         """
         color_palette = GetColorPalette(color_palette)
         cfg = GetConfig(name,filename=configfilename)
-        print cfg
         color = cfg["dashistyle"]["color"]
         if isinstance(color,int):
             color = color_palette[color]
         cfg["dashistyle"]["color"] = color
-        if cfg['histscatter'] == 'scatter':
-            self.histograms[name].scatter(log=log,cumulative=cumulative,label=self.labels[name],**cfg["dashistylescatter"])
-        elif cfg['histscatter'] == "line":
-            self.histograms[name].line(log=log,cumulative=cumulative,label=self.labels[name],**cfg["dashistyle"])
-        elif cfg['histscatter'] == "overlay":
-            self.histograms[name].line(log=log,cumulative=cumulative,label=self.labels[name],**cfg["dashistyle"])
-            self.histograms[name].scatter(log=log,cumulative=cumulative,label="_nolegend_",**cfg["dashistylescatter"])
         if cumulative:
-            self.cumuls.pop(name)
+            histograms = self.cumuls
+            log = False # no log, no way!
         else:
-            self.histograms.pop(name)
+            histograms = self.histograms
+
+        if cfg['histscatter'] == 'scatter':
+            histograms[name].scatter(log=log,cumulative=cumulative,label=self.labels[name],**cfg["dashistylescatter"])
+        elif cfg['histscatter'] == "line":
+            histograms[name].line(log=log,cumulative=cumulative,label=self.labels[name],**cfg["dashistyle"])
+        elif cfg['histscatter'] == "overlay":
+            histograms[name].line(log=log,cumulative=cumulative,label=self.labels[name],**cfg["dashistyle"])
+            histograms[name].scatter(log=log,cumulative=cumulative,**cfg["dashistylescatter"])
 
     def _draw_histratio(self,name,axes,ylim=(0.1,2.5)):
         """
@@ -160,10 +201,9 @@ class VariableDistributionPlot(object):
             axes.hlines(total_ratio - total_ratio_errors,theax.get_xlim()[0],theax.get_xlim()[1],linestyle=":")
             xs = n.linspace(axes.get_xlim()[0],theax.get_xlim()[1],200)
             axes.fill_between(xs,total_ratio - total_ratio_errors, total_ratio + total_ratio_errors,facecolor="grey",alpha=0.3)
-            axes.set_ylim(ylim)
-            axes.set_ylabel(label)
-            axes.grid(1)
-        self.histratios.pop(name)
+        axes.set_ylim(ylim)
+        axes.set_ylabel(label)
+        axes.grid(1)
 
     def _locate_axes(self,combined_cumul,combined_ratio,combined_distro):
         axes_locator = []
@@ -238,12 +278,28 @@ class VariableDistributionPlot(object):
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_distro:
                 for k in self.histograms.keys():
+                    print "drawing..",k
                     self._draw_distribution(k,log=log)
-                    break
+                break
             else:
-                k = self.cumuls[self.histograms.keys()[ax[0]]]
+                k = self.histograms[self.histograms.keys()[ax[0]]]
                 self._draw_distribution(k,log=log)    
+        # cleanup
+        #self.canvas.limit_yrange()
+        self.canvas.eliminate_lower_yticks()
+
+
+    def add_legend(self,**kwargs):
+        """
+        Add a legend to the plot
         
+        Keyword Args:
+             will be passed to pylab.legend
+        """
+        if not kwargs:
+            kwargs = {"bbox_to_anchor" :(0.,1.0, 1., .102), "loc" : 3, "ncol" :3, "mode" :"expand", "borderaxespad":0., "handlelength": 2,"numpoints" :1}
+        self.canvas.global_legend(**kwargs)
+ 
 
 
 #

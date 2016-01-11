@@ -20,14 +20,16 @@ def _regex_compiler(cfgsection,cfgname,transform = lambda x : x
 ):
     """
     Reads out regex from a configfile and compiles them
-    :param cfgsection: name of the section in the configfile
-    :param cfgname: name of the variable in the section
-    :param transform: apply a transformation to the read-out value from the configfile
-    :type cfgsection: str
-    :type cfgname: str
-    :type transfomr: func
-    :return: function which containes the compiled regex
-    :rtype: function 
+
+    Args:
+        cfgsection (str): name of the section in the configfile
+        cfgname (str): name of the variable in the section
+
+    Keyword Args:
+        transform: apply a transformation to the read-out value
+
+    Returns:
+        function: containes the compiled regex
     """
     def safe_return(filename):
         res = []
@@ -57,10 +59,12 @@ def strip_all_endings(filename):
     Split a filename at the first dot and declare
     everything which comes after it and consists of 3 or 4 
     characters (including the dot) as "ending"
-    :param filename: a filename which shall be split
-    :type filenaae: str
-    :return: file basename + ending
-    :rtype: list
+
+    Args:
+        filename (str): a filename which shall be split
+
+    Returns:
+        list: file basename + ending
     """
     ending = ENDING(filename)
     while ENDING(ending[0]) is not None:
@@ -73,18 +77,18 @@ def harvest_files(path,ending=".bz2",sanitizer=lambda x : x,use_ls=False,prefix=
     """
     Get all the files with a specific ending
     from a certain path
-    :param path: a path on the filesystem to look for files
-    :param ending: glob for files with this ending
-    :param sanitizer: clean the filelist with a filter
-    :param use_ls: try to use unix ls to compile the filelist
-    :param prefix: apply this prefix fo the filenames after the files were found
-    :type path: str
-    :type ending: str
-    :type sanitizer: function
-    :type use_ls: bool
-    :type prefix: str
-    :return: All files in path which match ending and are filtered by sanitizer
-    :rtype: list 
+
+    Args:
+        path (str): a path on the filesystem to look for files
+
+    Keyword Args:
+        ending (str): glob for files with this ending
+        sanitizer (func): clean the file list with a filter
+        use_ls (bool): use unix ls to compile the filelist
+        prefix (str): apply this prefix to the file names
+
+    Returns:
+        list: All files in path which match ending and are filtered by sanitizer
     """
 
     if (not os.path.exists(path)) or (not os.path.isdir(path)):
@@ -123,17 +127,17 @@ def group_names_by_regex(names,regex=EXP_RUN_ID,firstpattern=GCD,estimate_first=
     """
     Generate lists with files which all have the same 
     name patterns, group by regex
-    :param names: a list of filename
-    :param regex: a regex to group by
-    :param firstpattern: the leading element of each list
-    :param estimate_first: if there are several elements which match fi
-    firstpattern, estimate which is the first
-    :type names: list
-    :type regex: function with compiled regex
-    :type firstpattern: function with compiled regex
-    :type estimate_first: function
-    :return: names grouped by regex with firstpattern as leading element
-    :rtype: list
+
+    Args:
+        names (list): a list of file names
+
+    Keyword Args:
+        regex (func): a regex to group by
+        firstpattern (func): the leading element of each list
+        estimate_first (func): if there are servaral elements which match firstpattern,
+                                estimate which is the first
+    Returns:
+        list: names grouped by reges with first pattern as leading element
     """
     identifiers        = map(regex,names)
     unique_identifiers = set(identifiers)

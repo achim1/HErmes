@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as n
 
 def _lambdanator(operation,value):
-    return compile("lambda x : x %s" + str(value))
+    return eval("lambda x : x %s " %operation + str(value))
 
 
 class Cut(object):
@@ -17,18 +17,35 @@ class Cut(object):
     Impose criteria on variables of a certain
     category to reduce its mightiness
     """
-    _cutdict = dict()
+    cutdict = dict()
+    compiled_cuts = dict()
     _condition_map = {">" : "gt","<" : "lt",">=" : "ge","<=" : "le"}
 
     def __init__(self,variables=[("mc_p_energy",">=",5)]):
 
-        for var,operation in variables:
+        for var,operation,value in variables:
             if isinstance(var,V):
                 name = var.name
             if isinstance(var,str):
                 name = var
-            self._cutdict[name] = operation
-        self.maskdict = dict()
+            self.cutdict[name] = (operation,value)
+            self.compiled_cuts[name] = _lambdanator(operation,value)
+
+    def __iter__(self):
+        """
+        Return name, cutfunc pairs
+        """
+
+        for k in self.cutdict.keys():
+            yield k,self.compiled_cuts[k]
+
+    def __repr__(self):
+        rep = """<Cut """
+        for k in self.cutdict.keys():
+            rep += """| %s %s %4.2f """ %(k,self.cutdict[k][0],self.cutdict[k][1])
+
+        rep += """>"""
+        return rep
 
 
     #def __call__(self,category):

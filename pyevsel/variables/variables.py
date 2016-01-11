@@ -10,6 +10,7 @@ import inspect
 import os
 import pandas as pd
 import tables
+
 try:
     import root_numpy as rn
 except ImportError:
@@ -18,7 +19,7 @@ except ImportError:
 
 from pyevsel.utils import files as f 
 from pyevsel.utils.logger import Logger
-
+from pyevsel.utils import GetTiming
 
 ################################################################
 
@@ -63,6 +64,7 @@ class Variable(object):
         nbins = FreedmanDiaconisBins(self.data,min(self.data),max(self.data))
         self.bins = n.linspace(min(self.data),max(self.data),nbins)
 
+    @GetTiming
     def harvest(self,*filenames):
         """
         Get the variable from a datafile

@@ -4,6 +4,7 @@ Categories of data, like "signal" of "background" etc
 
 from pyevsel.utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from pyevsel.utils.logger import Logger
+
 import variables
 import pandas as pd
 import inspect
@@ -22,8 +23,15 @@ class Category(object):
     An interface to variables from a certain 
     type of file
     """
+    name     = ""
+    label    = ""
+    datasets = dict()
+    files    = []
+    cuts     = []
+    cutmask  = False
+    _is_harvested = False
+    _weightfunction = False
 
-    
     def __init__(self,name,label="",plotcolor=''):
         """
         Args:
@@ -36,6 +44,8 @@ class Category(object):
         self.label = label
         self.datasets = dict()
         self.files = []
+        self.cuts  = []
+        self.cutmask = []
         try:
             self.vardict = {}
         except AttributeError:
@@ -117,7 +127,7 @@ class Category(object):
         if kwargs.has_key("force"):
             force = kwargs.pop("force")
         if self._is_harvested:
-            print "Variable has already be harvested! If you really want to reload the filelist, use 'force=True'. If you do so, all your harvested variables will be deleted!"
+            print "Variables have already been harvested! If you really want to reload the filelist, use 'force=True'. If you do so, all your harvested variables will be deleted!"
             if not force:
                 return
             else:
@@ -155,7 +165,10 @@ class Category(object):
         if not self.vardict.has_key(varkey):
             raise KeyError("%s not found!" %varkey)
 
-        return self.vardict[varkey].data
+        if len(self.cutmask):
+            return self.vardict[varkey].data[self.cutmask]
+        else:
+            return self.vardict[varkey].data
 
     def read_variables(self,names=[]):
         """
@@ -190,6 +203,56 @@ class Category(object):
     def get_datacube(self,variablenames=[]):
         pass
 
+    def add_cut(self,cut):
+        """
+        Add a cut without applying it yet
+
+        Args:
+            cut (pyevsel.variables.cut.Cut): Append this cut to the internal cutlist
+
+        """
+
+        self.cuts.append(cut)
+
+    def apply_cuts(self,inplace=False):
+        """
+        Apply the added cuts
+
+        Keyword Args:
+            inplace (bool): If True, cut the internal variable buffer
+                           (Can not be undone except variable is reloaded)
+        """
+        mask = []
+        while not len(mask):
+            for k in self.vardict.keys():
+                mask = n.ones(len(self.get(k)))
+
+        for cut in self.cuts:
+            for varname,cutfunc in cut:
+                mask = n.logical_and(mask,cutfunc(self.get(varname)))
+
+        if inplace:
+            for k in self.vardict.keys():
+                self.vardict[k].data = self.vardict[k].data[mask]
+        else:
+            self.cutmask = mask
+
+        return
+
+    def undo_cuts(self):
+        """
+        Conveniently undo a previous "apply_cuts"
+        """
+
+        self.cutmask = []
+
+    def delete_cuts(self):
+        """
+        Get rid of previously added cuts
+        """
+
+        self.undo_cuts()
+        self.cuts = []
 
     def __radd__(self,other):
         

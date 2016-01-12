@@ -4,6 +4,7 @@ Categories of data, like "signal" of "background" etc
 
 from pyevsel.utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from pyevsel.utils.logger import Logger
+from pyevsel.utils import GetTiming
 
 import variables
 import pandas as pd
@@ -28,7 +29,7 @@ class Category(object):
     datasets = dict()
     files    = []
     cuts     = []
-    cutmask  = False
+    cutmask  = []
     _is_harvested = False
     _weightfunction = False
 
@@ -170,6 +171,7 @@ class Category(object):
         else:
             return self.vardict[varkey].data
 
+    @GetTiming
     def read_variables(self,names=[]):
         """
         Harvest the variables in self.vardict

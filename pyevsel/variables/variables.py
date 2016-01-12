@@ -64,7 +64,6 @@ class Variable(object):
         nbins = FreedmanDiaconisBins(self.data,min(self.data),max(self.data))
         self.bins = n.linspace(min(self.data),max(self.data),nbins)
 
-    @GetTiming
     def harvest(self,*filenames):
         """
         Get the variable from a datafile

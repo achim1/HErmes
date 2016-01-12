@@ -72,6 +72,4 @@ class Cut(object):
     #        newcat.vardict[v].data = category.vardict[v].data.where(total_mask)
     #    return newcat
 
-class CutCollection:
-    pass
 

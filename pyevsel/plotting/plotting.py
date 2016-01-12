@@ -14,37 +14,15 @@ d.visual()
 from pyevsel.plotting.plotcolors import GetColorPalette
 import pyevsel.plotting.canvases as c
 from pyevsel.utils.logger import Logger
+from pyevsel.plotting import GetCategoryConfig
 reload(c)
 
 STD_CONF=os.path.join(os.path.split(__file__)[0],"plotsconfig.yaml")
 
 import pylab as p
 
-style = os.path.join(os.path.split(__file__)[0],"pyevseldefault.mplstyle")
-p.style.use(style)
-
-def WritePlotsConfig(config,filename=""):
-    """
-    """
-    raise NotImplementedError
-
-def GetConfig(name,filename=STD_CONF):
-    """
-    Get a certain config from a file
-    Args:
-        name (string): Name of a category to search for
-    Keyword Args:
-        filename (str): A filename with valid yaml
-
-    """
-
-    configs = yaml.load(open(filename,"r"))
-    for cfg in configs["categories"]:
-        if cfg["name"] == name:
-            return cfg
-    Logger.warning("No config for %s found!" %name)
-    return cfg
-
+STYLE = os.path.join(os.path.split(__file__)[0],"pyevseldefault.mplstyle")
+p.style.use(STYLE)
 
 ################################################
 
@@ -170,7 +148,7 @@ class VariableDistributionPlot(object):
         Paint the histograms!
         """
         color_palette = GetColorPalette(color_palette)
-        cfg = GetConfig(name,filename=configfilename)
+        cfg = GetCategoryConfig(name)
         color = cfg["dashistyle"]["color"]
         if isinstance(color,int):
             color = color_palette[color]
@@ -201,9 +179,9 @@ class VariableDistributionPlot(object):
         ratio.scatter(c="k",marker="o",markersize=3)
         axes.hlines(total_ratio,axes.get_xlim()[0],axes.get_xlim()[1],linestyle="--")
         if total_ratio_errors is not None:
-            axes.hlines(total_ratio + total_ratio_errors,theax.get_xlim()[0],theax.get_xlim()[1],linestyle=":")
-            axes.hlines(total_ratio - total_ratio_errors,theax.get_xlim()[0],theax.get_xlim()[1],linestyle=":")
-            xs = n.linspace(axes.get_xlim()[0],theax.get_xlim()[1],200)
+            axes.hlines(total_ratio + total_ratio_errors,axes.get_xlim()[0],axes.get_xlim()[1],linestyle=":")
+            axes.hlines(total_ratio - total_ratio_errors,axes.get_xlim()[0],axes.get_xlim()[1],linestyle=":")
+            xs = n.linspace(axes.get_xlim()[0],axes.get_xlim()[1],200)
             axes.fill_between(xs,total_ratio - total_ratio_errors, total_ratio + total_ratio_errors,facecolor="grey",alpha=0.3)
         axes.set_ylim(ylim)
         axes.set_ylabel(label)

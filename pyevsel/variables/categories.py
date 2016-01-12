@@ -25,7 +25,6 @@ class Category(object):
     type of file
     """
     name     = ""
-    label    = ""
     datasets = dict()
     files    = []
     cuts     = []
@@ -33,16 +32,12 @@ class Category(object):
     _is_harvested = False
     _weightfunction = False
 
-    def __init__(self,name,label="",plotcolor=''):
+    def __init__(self,name):
         """
         Args:
             name (str): a descriptive, unique name
-
-        Keyword Args:
-            label (str): a label used for plotting
         """
         self.name = name
-        self.label = label
         self.datasets = dict()
         self.files = []
         self.cuts  = []
@@ -384,11 +379,9 @@ class ReweightedSimulation(Simulation):
     A proxy for simulation dataset, when only the weighting differs
     """
 
-    def __init__(self,name,mother,label="",plotcolor="red"):
+    def __init__(self,name,mother):
         self._mother = mother
         self.name = name
-        self.plotcolor = plotcolor
-        self.label = label
         self.weights     = pd.Series()
         self._weightfunction = None
 

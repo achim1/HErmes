@@ -53,16 +53,21 @@ In the end, what is really desired is a *datacube*, which is the full parameter 
     2  2 
 ```
 
-Each point in the *datacube* can be adressed by its coordinates (A,1,2,..) and then it can be searched for clustering, e.g. by machine learning methods e.g. by [skykit-learn](http://scikit-learn.org/stable/documentation.html)
+Each point in the *datacube* can be adressed by its coordinates (A,1,2,..) and then it can be searched for clustering, e.g. by machine learning methods e.g. by [scikit-learn](http://scikit-learn.org/stable/documentation.html)
 
 The pyevsel project should provide everything to go from files to a working datacube as quickly as possible. As filtering is important from an early stage on, it will provide also a set of routines which allow filtering and cross-checking the results.
 
-As a bonus, it allows for easy-weighing on the fly fro IceCube analysis.
+As a bonus, it allows for easy-weighting on the fly fro IceCube analysis.
 
-##Examples
+#Examples
 
 
-###Setting up categories from files
+##Setting up categories from files
+
+First tell the software, where to find the files to uread the data from. Categories need to be initialized with an unique name.
+The ReweightedSimulation category holds a reference to all the variables defined in the given category, however it allows for 
+the calculation of different weights.
+
 ```
 import pyevsel.variables.categories as c
 
@@ -77,6 +82,10 @@ signal.get_files(numu_path,ending=".h5",prefix="dccap://")
 ### defining variabls
  defining labels, bins,
  transformations can be applied...
+
+The variable definitions can be written to its own python file, e.g. `variable_def.py` (which should be in the PYTHONPATH).
+Variables are declared by a unique name and optional bins, transformations and labels. The definitions describe the table and subnode
+where the variables can be found in the datafiles
 
 ```
 variable_def.py
@@ -94,6 +103,7 @@ mc_p_ze = v.Variable("mc_p_zen",definitions=[("MCPrimary","zenith"),("mostEnerge
 
 ### getting variables and weighting
 
+The weighting is specific for IceCube and needs the icetray software.
 
 ```
 import variable_defs
@@ -110,7 +120,19 @@ honda.set_weightfunction(gw.GetModelWeight)
 honda.get_weights(s.NuFluxes.Honda2006H3a)
 ```
 
+### cutting
 
+A cut can be defined by giving conditions with simple strings. After application, the get calls of the category will return
+the variable data after applying the cut.
+If necessary, cuts can be deleted
+
+```
+uncut_var  =  signal.get("myfavoritevariable")
+cut = cu.Cut(variables=[("energy",">",5)])
+signal.add_cut(cut)
+signal.apply_cuts()
+cutted_var = signal.get("myfavoritevariable")
+print len(a),len(b)
 
 
 

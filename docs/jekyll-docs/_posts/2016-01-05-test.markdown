@@ -2,11 +2,13 @@
 layout: post
 title:  "Setting up pyevsel documentation"
 date:   2016-01-05 23:00:00 -0600
+apidocs: 'http://achim1.github.io/pyevsel/apidocs/'
 categories: jekyll update
 ---
 
-Find the API docs now at 
-[api-docs]: http://achim1.github.io/pyevsel/apidocs
+Find the API docs now at:
+[API docs][the_link]
 
+[the_link]: {{page.apidocs}}
 
 

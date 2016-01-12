@@ -66,7 +66,7 @@ def PlotVariableDistribution(categories,name,ratio=([],[])):
         plot.add_cumul(cat.name)
     plot.add_ratio(ratio[0],ratio[1])
     plot.plot(heights=[.4,.2,.2])
-    plot.add_legend()
+    #plot.add_legend()
     plot.canvas.save("","deletemenow",dpi=350)
     return plot
 ###############################################
@@ -165,7 +165,7 @@ class VariableDistributionPlot(object):
         self.cumuls[name] = self.histograms[name].normalized()
         
 
-    def _draw_distribution(self,name,log=True,cumulative=False,configfilename=STD_CONF,color_palette="dark"):
+    def _draw_distribution(self,ax,name,log=True,cumulative=False,configfilename=STD_CONF,color_palette="dark"):
         """
         Paint the histograms!
         """
@@ -188,6 +188,10 @@ class VariableDistributionPlot(object):
         elif cfg['histscatter'] == "overlay":
             histograms[name].line(log=log,cumulative=cumulative,label=self.labels[name],**cfg["dashistyle"])
             histograms[name].scatter(log=log,cumulative=cumulative,**cfg["dashistylescatter"])
+        if cumulative:
+            ax.set_ylabel('fraction')
+        else:
+            ax.set_ylabel('rate/bin [1/s]')
 
     def _draw_histratio(self,name,axes,ylim=(0.1,2.5)):
         """
@@ -259,11 +263,11 @@ class VariableDistributionPlot(object):
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_cumul:
                 for k in self.cumuls.keys():
-                    self._draw_distribution(k,cumulative=True,log=log)
+                    self._draw_distribution(cur_ax,k,cumulative=True,log=log)
                 break
             else:
                 k = self.cumuls[self.cumuls.keys()[ax[0]]]
-                self._draw_distribution(k,cumulative=True,log=log)    
+                self._draw_distribution(cur_ax,cumulative=True,log=log)    
         for ax in r_axes:
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_ratio:
@@ -279,11 +283,14 @@ class VariableDistributionPlot(object):
             if combined_distro:
                 for k in self.histograms.keys():
                     print "drawing..",k
-                    self._draw_distribution(k,log=log)
+                    self._draw_distribution(cur_ax,k,log=log)
                 break
             else:
                 k = self.histograms[self.histograms.keys()[ax[0]]]
-                self._draw_distribution(k,log=log)    
+                self._draw_distribution(cur_ax,k,log=log)    
+        lgax = self.canvas.select_axes(-1)#most upper one
+        lg = lgax.legend(bbox_to_anchor=(0., 1.0, 1., .102), loc=3,frameon=True,ncol=3,framealpha=1.,borderaxespad=0,mode="expand",handlelength=2,numpoints=1)
+        lg.get_frame().set_linewidth(1.5)
         # cleanup
         #self.canvas.limit_yrange()
         self.canvas.eliminate_lower_yticks()

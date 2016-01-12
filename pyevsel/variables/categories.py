@@ -203,7 +203,11 @@ class Category(object):
         raise NotImplementedError("Not implemented for base class!")
 
     def get_datacube(self,variablenames=[]):
-        pass
+        cube = dict()
+        for k in self.vardict.keys():
+            cube[k] = self.get(k)
+
+        return pd.DataFrame(cube)
 
     def add_cut(self,cut):
         """

@@ -24,8 +24,6 @@ import pylab as p
 STYLE = os.path.join(os.path.split(__file__)[0],"pyevseldefault.mplstyle")
 p.style.use(STYLE)
 
-################################################
-
 def PlotVariableDistribution(categories,name,ratio=([],[])):
     """
     One shot short-cut for one of the most used
@@ -34,7 +32,7 @@ def PlotVariableDistribution(categories,name,ratio=([],[])):
     Args:
         categories (list): A list of categories which should be plotted
         name (string): The name of the variable to plot
-    
+
     Keyword Args:
         ratio (list): A ratio plot of these categories will be crated
     """
@@ -47,6 +45,7 @@ def PlotVariableDistribution(categories,name,ratio=([],[])):
     #plot.add_legend()
     plot.canvas.save("","deletemenow",dpi=350)
     return plot
+
 ###############################################
 
 class VariableDistributionPlot(object):
@@ -59,7 +58,6 @@ class VariableDistributionPlot(object):
         self.histograms = {}
         self.histratios = {}
         self.cumuls     = {}
-        self.labels     = {}
         self.plotratio  = False
         self.plotcumul  = False
         self.canvas     = None
@@ -67,7 +65,7 @@ class VariableDistributionPlot(object):
         #for k in categories.keys():
         #    self.categories[k] = categories[k]
 
-    def _add_data(self,dataname,variable_data,bins,weights=None,label=""):
+    def _add_data(self,dataname,variable_data,bins,weights=None):
         """
         Histogram the added data and store internally
         
@@ -78,13 +76,12 @@ class VariableDistributionPlot(object):
         
         Keyword Args:
             weights (array): weights for the histogram
-            label (string): A label to put on the histogram      
         """
         if weights is None:
             weights = n.ones(len(variable_data))
         print weights,dataname
         self.histograms[dataname] = d.factory.hist1d(variable_data,bins,weights=weights)
-        self.labels[dataname] = label
+
 
     def add_variable(self,category,variable_name):
         """
@@ -95,7 +92,7 @@ class VariableDistributionPlot(object):
            variable_name (string): The name of the variable
 
         """
-        self._add_data(category.name,category.get(variable_name),category.vardict[variable_name].bins,weights=category.weights,label=category.label)
+        self._add_data(category.name,category.get(variable_name),category.vardict[variable_name].bins,weights=category.weights)
 
     def add_ratio(self,names_upper,names_under,total_ratio=None,total_ratio_errors=None,log=False,label="data/$\Sigma$ bg"):
         """
@@ -160,11 +157,11 @@ class VariableDistributionPlot(object):
             histograms = self.histograms
 
         if cfg['histscatter'] == 'scatter':
-            histograms[name].scatter(log=log,cumulative=cumulative,label=self.labels[name],**cfg["dashistylescatter"])
+            histograms[name].scatter(log=log,cumulative=cumulative,label=cfg["label"],**cfg["dashistylescatter"])
         elif cfg['histscatter'] == "line":
-            histograms[name].line(log=log,cumulative=cumulative,label=self.labels[name],**cfg["dashistyle"])
+            histograms[name].line(log=log,cumulative=cumulative,label=cfg["label"],**cfg["dashistyle"])
         elif cfg['histscatter'] == "overlay":
-            histograms[name].line(log=log,cumulative=cumulative,label=self.labels[name],**cfg["dashistyle"])
+            histograms[name].line(log=log,cumulative=cumulative,label=cfg["label"],**cfg["dashistyle"])
             histograms[name].scatter(log=log,cumulative=cumulative,**cfg["dashistylescatter"])
         if cumulative:
             ax.set_ylabel('fraction')

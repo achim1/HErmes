@@ -5,6 +5,9 @@ Categories of data, like "signal" of "background" etc
 from pyevsel.utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from pyevsel.utils.logger import Logger
 from pyevsel.utils import GetTiming
+from pyevsel.plotting.plotting import VariableDistributionPlot
+from pyevsel.plotting import GetCategoryConfig
+
 
 import variables
 import pandas as pd
@@ -29,6 +32,7 @@ class Category(object):
     files    = []
     cuts     = []
     cutmask  = []
+    _weights  = []
     _is_harvested = False
     _weightfunction = False
 
@@ -204,6 +208,17 @@ class Category(object):
 
         return pd.DataFrame(cube)
 
+    @property
+    def weights(self):
+        if len(self.cutmask):
+            return self._weights[self.cutmask]
+        else:
+            return self._weights
+
+    @property
+    def variablenames(self):
+        return self.vardict.keys()
+
     def add_cut(self,cut):
         """
         Add a cut without applying it yet
@@ -254,6 +269,21 @@ class Category(object):
 
         self.undo_cuts()
         self.cuts = []
+
+    @property
+    def integrated_rate(self):
+        """
+        Calculate the total eventrate of this category
+        (requires weights)
+
+        Returns (tuple): rate and quadratic error
+        """
+
+        rate  = self.weights.sum()
+        error = n.sqrt((self.weights**2).sum())
+
+        return (rate,error)
+
 
     def __radd__(self,other):
         
@@ -363,7 +393,7 @@ class Simulation(Category):
 
         func_kwargs.update(model_kwargs)
 
-        self.weights = pd.Series(self._weightfunction(model,self.datasets,\
+        self._weights = pd.Series(self._weightfunction(model,self.datasets,\
                                  **func_kwargs))
                                  #self.vardict[mc_p_energy].data,\
                                  #self.vardict[mc_p_type].data))
@@ -427,9 +457,6 @@ class ReweightedSimulation(Simulation):
 
     def read_mc_primary(self):
         raise NotImplementedError
-
-
-
 
     def __repr__(self):
         return """<Category: ReweightedSimulation %s from %s>""" %(self.name,self._mother)
@@ -539,8 +566,7 @@ class Data(Category):
             else:
                 Logger.warning("Read out variables first!")        
 
-        self.weights = pd.Series(n.ones(datalen,dtype=n.float64)/self.livetime)
-
+        self._weights = pd.Series(n.ones(datalen,dtype=n.float64)/self.livetime)
 
     def __repr__(self):
         return """<Category: Data %s>""" %self.name
@@ -551,25 +577,273 @@ class Dataset(object):
     """
     Holds many different categories
     """
-    _categories = dict()
+    categories = []
+    livetime   = 0
 
-    def __init__(self,categories=[]):
-        
-        if categories:
-            for c in categories:
-                self._categories[c.name] = category
-        self._weights_available = False
+    def __init__(self,*args):
+        """
+        Iniitalize with the categories
+
+        Args:
+            *args: pyevsel.variables.categories.Category list
+
+        Returns:
+
+        """
+        if args:
+            for cat in args:
+                self.categories.append(cat)
+                self.__dict__[cat.name] = cat
+
+    def read_all_vars(self,variable_defs):
+        """
+        Read out the variable for all categories
+
+        Args:
+            variable_defs: A python module containing variable definitions
+
+        Returns:
+
+        """
+        for cat in self.categories:
+            if isinstance(cat,Simulation):
+                cat.set_mc_primary(energy_var=variable_defs.mc_p_en,\
+                                   type_var=variable_defs.mc_p_ty,\
+                                   zenith_var=variable_defs.mc_p_ze)
+            cat.load_vardefs(variable_defs)
+            cat.read_variables()
+
+    def get_weights(self,weightfunction=lambda x : x,models={}):
+        """
+        Calculate the weights for all categories
+
+        Args:
+            weightfunction (func): set func used for medel weight calculation
+            models (dict): A dictionary of categoryname -> model
+        """
+        for cat in self.categories:
+            if isinstance(cat,Simulation):
+                cat.set_weightfunction(weightfunction)
+            # FIXME: should be the same case as above!
+            if isinstance(cat,ReweightedSimulation):
+                cat.set_weightfunction(weightfunction)
+            cat.get_weights(models[cat.name])
 
     def add_category(self,category):
-        self._categories[category.name] = category
+        self.categories.append(category)
+
+    def get_category(self,categoryname):
+        """
+        Get a reference to a category
+
+        Args:
+            category: A name which has to be associated to a category
+
+        Returns (pyevsel.variables.categories.Category): Category
+        """
+
+        for cat in self.categories:
+            if cat.name == categoryname:
+                return cat
+
+        raise KeyError("Can not find category %s" %categoryname)
+
+    def get_variable(self,varname):
+        """
+        Get a pandas dataframe for all categories
+
+        Args:
+            varname (str): A name of a variable
+
+        Returns (pandas.DataFrame): A 2d dataframe category -> variable
+        """
+
+        var = dict()
+        for cat in self.categories:
+            var[cat.name] = cat.get(varname)
+
+        df = pd.DataFrame(var)
+        return df
 
     @property
     def weights(self):
-        pass
+        w = dict()
+        for cat in self.categories:
+            w[cat.name] = cat.weights
+        df = pd.DataFrame(w)
+        return df
 
-    def get(self,varname):
-        pass
+    def __repr__(self):
+        rep = """ <Dataset: """
+        for cat in self.categories:
+            rep += "%s " %cat.name
+        rep += ">"
 
+    def add_cut(self,cut):
+        """
+        Add a cut without applying it yet
+
+        Args:
+            cut (pyevsel.variables.cut.Cut): Append this cut to the internal cutlist
+
+        """
+        for cat in self.categories:
+            cat.cuts.append(cut)
+
+    def apply_cuts(self,inplace=False):
+        """
+        Apply them all!
+        """
+        for cat in self.categories:
+            cat.apply_cuts(inplace=inplace)
+
+    def undo_cuts(self):
+        for cat in self.categories:
+            cat.undo_cuts()
+
+    @property
+    def categorynames(self):
+        return [cat.name for cat in self.categories]
+
+    def plot_distribution(self,name,\
+                          ratio=([],[]),
+                          cumulative=True,
+                          heights=[.4,.2,.2],
+                          savepath="",savename="vdistplot"):
+        """
+        One shot short-cut for one of the most used
+        plots in eventselections
+
+        Args:
+            name (string): The name of the variable to plot
+
+        Keyword Args:
+            ratio (list): A ratio plot of these categories will be crated
+        """
+        plot = VariableDistributionPlot()
+        for cat in self.categories:
+            plot.add_variable(cat,name)
+            if cumulative:
+                plot.add_cumul(cat.name)
+        if len(ratio[0]) and len(ratio[1]):
+            plot.add_ratio(ratio[0],ratio[1])
+        plot.plot(heights=heights)
+        #plot.add_legend()
+        plot.canvas.save("",savename,dpi=350)
+        return plot
+
+    @property
+    def integrated_rate(self):
+        """
+        Integrated rate for each category
+
+        Returns (pandas.Panel): rate with error
+        """
+        ratedict = dict()
+        errdict  = dict()
+        for cat in self.categories:
+            rate,error = cat.integrated_rate
+            ratedict[cat.name] = rate
+            errdict[cat.name] = errdict
+        rate = pd.DataFrame(ratedict)
+        err  = pd.DataFrame(errdict)
+        return rate,err
+
+    def sum_rate(self,categories=[]):
+        """
+        Sum up the integrated rates for categories
+
+        Args:
+            background: categories considerred background
+
+        Returns (tuple): rate with error
+
+        """
+        rate,error = categories.pop().integrated_rate
+        error = error**2
+        for cat in categories:
+            tmprate,tmperror = cat.integrated_rate
+            rate  += tmprate # categories should be independent
+            error += tmperror**2
+        return rate,n.sqrt(error)
+
+
+    def _setup_table_data(self,signal=[],background=[]):
+        """
+        Setup data for a table
+        If signal and background are given, also summed values
+        will be in the list
+
+        Keyword Args:
+            signal (list): category names which are considered signal
+            background (list): category names which are considered background
+
+        Returns (dict): table dictionary
+        """
+
+        rates, errors = self.integrated_rate
+        sgrate, sgerrors = self.sum_rate(signal)
+        bgrate, bgerrors = self.sum_rate(background)
+        allrate, allerrors = self.sum_rate(self.categories)
+        tmprates  = pd.DataFrame({"signal" : pd.Series(sgrate)},\
+                                {"background": pd.Series(bgrate)},\
+                                 { "all": pd.Series(allrate)})
+        tmperrors = pd.DataFrame({"signal" : pd.Series(sgerrors)},\
+                                {"background": pd.Series(bgerrors)},\
+                                 {"all": pd.Series(allerrors)})
+
+        rates = rates.append(tmprates)
+        errors = errors.append(tmperrors)
+
+        datacats = []
+        for cat in self.categories:
+            if isinstance(cat,Data):
+                datacats.append(cat)
+        if datacats:
+            simcats = [cat for cat in self.categories if cat.name not in [kitty.name for kitty in datacats]]
+            simrate, simerror = self.sum_rate(simcats)
+
+        fudges = dict()
+        for cat in datacats:
+            rate,error =  cat.integrated_rate
+            fudges[cat.name] =  (rate/simrate,error/simerror)
+
+        #table_dict["rates (evts/sec)"] = self.integrated_rate[0]
+        #table_dict["stat. error (+-)"] = self.integrated_rate[1]
+        rate_dict = dict()
+        all_fudge_dict = dict()
+        for catname in self.categorynames:
+            cfg = GetCategoryConfig(cat.name)
+            label = cfg["label"]
+            rate_dict[label] = (rates[cat.name],errors[cat.name])
+            if fudges.has_key(cat.name):
+                all_fudge_dict[label] = fudges[cat.name]
+            else:
+                all_fudge_dict[label] = None
+
+
+        rate_dict["Sig."] =  (rates["signal"],errors["signal"] )
+        rate_dict["Bg."] = (rates["background"],errors["background"])
+        rate_dict["Gr. Tot."] = (rates["all"],errors["all"])
+        all_fudge_dict["Sig."]     = None
+        all_fudge_dict["Bg."]      = None
+        all_fudge_dict["Gr. Tot."] = None
+        return rate_dict,all_fudge_dict
+
+    def tinytable(self,signal=[],\
+                    background=[],\
+                    layout="v",\
+                    format="html"):
     
+        def cellformatter(input):
+            if input is None:
+                return "-"
+            return "%4.2f +- %4.2f" %input
+
+        rates,fudges = self._setup_table_data(signal=signal,background=background)
+        tt = d.TinyTable()
+        tt.add("Rate (1/s)", **rates)
+        tt.add("Ratio",**fudges)
+        return tt.render(layout=layout,format=format,format_cell=cellformatter)
         
 

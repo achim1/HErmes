@@ -4,6 +4,7 @@ Provide the usual plots
 import tempfile
 import yaml
 import os
+import re
 
 from pyevsel.utils.logger import Logger
 STD_CONF=os.path.join(os.path.split(__file__)[0],"plotsconfig.yaml")
@@ -15,6 +16,7 @@ config.write(configdata)
 config.close()
 CONFIGFILE = config.name
 
+SLASHES = re.compile(r"(\\+)")
 
 #################################
 
@@ -88,6 +90,11 @@ def GetCategoryConfig(name):
     configs = yaml.load(open(CONFIGFILE,"r"))
     for cfg in configs["categories"]:
         if cfg["name"] == name:
+            # FIXME little hack for bad latex parsing
+            # by yaml
+            #cleanlabel = cfg["label"]
+            cleanlabel = SLASHES.sub(r"\\",cfg["label"])
+            cfg["label"] = cleanlabel
             return cfg
     Logger.warning("No config for %s found!" %name)
     return cfg

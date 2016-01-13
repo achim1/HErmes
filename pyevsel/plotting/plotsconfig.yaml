@@ -51,7 +51,7 @@ categories: [{name: 'data',
     histscatter: 'overlay'
     },
     {name: 'corsika',
-     label: '$\mu_{atm\$',
+    label: '$\mu_{atm}$',
     dashistyle:{
          color: 0,
          linewidth: 3,
@@ -65,7 +65,7 @@ categories: [{name: 'data',
     histscatter: 'overlay'
     },
     {name: 'corsika_coinc',
-    label: 'cc $\\mu_\{atm\}$',
+    label: 'cc $\mu_{atm}$',
     dashistyle:{
          color: -1,
          linewidth: 3,
@@ -77,7 +77,7 @@ categories: [{name: 'data',
     histscatter: 'line'
     },
     {name: 'signal',
-    label: '$\\nu_\{astr\}$',
+    label: '$\nu_{astr}$',
     dashistyle:{
          color: 2,
          linewidth: 3,

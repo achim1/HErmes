@@ -240,14 +240,12 @@ class Category(object):
             inplace (bool): If True, cut the internal variable buffer
                            (Can not be undone except variable is reloaded)
         """
-        mask = []
-        while not len(mask):
-            for k in self.vardict.keys():
-                mask = n.ones(len(self.get(k)))
-
+        self.cutmask = []
+        testvar = self.cuts[0].cutdict.keys()[0]
+        mask = n.ones(len(self.get(testvar)))
         for cut in self.cuts:
             for varname,cutfunc in cut:
-                mask = n.logical_and(mask,cutfunc(self.get(varname)))
+                mask = n.logical_and(mask,self.get(varname).apply(cutfunc))
 
         if inplace:
             for k in self.vardict.keys():
@@ -263,6 +261,7 @@ class Category(object):
         """
 
         self.cutmask = []
+
 
     def delete_cuts(self):
         """
@@ -702,6 +701,10 @@ class Dataset(object):
     def undo_cuts(self):
         for cat in self.categories:
             cat.undo_cuts()
+
+    def delete_cuts(self):
+        for cat in self.categories:
+            cat.delete_cuts()
 
     @property
     def categorynames(self):

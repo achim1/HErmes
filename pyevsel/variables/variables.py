@@ -148,10 +148,12 @@ class CompoundVariable(Variable):
     def __repr__(self):
         return """<CompoundVariable %s created from: %s>""" %(self.name,"".join([x.name for x in self._variables ]))
 
-    def harvest(self):
+    def harvest(self,*filenames):
+        #FIXME: filenames is not used, just
+        #there for compatibility
+
         if self._is_harvested:
             return
-        print self._variables
         harvestable = filter(lambda var : var._is_harvested, self._variables)
         if not len(harvestable) == len(self._variables):
             Logger.error("Variables have to be harvested for compound variable %s first!" %self.name)

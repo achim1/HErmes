@@ -14,6 +14,8 @@ import pandas as pd
 import inspect
 import numpy as n
 
+from dashi.tinytable import TinyTable
+
 from copy import deepcopy as copy
 
 MC_P_EN   = "mc_p_en"
@@ -51,7 +53,7 @@ class Category(object):
         except AttributeError:
             pass #This happens for our ReweightedSimulation class
         self._is_harvested = False
-        self.weights     = pd.Series()
+        self._weights     = pd.Series()
         self._weightfunction = None
 
     @staticmethod
@@ -412,7 +414,7 @@ class ReweightedSimulation(Simulation):
     def __init__(self,name,mother):
         self._mother = mother
         self.name = name
-        self.weights     = pd.Series()
+        self._weights     = pd.Series()
         self._weightfunction = None
 
     #proxy the stuff by hand
@@ -739,14 +741,19 @@ class Dataset(object):
 
         Returns (pandas.Panel): rate with error
         """
-        ratedict = dict()
-        errdict  = dict()
+        #ratedict = dict()
+        #errdict  = dict()
+        rdata,edata,index = [],[],[]
         for cat in self.categories:
             rate,error = cat.integrated_rate
-            ratedict[cat.name] = rate
-            errdict[cat.name] = errdict
-        rate = pd.DataFrame(ratedict)
-        err  = pd.DataFrame(errdict)
+            rdata.append(rate)
+            index.append(cat.name)
+            edata.append(error)
+
+            #ratedict[cat.name] = [rate]
+            #errdict[cat.name] = [errdict]
+        rate = pd.Series(rdata,index)
+        err  = pd.Series(edata,index)
         return rate,err
 
     def sum_rate(self,categories=[]):
@@ -759,9 +766,9 @@ class Dataset(object):
         Returns (tuple): rate with error
 
         """
-        rate,error = categories.pop().integrated_rate
+        rate,error = categories[0].integrated_rate
         error = error**2
-        for cat in categories:
+        for cat in categories[1:]:
             tmprate,tmperror = cat.integrated_rate
             rate  += tmprate # categories should be independent
             error += tmperror**2
@@ -785,13 +792,8 @@ class Dataset(object):
         sgrate, sgerrors = self.sum_rate(signal)
         bgrate, bgerrors = self.sum_rate(background)
         allrate, allerrors = self.sum_rate(self.categories)
-        tmprates  = pd.DataFrame({"signal" : pd.Series(sgrate)},\
-                                {"background": pd.Series(bgrate)},\
-                                 { "all": pd.Series(allrate)})
-        tmperrors = pd.DataFrame({"signal" : pd.Series(sgerrors)},\
-                                {"background": pd.Series(bgerrors)},\
-                                 {"all": pd.Series(allerrors)})
-
+        tmprates  = pd.Series([sgrate,bgrate,allrate],index=["signal","background","all"])
+        tmperrors = pd.Series([sgerrors,bgerrors,allerrors],index=["signal","background","all"])
         rates = rates.append(tmprates)
         errors = errors.append(tmperrors)
 
@@ -813,11 +815,11 @@ class Dataset(object):
         rate_dict = dict()
         all_fudge_dict = dict()
         for catname in self.categorynames:
-            cfg = GetCategoryConfig(cat.name)
+            cfg = GetCategoryConfig(catname)
             label = cfg["label"]
-            rate_dict[label] = (rates[cat.name],errors[cat.name])
-            if fudges.has_key(cat.name):
-                all_fudge_dict[label] = fudges[cat.name]
+            rate_dict[label] = (rates[catname],errors[catname])
+            if fudges.has_key(catname):
+                all_fudge_dict[label] = fudges[catname]
             else:
                 all_fudge_dict[label] = None
 
@@ -836,12 +838,13 @@ class Dataset(object):
                     format="html"):
     
         def cellformatter(input):
+            print input
             if input is None:
                 return "-"
-            return "%4.2f +- %4.2f" %input
+            return "%4.2f +- %4.2f" %(input[0],input[1])
 
         rates,fudges = self._setup_table_data(signal=signal,background=background)
-        tt = d.TinyTable()
+        tt = TinyTable()
         tt.add("Rate (1/s)", **rates)
         tt.add("Ratio",**fudges)
         return tt.render(layout=layout,format=format,format_cell=cellformatter)

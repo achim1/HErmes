@@ -68,7 +68,7 @@ First tell the software, where to find the files to uread the data from. Categor
 The ReweightedSimulation category holds a reference to all the variables defined in the given category, however it allows for 
 the calculation of different weights.
 
-```
+```python
 import pyevsel.variables.categories as c
 
 numu_path = "/some/path"
@@ -87,7 +87,7 @@ The variable definitions can be written to its own python file, e.g. `variable_d
 Variables are declared by a unique name and optional bins, transformations and labels. The definitions describe the table and subnode
 where the variables can be found in the datafiles
 
-```
+```python
 variable_def.py
 
 ...
@@ -103,9 +103,9 @@ mc_p_ze = v.Variable("mc_p_zen",definitions=[("MCPrimary","zenith"),("mostEnerge
 
 ### getting variables and weighting
 
-The weighting is specific for IceCube and needs the icetray software.
+The weighting which is provided with the module is specific for IceCube and needs the icetray software. However, it could be extended easily to other experiments.
 
-```
+```python
 import variable_defs
 import icecube_goodies.weighting as gw
 import icecube_goodies.shortcuts as s
@@ -126,15 +126,102 @@ A cut can be defined by giving conditions with simple strings. After application
 the variable data after applying the cut.
 If necessary, cuts can be deleted
 
-```
+```python
 uncut_var  =  signal.get("myfavoritevariable")
 cut = cu.Cut(variables=[("energy",">",5)])
+uncutted_var = signal.get("myfavoritevariable")
 signal.add_cut(cut)
 signal.apply_cuts()
 cutted_var = signal.get("myfavoritevariable")
-print len(a),len(b)
+print len(uncutted_var) > len(cutted_var)
+=> True
+```
+
+#### undo and delete cuts
+
+A cut can be undone (if not the inplace parameter is set to true) with `Category.undo_cuts()` (which is the inverse to `Category.apply_cuts()`) and completely removed with `Category.delete_cuts()`
 
 
+### datasets
+
+A dataset is a combination of different cutegories, which allows to perform cuts simultaniously on all categories of the
+dataset
+
+```python
+import pyevsel.variables.cut as cu
+
+# background, data are of type pyevsel.variables.Category as well
+dataset = c.Dataset(signal,background,data)
+cut = cu.Cut(variables=[("energy",">",5)])
+dataset.add_cut(cut)
+dataset.apply_cuts()
+```
+
+#### gotchas
+
+**easy plotting of variable distributions**:
+
+* plots the distribution with ratio and cumulative distribution the `ratio` parameter defines which should be plot in the ratio part height defines the fraction of the individual panels (*The API for the ratio parameter might change slightly*)
+
+```python
+
+dataset.plot_distribution("energy",ratio=([data.name],[background.name]),heights=[.3,.2,.2])
+```
+##### plotting can be configured easily:
+
+Configfiles can be provided (a standard configuration is delivered with the software), which have to be written in yaml/json syntax, e.g.
+
+```
+
+canvas: {
+        leftpadding: 0.15,
+        rightpadding: 0.05,
+        toppadding:  0.0,
+        bottompadding: 0.1,
+        }
+
+savefig: {
+        dpi: 350,
+        facecolor: 'w',
+        edgecolor: 'w',
+        transparent: False,
+        bbox_inches: 'tight'       
+}
+
+
+categories: [{name: 'data',
+     label: 'exp',
+     histscatter: 'scatter',
+     dashistyle:{
+         color: 'k',
+         linewidth: 3,
+         alpha: 1.,
+         filled: False
+         },
+    dashistylescatter: {
+         color: 'k',
+         linewidth: 3,
+         alpha: 1.,
+         marker: 'o',
+         markersize: 4
+         }
+    },
+    {name: 'atmos_mu',
+    label: '$\mu_{atm}$',
+  ...
+
+```
+Each category can be adressed individually by its name. Plotting is done with dashi, and the keys `dashistyle` apply to `dashi.line()` histograms, where `dashiscatter` apply to `dashi.scatter()` style histograms. The `histscatter` parameter takes the values `line`,`scatter` or `overlay`. Labels can be valid Latex strings. 
+
+
+
+**rate table**: 
+
+* if weights are avaiable, the integrated rates can be displayed in a nice html table representation (uses dashi.tinytable.TinyTable). Signal and background parameters allow to calculate sum rates for signal and background
+
+```python
+table = dataset.tinytable(signal=[signal],background=[background])
+```
 
 
 

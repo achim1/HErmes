@@ -1,0 +1,101 @@
+---
+layout: post
+title:  "Combining categories to datasets"
+date:   2016-01-11 21:59:00 -0600
+apidatasetdocs: 'http://achim1.github.io/pyevsel/apidocs/pyevsel.variables.html#module-pyevsel.variables.categories'
+apishortcutdocs: 'http://achim1.github.io/pyevsel/apidocs/pyevsel.icecube_goodies.html#module-pyevsel.icecube_goodies.shortcuts'
+categories: jekyll update
+---
+
+Datasets ([API docs][the_link]) are ment to save repetitive work while working with categories. In general, the member functions of `categories.Dataset` are wrappers around the respective member of the individual categories, which are grouped together by the dataset. Furthermore, datasets provide some gotchas, like pre-defined plots and a rate table with a nicely formatted html output, which can be displayed in the ipython notebook.
+
+Working with datasets in a somewhat realistic scenario with many datasets containing neutrino and atmospheric muon simulation plus some data looks like this:
+
+{% highlight python %}
+import pyevsel.variables.categories as c
+import datasets as ds
+
+ana_basepath   = "/some/path"
+nuepath    = ana_basepath + "nue"
+numupath   = ana_basepath + "numu"
+nutaupath  = ana_basepath + "nutau"
+mupath     = ana_basepath + "mu"
+muccpath   = ana_basepath + "mu-cc"
+datapath   = ana_basepath + "exp"
+
+astro_nue   = c.Simulation("astro_nue")
+astro_numu  = c.Simulation("astro_numu")
+astro_nutau = c.Simulation("astro_nutau")
+
+honda_nue   = c.ReweightedSimulation("conv_numu",astro_nue)
+honda_numu  = c.ReweightedSimulation("conv_numu",astro_numu)
+
+ers_nue   = c.ReweightedSimulation("prompt_nue",astro_nue)
+ers_numu  = c.ReweightedSimulation("prompt_numu",astro_numu)
+
+data = c.Data("exp")
+
+mu   = c.Simulation("atmos_mu")
+mucc = c.Simulation("atmos_cc_mu")
+
+for cat,pth,ds_ in [(astro_nue,nuepath,ds.nue_ds),(astro_numu,numupath,ds.numu_ds),
+                   (astro_nutau,nutaupath,ds.nutau_ds),
+                   (data,datapath,None),
+                   (mu,mupath,ds.mu_ds),
+                   (mucc,muccpath,ds.mucc_ds)]:
+    if ds_ is None:
+        cat.get_files(pth,ending=".h5",prefix="")
+    else:
+        cat.get_files(pth,ending=".h5",prefix="",datasets=ds_)
+data.set_livetime(42) #time in seconds
+categories = [astro_nue,astro_numu,astro_nutau,data,mu,mucc]
+dataset = c.Dataset(categories)
+
+{% endhighlight %}
+
+The imported datasets module in this particular example containes member dictionaries for each category which are a mapping of dataset number to the number of files which are available for this specific dataset (might be an IceCube thing though).
+
+After being set up, the dataset provides an interface to the categories it is holding and joint operations can be performed.
+
+{% highlight python %}
+import variable_defs
+
+dataset.read_all_vars(variable_defs)        
+{% endhighlight %}
+
+And the variables actually now hold the data. Variables in the module `variable_defs` need to be Variable instances defined as follows:
+
+{% highlight python %}
+import pyevsel.variables.variable as v
+import pyevsel.variables.conversions as conv
+...
+energy  = v.Variable("energy",bins=n.linspace(0,10,20),transform=n.log10,label=r"$\log(E_{rec}/$GeV$)$",definitions=[("CredoFit","energy")])
+
+mc_p_en = v.Variable("mc_p_en",definitions=[("MCPrimary","energy"),("mostEnergeticPrimary","energy")])
+mc_p_ty = v.Variable("mc_p_ty",definitions=[("MCPrimary","type"),("mostEnergeticPrimary","type")],transform=conv.ConvertPrimaryToPDG)
+mc_p_ze = v.Variable("mc_p_zen",definitions=[("MCPrimary","zenith"),("mostEnergeticPrimary","zenith")],transform=conv.ConvertPrimaryToPDG)
+...
+{% endhighlight %}
+
+If a dataset is set up like this, weights can be calculated easily (only implemented for IceCube yet). For the available models, see [API Neutrino/Muon fluxes][the_linksc]. In this specific example, the weighting might look like this:
+ 
+{% highlight python %}
+import pyevsel.icecube_goodies.weighting as gw
+import pyevsel.icecube_goodies.shortcuts as s
+models = dict()
+models['astro_nue'] = s.NuFluxes.E2
+...
+models['conv_nue'] = s.NuFluxes.Honda2006H3a
+...
+models['mu'] = s.MuFluxes.GaisserH3a
+...
+dataset.get_weights(weightfunction=gw.GetModelWeight,models=models)
+
+{% endhighligh %}
+
+... T.B.C. ...
+
+[the_link]: {{page.apidatasetdocs}}
+[the_liksc]: {{page.apishortcutdocs}}
+
+

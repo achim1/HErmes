@@ -17,7 +17,7 @@ cut = cu.Cut(variables=[("energy",">",5)])
 signal.add_cut(cut)
 signal.apply_cuts()
 cutted_var = signal.get("myfavoritevar")
-print len(uncutvar) < len(cutted_var)
+print len(uncutvar) > len(cutted_var)
 => True
 {% endhighlight %}
 

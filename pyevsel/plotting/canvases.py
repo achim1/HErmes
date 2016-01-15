@@ -108,6 +108,12 @@ class YStackedCanvas(object):
 
 
     def select_axes(self, axes):
+        """
+        Set the scope on a certain axes
+
+        Args:
+            axes (int): 0, lowest, -1 highest, increasing y-order
+        """
         ax = self.axes[axes]
         p.sca(ax)
         return ax
@@ -138,7 +144,7 @@ class YStackedCanvas(object):
 
         for ending in endings:
             filename = os.path.join(path,name + '.' + ending)
-            self.figure.savefig(filename,format=ending,**kwargs)
+            self.figure.savefig(filename,format=ending,**GetSavefigConfig())
             Logger.info("Saved to %s" %filename)
             if ending == "png":
                 self.png_filename = filename

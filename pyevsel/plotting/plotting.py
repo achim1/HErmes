@@ -14,7 +14,7 @@ d.visual()
 from pyevsel.plotting.plotcolors import GetColorPalette
 import pyevsel.plotting.canvases as c
 from pyevsel.utils.logger import Logger
-from pyevsel.plotting import GetCategoryConfig
+from pyevsel.plotting import GetCategoryConfig,LoadConfig
 reload(c)
 
 STD_CONF=os.path.join(os.path.split(__file__)[0],"plotsconfig.yaml")
@@ -23,6 +23,42 @@ import pylab as p
 
 STYLE = os.path.join(os.path.split(__file__)[0],"pyevseldefault.mplstyle")
 p.style.use(STYLE)
+
+###############################################
+
+def CreateArrow(x_0,y_0,dx,dy,length,\
+                width = .1,shape="right",\
+                fc="k",ec="k",\
+                alpha=1.,log=False):
+    """
+    Create an arrow object for plots
+
+    Args:
+        x_0 (float): x-origin
+        y_0 (float): y-origin
+        dx (float): x length
+        dy (float): y length
+        lenght (float): scale natural length 
+    Keyword Args:
+        width (float): thickness of arrow
+        shape (str): either full, left or right
+        fc (str): facecolor
+        ec (str): edgecolor
+        alpha (float): 0 -1 
+        log (bool): If log, take care of proportions
+    """
+    head_starts_at_zero = False
+    head_width = width*5
+    head_length = length*0.1
+    if log: # slightly bigger arrow
+        head_width = width*6
+        head_length = length*0.2
+
+    arrow_params={'length_includes_head':False, 'shape':shape, 'head_starts_at_zero':head_starts_at_zero}
+    arr = p.arrow(x_0, y_0, dx*length, dy*length, fc=fc, ec=ec, alpha=alpha, width=width, head_width=head_width,head_length=head_length, **arrow_params)
+    return arr
+
+###########################
 
 def PlotVariableDistribution(categories,name,ratio=([],[])):
     """
@@ -54,18 +90,20 @@ class VariableDistributionPlot(object):
     and ratio plots for variables
     """
 
-    def __init__(self):
+    def __init__(self,cuts=[]):
         self.histograms = {}
         self.histratios = {}
         self.cumuls     = {}
         self.plotratio  = False
         self.plotcumul  = False
         self.canvas     = None
+        self.label      = ''
+        self.cuts       = cuts
         #self.categories = {}
         #for k in categories.keys():
         #    self.categories[k] = categories[k]
 
-    def _add_data(self,dataname,variable_data,bins,weights=None):
+    def _add_data(self,dataname,variable_data,bins,weights=None,label=''):
         """
         Histogram the added data and store internally
         
@@ -79,9 +117,35 @@ class VariableDistributionPlot(object):
         """
         if weights is None:
             weights = n.ones(len(variable_data))
-        print weights,dataname
         self.histograms[dataname] = d.factory.hist1d(variable_data,bins,weights=weights)
+        self.label = label
 
+    def indicate_cut(self,ax):
+        """
+        If cuts are given, indicate them by lines
+
+        Args:
+            ax (pylab.axes): axes to draw on
+
+        """
+        vmin,vmax = ax.get_ylim()
+        hmin,hmax = ax.get_xlim()
+        for __,operator,value in self.cuts:
+            width = vmax/50.
+            ax.vlines(value,ymin=vmin,ymax=vmax,linestyle=':')
+            length = (hmax - hmin)*0.1
+            shape = 'left'
+            inversed = False
+            if operator in ('>','>='):
+                shape = 'right'
+                inversed = True
+
+            arr = CreateArrow(cutval,vmax*0.1, -1., 0, length, width= width,shape=shape,log=True)
+            ax.add_patch(arr)
+            if not inversed:
+                ax.axvspan(value, hmax, facecolor=st.helpercolors["prohibited"], alpha=0.5)
+            else:
+                ax.axvspan(hmin, value, facecolor=st.helpercolors["prohibited"], alpha=0.5)
 
     def add_variable(self,category,variable_name):
         """
@@ -92,7 +156,7 @@ class VariableDistributionPlot(object):
            variable_name (string): The name of the variable
 
         """
-        self._add_data(category.name,category.get(variable_name),category.vardict[variable_name].bins,weights=category.weights)
+        self._add_data(category.name,category.get(variable_name),category.vardict[variable_name].bins,weights=category.weights,label=category.vardict[variable_name].label)
 
     def add_ratio(self,names_upper,names_under,total_ratio=None,total_ratio_errors=None,log=False,label="data/$\Sigma$ bg"):
         """
@@ -264,11 +328,15 @@ class VariableDistributionPlot(object):
                 k = self.histograms[self.histograms.keys()[ax[0]]]
                 self._draw_distribution(cur_ax,k,log=log)    
         lgax = self.canvas.select_axes(-1)#most upper one
-        lg = lgax.legend(bbox_to_anchor=(0., 1.0, 1., .102), loc=3,frameon=True,ncol=3,framealpha=1.,borderaxespad=0,mode="expand",handlelength=2,numpoints=1)
-        lg.get_frame().set_linewidth(1.5)
+        lg = lgax.legend(**LoadConfig()['legend'])
+        legendwidth = LoadConfig()
+        legendwidth = legendwidth['legendwidth']
+        lg.get_frame().set_linewidth(legendwidth)
         # cleanup
         #self.canvas.limit_yrange()
         self.canvas.eliminate_lower_yticks()
+        # set the label on the lowest axes
+        self.canvas.axes[0].set_xlabel(self.label)
 
 
     def add_legend(self,**kwargs):

@@ -18,6 +18,19 @@ savefig: {
         bbox_inches: 'tight'       
 }
 
+legend: {
+        bbox_to_anchor: [0., 1.0, 1., .102],
+        loc: 3,
+        frameon: True,
+        ncol: 3,
+        framealpha: 1.,
+        borderaxespad: 0,
+        mode: "expand",
+        handlelength: 2,
+        numpoints: 1
+}
+
+legendwidth: 1.5
 
 categories: [{name: 'data',
      label: 'exp',

@@ -124,9 +124,9 @@ def AtmosphericNuFlux(modelname='honda2006',knee="",fluxconst=1.):
 
     def flux(mc_p_energy,mc_p_type,mc_p_zenith):
         mc_p_type = n.int32(mc_p_type)
-        print mc_p_type,"atm"
+        #print mc_p_type,"atm"
         mc_p_type = ConvertPrimaryFromPDG(mc_p_type)
-        print mc_p_type,"atm from pdg"
+        #print mc_p_type,"atm from pdg"
         #mc_p_type = map(dataclasses.I3Particle.ParticleType,mc_p_type)
         return fluxconst*nuflux.getFlux(mc_p_type,mc_p_energy,mc_p_zenith)
 

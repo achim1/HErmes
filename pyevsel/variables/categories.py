@@ -399,9 +399,9 @@ class Simulation(Category):
                                  #self.vardict[mc_p_energy].data,\
                                  #self.vardict[mc_p_type].data))
 
-        @property
-        def livetime(self):
-            return self.weights.sum() / n.power(self.weights, 2).sum()
+    @property
+    def livetime(self):
+        return self.weights.sum() / n.power(self.weights, 2).sum()
 
 
 
@@ -844,7 +844,7 @@ class Dataset(object):
             print input
             if input is None:
                 return "-"
-            return "%4.2f +- %4.2f" %(input[0],input[1])
+            return "%4.2e +- %4.2e" %(input[0],input[1])
 
         rates,fudges = self._setup_table_data(signal=signal,background=background)
         tt = TinyTable()

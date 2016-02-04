@@ -56,7 +56,7 @@ pdist        = lambda p1, p2 : ((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 + (p1[2]-p2[
 # mc primary
 mc_p_en = V("mc_p_en",definitions=[("MCPrimary","energy"),("mostEnergeticPrimary","energy")])
 mc_p_ty = V("mc_p_ty",definitions=[("MCPrimary","type"),("mostEnergeticPrimary","type")],transform=conv.ConvertPrimaryToPDG)
-mc_p_ze = V("mc_p_zen",definitions=[("MCPrimary","zenith"),("mostEnergeticPrimary","zenith")],transform=conv.ConvertPrimaryToPDG)
+mc_p_ze = V("mc_p_zen",definitions=[("MCPrimary","zenith"),("mostEnergeticPrimary","zenith")],transform=n.cos)
 
 
 # MC refvis cascade

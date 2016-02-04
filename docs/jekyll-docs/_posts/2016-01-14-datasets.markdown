@@ -93,9 +93,20 @@ dataset.get_weights(weightfunction=gw.GetModelWeight,models=models)
 
 {% endhighligh %}
 
-... T.B.C. ...
+Applying cuts is the same as for individual categories. Applying a cut to a dataset will automatically apply on all individual datasets it holds.
+
+{% highlight python %} 
+
+import pyevsel.variables.cut as cu
+
+cut = cu.Cut(variables=[("energy",">",5)])
+dataset.add_cut(cut)
+dataset.apply_cuts()
+
+i% endhighlight %}
+
 
 [the_link]: {{page.apidatasetdocs}}
-[the_liksc]: {{page.apishortcutdocs}}
+[the_linksc]: {{page.apishortcutdocs}}
 
 

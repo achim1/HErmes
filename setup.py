@@ -11,7 +11,9 @@ setup(name='pyevsel',
       url='https://github.com/achim1/pyevsel',
       download_url="pip install pyevsel",
       install_requires=['numpy>=1.9.0',
-                        'matplotlib>=1.5.0'],
+                        'matplotlib>=1.5.0',
+                        'pandas>=0.17.1',
+                        'pyyaml>=3.10.0'],
       license="GPL",
       platforms=["Ubuntu 12.04"],
       classifiers=[
@@ -27,8 +29,7 @@ setup(name='pyevsel',
                 "astrophysics", "icecube"],
       packages=['pyevsel','pyevsel.icecube_goodies',\
                 'pyevsel.plotting','pyevsel.utils',\
-                'pyevsel.variables']
+                'pyevsel.variables'],
       #scripts=['bin/muonic','bin/which_tty_daq'],
-      #package_data={'muonic': ['daq/simdaq.txt'],'':['*.txt','*.rst']},
-      #package_data={'' : ['docs/*','README'], 'muonic': ['daq/simdaq.txt','daq/which_tty_daq']}, 
+      package_data={'pyevsel': ['plotting/plotsconfig.yaml','plotting/pyevseldefault.mplstyle','utils/PATTERNS.cfg']}
       )

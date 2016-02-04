@@ -91,7 +91,7 @@ models['mu'] = s.MuFluxes.GaisserH3a
 ...
 dataset.get_weights(weightfunction=gw.GetModelWeight,models=models)
 
-{% endhighligh %}
+{% endhighlight %}
 
 Applying cuts is the same as for individual categories. Applying a cut to a dataset will automatically apply on all individual datasets it holds.
 
@@ -103,7 +103,7 @@ cut = cu.Cut(variables=[("energy",">",5)])
 dataset.add_cut(cut)
 dataset.apply_cuts()
 
-i% endhighlight %}
+{% endhighlight %}
 
 
 [the_link]: {{page.apidatasetdocs}}

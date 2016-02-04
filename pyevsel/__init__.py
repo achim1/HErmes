@@ -19,4 +19,8 @@ def _DeleteTmpFile():
     from pyevsel.plotting import CONFIGFILE
     os.remove(CONFIGFILE)
 
-atexit.register(_DeleteTmpFile)
+try:
+    atexit.register(_DeleteTmpFile)
+except IOError:
+    print "Can not register tmpfile deletion right now..."
+

@@ -6,7 +6,7 @@ HEP style eventselection with python
 import atexit
 import os
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 # delete created tmpfile
 # a bit ugly though..as
 

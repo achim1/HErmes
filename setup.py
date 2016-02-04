@@ -1,7 +1,9 @@
 from setuptools import setup
 
+from pyevsel import __version__
+
 setup(name='pyevsel',
-      version='0.1.0',
+      version=__version__,
       description='Eventselection for HEP analysis',
       long_description='Manages bookkeeping for different simulation datasets, developed for the use with IceCube data',
       author='Achim Stoessl',

@@ -3,10 +3,14 @@ Unit conversions and such
 """
 
 from numpy import vectorize,int32
-
+from icecube import icetray,dataclasses,NewNuFlux
 ####################################################
 
+
 class ParticleType:
+    """
+    Namespace for icecube particle type codes
+    """
     PPlus       =   14
     He4Nucleus  =  402
     N14Nucleus  = 1407
@@ -22,7 +26,11 @@ class ParticleType:
 
 #######################################################
 
+
 class PDGCode:
+    """
+    Namespace for PDG conform particle type codes
+    """
     PPlus       =       2212
     He4Nucleus  = 1000020040
     N14Nucleus  = 1000070140
@@ -61,7 +69,7 @@ pdg_to_ptype = \
 1000080160     :  1608,
 1000130270     :  2713,
 1000260560     :  5626,
-          12   :    66,
+        12     :    66,
        -12     :    67,
         14     :    68,
        -14     :    69,
@@ -70,20 +78,52 @@ pdg_to_ptype = \
 
 ##############################
 
+
+def IsPDGEncoded(pid,neutrino=False):
+    """
+    Check if the particle has already a pdg compatible
+    pid
+
+    Args:
+        id (int): Partilce Id
+
+    Keyword Args:
+        neutrino (bool): as nue is H in PDG, set true if you know already
+                    that ihe particle might be a neutrino
+
+    Returns (bool): True if PDG compatible
+    """
+
+    for i in pid.values:
+        if i in pdg_to_ptype.keys():
+            if i == 14 and neutrino:
+                return True
+            elif i == 14 and not neutrino:
+                return False
+
+            else:
+                return True
+
+    return False
+
+##############################
+
+
 def ConvertPrimaryToPDG(pid):
     """
     Convert a primary id in an i3 file to the new values
     given by the pdg
     """
     def _convert(pid):
-        if ptype_to_pdg.has_key(pid):
+        if pid in ptype_to_pdg:
             return int32(ptype_to_pdg[pid])
         else:
-             return int32(pid)
+            return int32(pid)
 
     return vectorize(_convert)(pid)
 
 ###############################
+
 
 def ConvertPrimaryFromPDG(pid):
     """
@@ -91,10 +131,10 @@ def ConvertPrimaryFromPDG(pid):
     given by the pdg
     """
     def _convert(pid):
-        if pdg_to_ptype.has_key(pid):
+        if pid in pdg_to_ptype:
             return int32(pdg_to_ptype[pid])
         else:
-             return int32(pid)
+            return int32(pid)
 
     return vectorize(_convert)(pid)
 

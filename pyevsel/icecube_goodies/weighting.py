@@ -1,17 +1,12 @@
 """
-An interface to icecubes weighting schmagoigl
+An interface to icecube's weighting schmagoigl
 """
 
-from icecube import icetray,dataclasses,NewNuFlux
 from icecube.weighting.weighting import from_simprod, EnergyWeight,ParticleType
-from icecube.weighting.fluxes import *
-
-from conversions import ParticleType,ConvertPrimaryFromPDG
 import inspect
+import conversions as conv
 
-import numpy as n
-
-FLUXES = {"gaisserH3a" : GaisserH3a}
+reload(conv)
 
 ###########################################
 
@@ -50,7 +45,7 @@ class Weight(object):
         if (len(zenith) > 0) and can_use_zenith:
             return self.flux(energy,ptype,zenith)/self.gen(energy,particle_type=ptype,cos_theta=zenith)
         else:
-            return self.flux(energy,ptype)/self.gen(energy,particle_type=ptype)
+            return self.flux(energy,ptype)/self.gen(energy,particle_type=ptype,cos_theta=zenith)
 
 ###########################################
 
@@ -58,6 +53,10 @@ class Weight(object):
 def GetGenerator(datasets):
     """
     datasets must be a dict of dataset_id : number_of_files
+
+    Args:
+        datasets (dict): Query the database for these datasets.
+                         dict dataset_id -> number of files
     """
 
     generators = []
@@ -71,70 +70,40 @@ def GetGenerator(datasets):
 
 #####################################
 
+
 def HowManyFilesDB(dataset):
     """
     What does the DB think how many files 
     should be there
+
+    Args:
+        dataset (int): dataset_id
     """
     nfiles,__ = from_simprod(dataset)
     return nfiles
 
 ##########d##################################
 
+
 def GetModelWeight(model,datasets,mc_p_energy=[],mc_p_type=[],mc_p_zenith=[],**model_kwargs):
     """
-    Compute weights for CORSIKA datasets    
-    """
-    if callable(model):
-        if not model_kwargs:
-            flux = model()
-        else:
-            flux = model(**model_kwargs)
+    Compute weights using a predefined model
 
+    Args:
+        model (func): Used to calculate the target flux
+        datasets (dict): Get the generation pdf for these datasets from the db
+                         dict needs to be dataset_id -> nfiles
+    Keyword Args:
+        mc_p_energy (array-like): primary energy
+        mc_p_type (array-like): primary particle type
+        mc_p_zenith (array-like): primary particle cos(zenith)
+    """
+    if model_kwargs:
+        flux = model(**model_kwargs)
     else:
-        if model_kwargs:
-            print "Can't use model kwargs with predefined model!"
-        flux = FLUXES[model]
-        flux = flux()   
+        flux = model()
 
     gen  = GetGenerator(datasets)
     weight = Weight(gen,flux)
     return weight(mc_p_energy,mc_p_type,zenith=mc_p_zenith)
-
-###############################################
-
-def PowerLawFlux(fluxconst=1e-8,gamma=2):
-    if gamma > 0:
-        gamma *= -1
-
-    # closure:)
-    def flux(mc_p_energy,mc_p_type,mc_p_zenith):
-        # weighting API requires second and third argument even if we
-        # don't need it
-        flux = fluxconst * n.power(mc_p_energy, gamma)
-        return flux
-    return flux 
-
-###############################################
-
-def AtmosphericNuFlux(modelname='honda2006',knee="",fluxconst=1.):
-    nuflux = NewNuFlux.makeFlux(modelname)
-    if knee:
-        nuflux.knee_reweighting_model = knee
-
-    def flux(mc_p_energy,mc_p_type,mc_p_zenith):
-        mc_p_type = n.int32(mc_p_type)
-        #print mc_p_type,"atm"
-        mc_p_type = ConvertPrimaryFromPDG(mc_p_type)
-        #print mc_p_type,"atm from pdg"
-        #mc_p_type = map(dataclasses.I3Particle.ParticleType,mc_p_type)
-        return fluxconst*nuflux.getFlux(mc_p_type,mc_p_energy,mc_p_zenith)
-
-    return flux
-      
-##############################################
-
-def PrintFluxes():
-    return "".join(FLUXES.keys())
-
 

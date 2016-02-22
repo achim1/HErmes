@@ -23,6 +23,8 @@ MC_P_TY   = "mc_p_ty"
 MC_P_ZE   = "mc_p_ze"
 RUN_START = "run_start_mjd"
 RUN_STOP  = "run_stop_mjd"
+RUN       = "run"
+EVENT     = "event"
 
 class Category(object):
     """
@@ -33,10 +35,12 @@ class Category(object):
     datasets = dict()
     files    = []
     cuts     = []
-    cutmask  = []
+    cutmask  = n.array([])
     _weights  = []
     _is_harvested = False
     _weightfunction = False
+    _raw_count = 0 #how much 'raw events' (unweighted)
+
 
     def __init__(self,name):
         """
@@ -47,12 +51,11 @@ class Category(object):
         self.datasets = dict()
         self.files = []
         self.cuts  = []
-        self.cutmask = []
+        self.cutmask = n.array([])
         try:
             self.vardict = {}
         except AttributeError:
             pass #This happens for our ReweightedSimulation class
-        self._is_harvested = False
         self._weights     = pd.Series()
         self._weightfunction = None
 
@@ -67,6 +70,21 @@ class Category(object):
             dataset (int): A dataset number extracted from the filename
         """
         return DS_ID(filename)
+
+    def _get_raw_count(self):
+        """
+        Calculate how many raw events are in this
+        category
+
+        """
+
+        assert self._is_harvested,"Please read out variables first"
+        self._raw_count = len(self.get(RUN))
+
+    # read only
+    @property
+    def raw_count(self):
+        return self._raw_count
 
     def set_weightfunction(self,func):
         """
@@ -135,7 +153,7 @@ class Category(object):
             else:
                 print "..using force.."
        
-        if kwargs.has_key("datasets"):
+        if "datasets" in kwargs:
             filtered_files = []
             self.datasets = kwargs.pop("datasets")
             files = harvest_files(*args,**kwargs)        
@@ -164,7 +182,7 @@ class Category(object):
         
         """
 
-        if not self.vardict.has_key(varkey):
+        if varkey not in self.vardict:
             raise KeyError("%s not found!" %varkey)
 
         if len(self.cutmask):
@@ -199,7 +217,9 @@ class Category(object):
             #FIXME check if this causes a memory leak
             self.vardict[varname]._rewire_variables(self.vardict)
             self.vardict[varname].harvest()
-    
+        self._is_harvested = True
+        self._get_raw_count()
+
     def get_weights(self):
         raise NotImplementedError("Not implemented for base class!")
 
@@ -240,9 +260,8 @@ class Category(object):
             inplace (bool): If True, cut the internal variable buffer
                            (Can not be undone except variable is reloaded)
         """
-        self.cutmask = []
-        testvar = self.cuts[0].cutdict.keys()[0]
-        mask = n.ones(len(self.get(testvar)))
+        self.cutmask = n.array([])
+        mask = n.ones(self.raw_count)
         for cut in self.cuts:
             for varname,cutfunc in cut:
                 mask = n.logical_and(mask,self.get(varname).apply(cutfunc))
@@ -251,7 +270,7 @@ class Category(object):
             for k in self.vardict.keys():
                 self.vardict[k].data = self.vardict[k].data[mask]
         else:
-            self.cutmask = mask
+            self.cutmask = n.array(mask)
 
         return
 
@@ -260,7 +279,7 @@ class Category(object):
         Conveniently undo a previous "apply_cuts"
         """
 
-        self.cutmask = []
+        self.cutmask = n.array([])
 
 
     def delete_cuts(self):
@@ -286,11 +305,46 @@ class Category(object):
         return (rate,error)
 
 
-    def __radd__(self,other):
-        
+    def add_livetime_weighted(self,other,self_livetime=None,other_livetime=None):
+        """
+        Combine two datasets livetime weighted. If it is simulated data,
+        then in general it does not know about the detector livetime.
+        In this case the livetimes for the two datasets can be given
+
+        Args:
+            other (pyevsel.categories.Category): Add this dataset
+
+        Keyword Args:
+            self_livetime (float): the data livetime for this dataset
+            other_livetime (float): the data livetime for the other dataset
+
+        """
+
+        assert self.vardict.keys() == other.vardict.keys(),"Must have the same variables to be combined"
+
+        if isinstance(self,Data):
+            self_livetime = self.livetime
+
+        if isinstance(other,Data):
+            other_livetime = other.livetime
+
         for k in other.datasets.keys():
             self.datasets.update({k : other.datasets[k]})
         self.files.extend(other.files)
+        if self.cuts or other.cuts:
+            self.cuts.extend(other.cuts)
+        if len(self.cutmask) or len(other.cutmask):
+            self.cutmask = n.hstack((self.cutmask,other.cutmask))
+
+        for name in self.variablenames:
+            self.vardict[name].data = pd.concat([self.vardict[name].data,other.vardict[name].data])
+
+        self_weight = (self_livetime/(self_livetime + other_livetime))
+        other_weight = (other_livetime/(self_livetime + other_livetime))
+
+        self._weights = pd.concat([self_weight*self._weights,other_weight*other._weights])
+        self._get_raw_count()
+
 
     def __repr__(self):
         return """<Category: Category %s>""" %self.name
@@ -318,6 +372,10 @@ class Category(object):
 
 
 class Simulation(Category):
+    """
+    An interface to variables from simulated data
+    Allows to weight the events
+    """
 
     def __init__(*args,**kwargs):
         Category.__init__(*args,**kwargs)    
@@ -341,7 +399,7 @@ class Simulation(Category):
         for var,name in [(energy_var,MC_P_EN),(type_var,MC_P_TY),(zenith_var,MC_P_ZE)]:
             if var.name is None:
                 print "No %s available" %name
-            elif self.vardict.has_key(name):
+            elif name in self.vardict:
                 print "..%s already defined, skipping..."
                 continue
             
@@ -413,7 +471,7 @@ class ReweightedSimulation(Simulation):
     def __init__(self,name,mother):
         self._mother = mother
         self.name = name
-        self._weights     = pd.Series()
+        self._weights = pd.Series()
         self._weightfunction = None
 
     #proxy the stuff by hand
@@ -454,7 +512,7 @@ class ReweightedSimulation(Simulation):
         raise NotImplementedError
  
     def set_mc_primary(self,energy_var=variables.Variable(None),type_var=variables.Variable(None),zenith_var=variables.Variable(None)):
-        raise NotImplementedError
+        return self._mother.set_mc_primary(energy_var=energy_var,type_var=type_var,zenith_var=zenith_var)
 
     def read_mc_primary(self):
         raise NotImplementedError
@@ -464,6 +522,10 @@ class ReweightedSimulation(Simulation):
 
 
 class Data(Category):
+    """
+    An interface to real time event data
+    Simplified weighting only
+    """
 
     def __init__(self,*args,**kwargs):
         print "Runs are considered as datasets..."
@@ -558,25 +620,24 @@ class Data(Category):
         return 
 
     def get_weights(self):
-        
-        # get a random variable
-        for k in self.vardict.keys():
-            datalen = len(self.get(k))
-            if datalen:
-                break
-            else:
-                Logger.warning("Read out variables first!")        
+        """
+        Calculate weights as rate, that is number of
+        events per livetime
+        """
 
-        self._weights = pd.Series(n.ones(datalen,dtype=n.float64)/self.livetime)
+        self._weights = pd.Series(n.ones(self.raw_count,dtype=n.float64)/self.livetime)
 
     def __repr__(self):
         return """<Category: Data %s>""" %self.name
+
+
 
 #################################################################
 
 class Dataset(object):
     """
-    Holds many different categories
+    Holds different categories, relays calls to each
+    of them
     """
     categories = []
     livetime   = 0
@@ -631,6 +692,14 @@ class Dataset(object):
             cat.get_weights(models[cat.name])
 
     def add_category(self,category):
+        """
+        Add another category to the dataset
+
+        Args:
+            category (pyevsel.categories.Category): add this category
+
+        """
+
         self.categories.append(category)
 
     def get_category(self,categoryname):
@@ -675,6 +744,10 @@ class Dataset(object):
         return df
 
     def __repr__(self):
+        """
+        String representation
+        """
+
         rep = """ <Dataset: """
         for cat in self.categories:
             rep += "%s " %cat.name
@@ -699,10 +772,18 @@ class Dataset(object):
             cat.apply_cuts(inplace=inplace)
 
     def undo_cuts(self):
+        """
+        Undo previously done cuts, but keep them so that
+        they can be re-applied
+        """
         for cat in self.categories:
             cat.undo_cuts()
 
     def delete_cuts(self):
+        """
+        Completely purge all cuts from this
+        dataset
+        """
         for cat in self.categories:
             cat.delete_cuts()
 
@@ -839,7 +920,19 @@ class Dataset(object):
                     background=[],\
                     layout="v",\
                     format="html"):
-    
+        """
+        Use dashi.tinytable.TinyTable to render a nice
+        html representation of a rate table
+
+        Args:
+            signal (list) : summing up signal categories to calculate total signal rate
+            background (list): summing up background categories to calculate total background rate
+            layout (str) : "v" for vertical, "h" for horizontal
+            format (str) : "html","latex","wiki"
+
+        Returns:
+
+        """
         def cellformatter(input):
             print input
             if input is None:

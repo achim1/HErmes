@@ -7,7 +7,7 @@ import numpy as n
 
 from pyevsel.variables.variables import Variable as V
 from pyevsel.variables.variables import CompoundVariable as CV
-from pyevsel.variables.categories import RUN_START,RUN_STOP
+from pyevsel.variables.categories import RUN_START,RUN_STOP,RUN,EVENT
 
 from pyevsel.icecube_goodies import conversions as conv
 # abbreviations
@@ -52,6 +52,9 @@ identity     = lambda i : i
 micsec       = lambda ns : ns/1000.
 pdist        = lambda p1, p2 : ((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 + (p1[2]-p2[2])**2).map(n.sqrt)
 
+# run and event id
+run   = V(RUN,definitions=[("I3EventHeader","Run")])
+event = V(EVENT,definitions=[("I3EventHeader","Run")])
 
 # mc primary
 mc_p_en = V("mc_p_en",definitions=[("MCPrimary","energy"),("mostEnergeticPrimary","energy")])
@@ -68,7 +71,8 @@ mc_refvis_t    = V("mc_refvis_t",bins=timingbins,definitions=[("mostEnergeticCas
 
 
 # recovars
-l3credo_energy = V("l3credo_energy",bins=energybins,transform=n.log10,label=r"$\log(E_{rec}/$GeV$)$",definitions=[("CredoFit","energy")])
+l3credo_energy = V("l3credo_energy",bins=energybins,transform=n.log10,label=r"$\log(E_{rec}/$GeV$)$",definitions=[("CredoFit","energy"),("CscdL3_Credo_SpiceMie","energy")])
+l3credo_z = V("l3credo_z",bins=vertexbins,label=r"$z$ [m]",definitions=[("CredoFit","z"),("CscdL3_Credo_SpiceMie","z")])
 monopod_energy = V("monopod_energy",bins=energybins,transform=n.log10,label=r"$\log(E_{rec}/$GeV$)$",definitions=[("Monopod4","energy")])
 monopod_x      = V("monopod_x",bins=vertexbins,label=r"$x$ [m]",definitions=[("Monopod4","x")])
 monopod_y      = V("monopod_y",bins=vertexbins,label=r"$y$ [m]",definitions=[("Monopod4","y")])

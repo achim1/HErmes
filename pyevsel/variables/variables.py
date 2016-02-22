@@ -67,54 +67,72 @@ class Variable(object):
     def harvest(self,*filenames):
         """
         Get the variable from a datafile
+
+        FIXME: this entire method needs to be reworked!
         """
         if self._is_harvested:
             return        
 
         for filename in filenames:
-        
             ext = f.strip_all_endings(filename)[1]
             assert ext in REGISTERED_FILEEXTENSIONS, "Filetype %s not know" %ext
             assert os.path.exists(filename), "File %s does not exist!" %ext
-            data = []
-            defindex = 0
+            data = pd.Series()
+            if self.defsize == 1:
+                data = pd.DataFrame()
+            #defindex = 0
             if ext == ".h5":
                 #store = pd.HDFStore(filename)
                 store = tables.openFile(filename)
 
-            found_data = False
-            while not found_data:
-                if defindex == len(self.definitions):
-                    Logger.warning("No data for definitions %s found!" %self.definitions)
-                    return
+            for definition in self.definitions:
+                #if defindex == len(self.definitions):
+                #    Logger.warning("No data for definitions %s found!" %self.definitions)
+                #    return
                 if ext == ".h5":
                     if self.defsize == 2:
                         try:
-                            #data = store.select_column(*self.definitions[defindex])
-                            data = store.getNode("/" + self.definitions[defindex][0]).col(self.definitions[defindex][1])
+                            #data = store.select_column(*definition)
+                            data = store.getNode("/" + definition[0]).col(definition[1])
                             data = pd.Series(data)
-                            found_data = True
+                            #found_data = True
                         except AttributeError:
-                            defindex += 1
+                            #defindex += 1
                             continue
-                    elif self.defsize == 1:
+                    elif self.defsize == 1: #FIXME what happens if it isn't found?
                         #data = store.select(self.definitions[defindex][0])
-                        data = store.getNode("/" + self.definitions[defindex][0].read())
+                        data = store.getNode("/" + definition[0].read())
                         data = pd.DataFrame(data)
+                        #found_data = True
                 elif ext == ".root":
                     #FIXME: What happens if it is not found in the rootfile
-                    found_data = True #FIXME
-                    data = rn.root2rec(filename,*self.definitions[defindex])
+                    #found_data = True #FIXME
+                    data = rn.root2rec(filename,*definition)
                     if self.defsize == 2:
                         data = pd.Series(data)
                     elif self.defsize == 1:
                         data = pd.DataFrame(data)
-               
- 
-                self.data = self.data.append(data.map(self.transform))
-                defindex += 1
 
+                #defindex += 1
+
+            if ext == ".h5":
+                store.close()
+
+            #self.data = self.data.append(data.map(self.transform))
+            #concat should be much faster
+            if not len(self.data):
+                if isinstance(data,pd.Series):
+                    self.data = data.map(self.transform)
+                else:
+                    self.data = data
+
+            else:
+                if isinstance(data,pd.Series):
+                    self.data = pd.concat([self.data,data.map(self.transform)])
+                else:
+                    self.data = pd.concat([self.data,data])
             del data
+
         self._is_harvested = True
         return
 

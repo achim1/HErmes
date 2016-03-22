@@ -33,9 +33,20 @@ class Variable(object):
     label = None
     _is_harvested = False
 
+    def __init__(self,name,definitions,bins=None,label="",transform=lambda x : x):
+        """
+        Create a new variable
 
-    def __init__(self,name,bins=None,label="",transform=lambda x : x,definitions=[]):
-        
+        Args:
+            name (str): An unique identifier
+            definitions (list): table and/or column names in underlying data
+
+        Keyword Args:
+            bins (numpy.ndarray): used for histograms
+            label (str): used for plotting and as a label in tables
+            transform (func): apply to each member of the underlying data at readout
+        """
+
         assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions %s!" %definitions
         if definitions:
             self.defsize = len(definitions[0])
@@ -54,8 +65,39 @@ class Variable(object):
             self.data    = pd.Series()    
         self._is_harvested = False
 
+    def __hash__(self):
+        return self.name
+
     def __repr__(self):
         return """<Variable: %s>""" %self.name
+
+    def __eq__(self,other):
+        return self.name == other.name
+
+    def __neq__(self,other):
+        return self.name != other.name
+
+    def __lt__(self, other):
+        return sorted(self.name,other.name)[0] == self.name
+
+    def __gt__(self, other):
+        return sorted(self.name,other.name)[1] == self.name
+
+    def __le__(self, other):
+        return self < other or self == other
+
+    def __ge__(self, other):
+        return self > other or self == other
+
+    def declare_harvested(self):
+        self._is_harvested = True
+
+    def undeclare_harvested(self):
+        self._is_harvested = False
+
+    @property
+    def harvested(self):
+        return self._is_harvested
 
     def calculate_fd_bins(self):
         """
@@ -70,7 +112,7 @@ class Variable(object):
 
         FIXME: this entire method needs to be reworked!
         """
-        if self._is_harvested:
+        if self.harvested:
             return        
 
         for filename in filenames:
@@ -97,13 +139,12 @@ class Variable(object):
                             data = pd.Series(data)
                             #found_data = True
                         except AttributeError:
-                            #defindex += 1
                             continue
                     elif self.defsize == 1: #FIXME what happens if it isn't found?
                         #data = store.select(self.definitions[defindex][0])
                         data = store.getNode("/" + definition[0].read())
                         data = pd.DataFrame(data)
-                        #found_data = True
+
                 elif ext == ".root":
                     #FIXME: What happens if it is not found in the rootfile
                     #found_data = True #FIXME
@@ -133,8 +174,8 @@ class Variable(object):
                     self.data = pd.concat([self.data,data])
             del data
 
-        self._is_harvested = True
-        return
+        self.declare_harvested()
+        return None
 
 ##########################################################
 
@@ -170,14 +211,14 @@ class CompoundVariable(Variable):
         #FIXME: filenames is not used, just
         #there for compatibility
 
-        if self._is_harvested:
+        if self.harvested:
             return
         harvested = filter(lambda var : var._is_harvested, self._variables)
         if not len(harvested) == len(self._variables):
             Logger.error("Variables have to be harvested for compound variable %s first!" %self.name)
             return
         self.data = reduce(self._operation,[var.data for var in self._variables])
-        self._is_harvested = True
+        self.declare_harvested()
 
 ##########################################################
 
@@ -197,13 +238,13 @@ class VariableList(Variable):
         #FIXME: filenames is not used, just
         #there for compatibility
 
-        if self._is_harvested:
+        if self.harvested:
             return
         harvested = filter(lambda var : var._is_harvested, self._variables)
         if not len(harvested) == len(self._variables):
             Logger.error("Variables have to be harvested for compound variable %s first!" %self.name)
             return
-        self._is_harvested = True
+        self.declare_harvested()
 
 
     def _rewire_variables(self,vardict):

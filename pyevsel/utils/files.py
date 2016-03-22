@@ -119,6 +119,7 @@ def harvest_files(path,ending=".bz2",sanitizer=lambda x : x,use_ls=False,prefix=
         files = reduce(lambda x,y : x+y,map(glob,[os.path.join(direc,ending) for direc in tmpindirs]))
     files = filter(sanitizer,files)
     files = map(lambda x : prefix + x,files)
+    files = sorted(files) # ensure that each call returns exact same list
     return files
 
 ##############################################################

@@ -8,7 +8,6 @@ from pyevsel.utils import GetTiming
 from pyevsel.plotting.plotting import VariableDistributionPlot
 from pyevsel.plotting import GetCategoryConfig
 
-
 import variables
 import pandas as pd
 import inspect
@@ -17,7 +16,6 @@ import numpy as n
 from dashi.tinytable import TinyTable
 
 from copy import deepcopy as copy
-from warnings import warn
 
 MC_P_EN   = "mc_p_en"
 MC_P_TY   = "mc_p_ty"
@@ -32,16 +30,6 @@ class Category(object):
     An interface to variables from a certain 
     type of file
     """
-    name     = ""
-    datasets = dict()
-    files    = []
-    cuts     = []
-    cutmask  = n.array([])
-    _weights  = []
-    _is_harvested = False
-    _weightfunction = False
-    _raw_count = 0 #how much 'raw events' (unweighted)
-
 
     def __init__(self,name):
         """
@@ -53,12 +41,16 @@ class Category(object):
         self.files = []
         self.cuts  = []
         self.cutmask = n.array([])
+
         try:
             self.vardict = {}
         except AttributeError:
             pass #This happens for our ReweightedSimulation class
         self._weights     = pd.Series()
         self._weightfunction = None
+
+        self._is_harvested = False
+        self._raw_count = 0 #how much 'raw events' (unweighted)
 
     @staticmethod
     def _ds_regexp(filename):
@@ -273,10 +265,11 @@ class Category(object):
             for varname,cutfunc in cut:
                 mask = n.logical_and(mask,self.get(varname).apply(cutfunc))
                 if not sum(mask):
-                    warn("After cutting on %s, no events are left!" %varname)
-            if cut or n.logical_not(cut.condition):
-                #FIXME
-                mask = n.logical_and(cut.condition,mask)
+                    Logger.warning("After cutting on %s, no events are left!" %varname)
+            if cut.condition is not None:
+                if n.logical_or(mask,n.logical_not(cut.condition[self.name])):
+                    #FIXME
+                    mask = n.logical_and(cut.condition,mask)
         if inplace:
             for k in self.vardict.keys():
                 self.vardict[k].data = self.vardict[k].data[mask]
@@ -413,9 +406,9 @@ class Simulation(Category):
         """
         for var,name in [(energy_var,MC_P_EN),(type_var,MC_P_TY),(zenith_var,MC_P_ZE)]:
             if var.name is None:
-                warn("No %s available" %name)
+                Logger.warning("No %s available" %name)
             elif name in self.vardict:
-                warn("..%s already defined, skipping...")
+                Logger.warning("..%s already defined, skipping...")
                 continue
             
             else:
@@ -463,7 +456,7 @@ class Simulation(Category):
         try:
             func_kwargs["mc_p_zenith"] = self.get(MC_P_ZE)
         except KeyError:
-            warn("No MCPrimary zenith informatiion! Trying to omit..")
+            Logger.warning("No MCPrimary zenith informatiion! Trying to omit..")
 
         func_kwargs.update(model_kwargs)
 
@@ -475,8 +468,6 @@ class Simulation(Category):
     @property
     def livetime(self):
         return self.weights.sum() / n.power(self.weights, 2).sum()
-
-
 
 class ReweightedSimulation(Simulation):
     """
@@ -839,7 +830,7 @@ class Dataset(object):
 
         """
         for cat in self.categories:
-            cat.cuts.append(cut)
+            cat.add_cut(cut)
 
     def apply_cuts(self,inplace=False):
         """

@@ -35,14 +35,26 @@ class Cut(object):
     Impose criteria on variables of a certain
     category to reduce its mightiness
     """
-    cutdict = dict()
-    compiled_cuts = dict()
-    #_condition_map = {">" : "gt","<" : "lt",">=" : "ge","<=" : "le"}
 
-    def __init__(self,variables=[("mc_p_energy",">=",5)],condition=[]):
+    def __init__(self,condition=None,*cuts):
+        """
+        Create a new cut, with the variables and operations
+        given in cuts
+
+        Args:
+            cuts (list): like this [("mc_p_energy",">=",5)]
+
+        Keyword Args:
+            condition (numpy.ndarry(bool)): where to apply the cut
+
+        Returns:
+            None
+        """
 
         self.condition = condition
-        for var,operation,value in variables:
+        self.cutdict = dict()
+        self.compiled_cuts = dict()
+        for var,operation,value in cuts:
             if isinstance(var,V):
                 name = var.name
             if isinstance(var,str):
@@ -89,5 +101,3 @@ class Cut(object):
     #        print category.vardict[v].data
     #        newcat.vardict[v].data = category.vardict[v].data.where(total_mask)
     #    return newcat
-
-

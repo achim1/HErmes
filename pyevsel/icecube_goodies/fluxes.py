@@ -131,7 +131,11 @@ class MuFluxes:
     GaisserH4a   = staticmethod(mufluxes.GaisserH4a)
     Hoerandel    = staticmethod(mufluxes.Hoerandel)
     Hoerandel5   = staticmethod(mufluxes.Hoerandel5)
-    HoerandelIT  = staticmethod(mufluxes.Hoerandel_IT)
-    TIG1996      = staticmethod(mufluxes.TIG1996)
-    GlobalFitGST = staticmethod(mufluxes.GlobalFitGST)
-    Honda2004    = staticmethod(mufluxes.Honda2004)
+
+    # if these fluxes are available depends on the version
+    # of the weighting module
+    
+    #HoerandelIT  = staticmethod(mufluxes.Hoerandel_IT)
+    #TIG1996      = staticmethod(mufluxes.TIG1996)
+    #GlobalFitGST = staticmethod(mufluxes.GlobalFitGST)
+    #Honda2004    = staticmethod(mufluxes.Honda2004)

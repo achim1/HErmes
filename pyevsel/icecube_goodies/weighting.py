@@ -6,8 +6,6 @@ from icecube.weighting.weighting import from_simprod, EnergyWeight,ParticleType
 import inspect
 import conversions as conv
 
-reload(conv)
-
 ###########################################
 
 # safely boilerplate our own weight class,
@@ -22,8 +20,7 @@ class Weight(object):
 
     def __call__(self,energy,ptype,zenith=[],mapping=False):
 
-        #type mapping
-        #print zenith
+        # FIXME: mapping argument should go away
         if mapping:
             pmap = {14:ParticleType.PPlus, 402:ParticleType.He4Nucleus, 1407:ParticleType.N14Nucleus, 2713:ParticleType.Al27Nucleus, 5626:ParticleType.Fe56Nucleus}
             ptype = map(lambda x : pmap[x], ptype )
@@ -57,12 +54,19 @@ def GetGenerator(datasets):
     Args:
         datasets (dict): Query the database for these datasets.
                          dict dataset_id -> number of files
+
+    Returns (icecube.weighting...): Generation probability object
     """
 
     generators = []
     for k in datasets.keys():
         nfiles = datasets[k]
         generator = from_simprod(k)
+        # depending on the version of the
+        # weighting module, either nfiles,generator
+        # or just generator is returned
+        if isinstance(generator,tuple):
+            generator = generator[1]
         generators.append(nfiles*generator)
 
     generator = reduce(lambda x,y : x+y, generators)
@@ -78,6 +82,8 @@ def HowManyFilesDB(dataset):
 
     Args:
         dataset (int): dataset_id
+
+    Returns (int): number of files from db
     """
     nfiles,__ = from_simprod(dataset)
     return nfiles
@@ -97,6 +103,8 @@ def GetModelWeight(model,datasets,mc_p_energy=[],mc_p_type=[],mc_p_zenith=[],**m
         mc_p_energy (array-like): primary energy
         mc_p_type (array-like): primary particle type
         mc_p_zenith (array-like): primary particle cos(zenith)
+
+    Returns (array-like): Weights
     """
     if model_kwargs:
         flux = model(**model_kwargs)

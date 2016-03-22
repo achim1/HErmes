@@ -49,6 +49,23 @@ categories: [{name: 'data',
          markersize: 4
          }
     },
+    {name: 'exp',
+     label: 'exp',
+     histscatter: 'scatter',
+     dashistyle:{
+         color: 'k',
+         linewidth: 3,
+         alpha: 1.,
+         filled: False
+         },
+    dashistylescatter: {
+         color: 'k',
+         linewidth: 3,
+         alpha: 1.,
+         marker: 'o',
+         markersize: 4
+         }
+    },
     {name: 'atmos_mu',
     label: '$\mu_{atm}$',
     dashistyle:{
@@ -123,7 +140,7 @@ categories: [{name: 'data',
     histscatter: 'line'
     },
     {name: 'astro_nue',
-    label: '$\nu_e_{astr}$',
+    label: '$\nu_{e_{astr}}$',
     dashistyle:{
          color: 2,
          linewidth: 3,
@@ -134,7 +151,7 @@ categories: [{name: 'data',
     histscatter: 'line'
     },
     {name: 'astro_numu',
-    label: '$\nu_\mu_{astr}$',
+    label: '$\nu_{\mu_{astr}}$',
     dashistyle:{
          color: 0,
          linewidth: 3,
@@ -145,7 +162,7 @@ categories: [{name: 'data',
     histscatter: 'line'
     },
     {name: 'astro_nutau',
-    label: '$\nu_\tau_{astr}$',
+    label: '$\nu_{\tau_{astr}}$',
     dashistyle:{
          color: 2,
          linewidth: 3,

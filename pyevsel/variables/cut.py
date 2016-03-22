@@ -1,16 +1,34 @@
 """
-Holds a class which allows to perform cuts on 
-categories
+Use with pyevsel.categories.Category to perfom cuts
 """
 
 from pyevsel.variables.variables import Variable as V
 
-import pandas as pd
-import numpy as n
+import operator
 
-def _lambdanator(operation,value):
-    return eval("lambda x : x %s " %operation + str(value))
+def create_func(operation,value):
+    """operator_lookup
+    Create conditional function for the provide operator
+    value pair
 
+    Args:
+        operation (str): an operator string, '<', '==", etc
+        value (float): goes with operation
+
+    Returns:
+        func
+    """
+    operator_lookup = {\
+    ">" : operator.gt,\
+    "==" : operator.eq,\
+    "<" : operator.lt,\
+    ">=" : operator.ge,\
+    "<=" : operator.le\
+    }
+
+    def func(x):
+        return operator_lookup[operation](x,value)
+    return func
 
 class Cut(object):
     """
@@ -19,17 +37,18 @@ class Cut(object):
     """
     cutdict = dict()
     compiled_cuts = dict()
-    _condition_map = {">" : "gt","<" : "lt",">=" : "ge","<=" : "le"}
+    #_condition_map = {">" : "gt","<" : "lt",">=" : "ge","<=" : "le"}
 
-    def __init__(self,variables=[("mc_p_energy",">=",5)]):
+    def __init__(self,variables=[("mc_p_energy",">=",5)],condition=[]):
 
+        self.condition = condition
         for var,operation,value in variables:
             if isinstance(var,V):
                 name = var.name
             if isinstance(var,str):
                 name = var
             self.cutdict[name] = (operation,value)
-            self.compiled_cuts[name] = _lambdanator(operation,value)
+            self.compiled_cuts[name] = create_func(operation,value)
 
     def __iter__(self):
         """
@@ -42,11 +61,10 @@ class Cut(object):
     def __repr__(self):
         rep = """<Cut """
         for k in self.cutdict.keys():
-            rep += """| %s %s %4.2f """ %(k,self.cutdict[k][0],self.cutdict[k][1])
+            rep += """|%s %s %4.2f """ %(k,self.cutdict[k][0],self.cutdict[k][1])
 
         rep += """>"""
         return rep
-
 
     #def __call__(self,category):
     #    """

@@ -17,6 +17,7 @@ import numpy as n
 from dashi.tinytable import TinyTable
 
 from copy import deepcopy as copy
+from warnings import warn
 
 MC_P_EN   = "mc_p_en"
 MC_P_TY   = "mc_p_ty"
@@ -114,7 +115,7 @@ class Category(object):
         all_vars = [x[1] for x in all_vars if isinstance(x[1],variables.Variable)]
         for v in all_vars:
             if self.vardict.has_key(v.name):
-                print "Variable %s already defined,skipping!" %v.name
+                Logger.debug("Variable %s already defined,skipping!" %v.name)
                 continue
             new_v = copy(v)
             self.vardict[new_v.name] = new_v
@@ -147,11 +148,11 @@ class Category(object):
         if kwargs.has_key("force"):
             force = kwargs.pop("force")
         if self._is_harvested:
-            print "Variables have already been harvested! If you really want to reload the filelist, use 'force=True'. If you do so, all your harvested variables will be deleted!"
+            Logger.info("Variables have already been harvested!if you really want to reload the filelist, use 'force=True'. If you do so, all your harvested variables will be deleted!")
             if not force:
                 return
             else:
-                print "..using force.."
+                Logger.warning("..using force..")
        
         if "datasets" in kwargs:
             filtered_files = []
@@ -173,19 +174,21 @@ class Category(object):
         self.files = files
         del files
 
-    def get(self,varkey):
+    def get(self,varkey,uncut=False):
         """        
         Retrieve the data of a variable
         
         Args:
             varkey (str): The name of the variable
-        
+
+        Keyword Args:
+            uncut (bool): never return cutted values
         """
 
         if varkey not in self.vardict:
             raise KeyError("%s not found!" %varkey)
 
-        if len(self.cutmask):
+        if len(self.cutmask) and not uncut:
             return self.vardict[varkey].data[self.cutmask]
         else:
             return self.vardict[varkey].data
@@ -208,8 +211,12 @@ class Category(object):
                 if isinstance(self.vardict[varname],variables.CompoundVariable):
                     compound_variables.append(varname)
                     continue
+
+                if isinstance(self.vardict[varname],variables.VariableList):
+                    compound_variables.append(varname)
+                    continue
             except KeyError:
-                print "Cannot find %s in variables!" %varname
+                Logger.info("Cannot find %s in variables!" %varname)
                 continue
             self.vardict[varname].harvest(*self.files)
 
@@ -265,7 +272,11 @@ class Category(object):
         for cut in self.cuts:
             for varname,cutfunc in cut:
                 mask = n.logical_and(mask,self.get(varname).apply(cutfunc))
-
+                if not sum(mask):
+                    warn("After cutting on %s, no events are left!" %varname)
+            if cut or n.logical_not(cut.condition):
+                #FIXME
+                mask = n.logical_and(cut.condition,mask)
         if inplace:
             for k in self.vardict.keys():
                 self.vardict[k].data = self.vardict[k].data[mask]
@@ -288,6 +299,9 @@ class Category(object):
         """
 
         self.undo_cuts()
+        for cut in self.cuts:
+            del cut #FIXME: explicit call to destructor
+                    # should not be necessary
         self.cuts = []
 
     @property
@@ -343,8 +357,9 @@ class Category(object):
         other_weight = (other_livetime/(self_livetime + other_livetime))
 
         self._weights = pd.concat([self_weight*self._weights,other_weight*other._weights])
+        if isinstance(self,Data):
+            self.set_livetime(self.livetime + other.livetime)
         self._get_raw_count()
-
 
     def __repr__(self):
         return """<Category: Category %s>""" %self.name
@@ -398,14 +413,14 @@ class Simulation(Category):
         """
         for var,name in [(energy_var,MC_P_EN),(type_var,MC_P_TY),(zenith_var,MC_P_ZE)]:
             if var.name is None:
-                print "No %s available" %name
+                warn("No %s available" %name)
             elif name in self.vardict:
-                print "..%s already defined, skipping..."
+                warn("..%s already defined, skipping...")
                 continue
             
             else:
                 if var.name != name:
-                    print "..renaming %s to %s.." %(var.name,name)        
+                    Logger.warning("..renaming %s to %s.." %(var.name,name))
                     var.name = name
                 newvar = copy(var)
                 self.vardict[name] = newvar
@@ -448,7 +463,7 @@ class Simulation(Category):
         try:
             func_kwargs["mc_p_zenith"] = self.get(MC_P_ZE)
         except KeyError:
-            print "No MCPrimary zenith informatiion! Trying to omit.."
+            warn("No MCPrimary zenith informatiion! Trying to omit..")
 
         func_kwargs.update(model_kwargs)
 
@@ -473,6 +488,7 @@ class ReweightedSimulation(Simulation):
         self.name = name
         self._weights = pd.Series()
         self._weightfunction = None
+        self._raw_count = self._mother.raw_count
 
     #proxy the stuff by hand
     #FIXME: there must be a better way
@@ -506,7 +522,7 @@ class ReweightedSimulation(Simulation):
 
 
     def read_variables(self,names=[]):
-        raise NotImplementedError("Use read_variables of the mother categorz")
+        Logger.warning("Use read_variables of the mother category. Not doing anything...")
 
     def __radd__(self,other):
         raise NotImplementedError
@@ -520,6 +536,20 @@ class ReweightedSimulation(Simulation):
     def __repr__(self):
         return """<Category: ReweightedSimulation %s from %s>""" %(self.name,self._mother)
 
+    def add_livetime_weighted(self,other):
+        raise ValueError('ReweightedSimulation datasets can not be combined! Instanciate after adding mothers instead!')
+
+    def get(self,varkey,uncut=False):
+        data = self._mother.get(varkey,uncut=True)
+
+        if len(self.cutmask) and not uncut:
+            return data[self.cutmask]
+        else:
+            return data
+    
+    @property
+    def raw_count(self):
+        return self._mother.raw_count
 
 class Data(Category):
     """
@@ -528,9 +558,21 @@ class Data(Category):
     """
 
     def __init__(self,*args,**kwargs):
-        print "Runs are considered as datasets..."
-        Category.__init__(self,*args,**kwargs)    
-        self._livetime = 0
+        """
+        Instanciate a Data dataset. Provide livetime in **kwargs.
+        Special keyword "guess" for livetime allows to guess the livetime later on
+
+        Args:
+            *args:
+            **kwargs:
+
+        Returns:
+
+        """
+        assert "livetime" in kwargs, "Data livetime must be provided"
+        livetime = kwargs.pop("livetime")
+        Category.__init__(self,*args,**kwargs)
+        self.set_livetime(livetime)
         self._runstartstop_set = False
 
     @staticmethod
@@ -538,6 +580,16 @@ class Data(Category):
         return EXP_RUN_ID(filename)
 
     def set_livetime(self,livetime):
+        """
+        Override the private _livetime member
+
+        Args:
+            livetime: The time needed for data-taking
+
+        Returns: None
+
+        """
+
         self._livetime = livetime
 
     # livetime is read-only
@@ -572,8 +624,6 @@ class Data(Category):
                 self.vardict[name] = newvar
 
         self._runstartstop_set = True
-        
-
 
     def estimate_livetime(self,force=False):
         """
@@ -582,7 +632,7 @@ class Data(Category):
         Keyword Args:
             force (bool): overide existing livetime
         """
-        if self.livetime:
+        if self.livetime and (not self.livetime=="guess"):
             Logger.warning("There is already a livetime of %4.2f " %self.livetime)
             if force:
                 Logger.warning("Applying force...")
@@ -619,18 +669,29 @@ class Data(Category):
         self.set_livetime(est_ltime)
         return 
 
+    def set_weightfunction(self,func):
+        """
+        Can not use this for data, override...
+
+        Args:
+            func:
+
+        Returns:
+
+        """
+        pass
+
     def get_weights(self):
         """
         Calculate weights as rate, that is number of
         events per livetime
         """
-
+        if self.livetime == "guess":
+            self.estimate_livetime()
         self._weights = pd.Series(n.ones(self.raw_count,dtype=n.float64)/self.livetime)
 
     def __repr__(self):
         return """<Category: Data %s>""" %self.name
-
-
 
 #################################################################
 
@@ -675,7 +736,25 @@ class Dataset(object):
             cat.load_vardefs(variable_defs)
             cat.read_variables()
 
-    def get_weights(self,weightfunction=lambda x : x,models={}):
+    def set_weightfunction(self,weightfunction=lambda x:x):
+        """
+
+        Args:
+            weightfunction (func or dict): if func is provided, set this to all categories
+                                           if needed, provide dict, cat.name -> func for individula setting
+
+        Returns: None
+
+        """
+        if isinstance(weightfunction,dict):
+            for cat in self.categories:
+                cat.set_weightfunction(weightfunction[cat.name])
+
+        else:
+            for cat in self.categories:
+                cat.set_weightfunction(weightfunction)
+
+    def get_weights(self,models={}):
         """
         Calculate the weights for all categories
 
@@ -684,12 +763,10 @@ class Dataset(object):
             models (dict): A dictionary of categoryname -> model
         """
         for cat in self.categories:
-            if isinstance(cat,Simulation):
-                cat.set_weightfunction(weightfunction)
-            # FIXME: should be the same case as above!
-            if isinstance(cat,ReweightedSimulation):
-                cat.set_weightfunction(weightfunction)
-            cat.get_weights(models[cat.name])
+            if not cat.name in models:
+                cat.get_weights()
+            else:
+                cat.get_weights(models[cat.name])
 
     def add_category(self,category):
         """
@@ -838,7 +915,7 @@ class Dataset(object):
             #errdict[cat.name] = [errdict]
         rate = pd.Series(rdata,index)
         err  = pd.Series(edata,index)
-        return rate,err
+        return (rate,err)
 
     def sum_rate(self,categories=[]):
         """
@@ -847,7 +924,8 @@ class Dataset(object):
         Args:
             background: categories considerred background
 
-        Returns (tuple): rate with error
+        Returns:
+             tuple: rate with error
 
         """
         rate,error = categories[0].integrated_rate
@@ -856,8 +934,7 @@ class Dataset(object):
             tmprate,tmperror = cat.integrated_rate
             rate  += tmprate # categories should be independent
             error += tmperror**2
-        return rate,n.sqrt(error)
-
+        return (rate,n.sqrt(error))
 
     def _setup_table_data(self,signal=[],background=[]):
         """
@@ -891,9 +968,11 @@ class Dataset(object):
 
         fudges = dict()
         for cat in datacats:
-            rate,error =  cat.integrated_rate
-            fudges[cat.name] =  (rate/simrate,error/simerror)
-
+            rate,error = cat.integrated_rate
+            try:
+                fudges[cat.name] = (rate/simrate,error/simerror)
+            except ZeroDivisionError:
+                fudges[cat.name] = n.Nan
         #table_dict["rates (evts/sec)"] = self.integrated_rate[0]
         #table_dict["stat. error (+-)"] = self.integrated_rate[1]
         rate_dict = dict()
@@ -902,11 +981,10 @@ class Dataset(object):
             cfg = GetCategoryConfig(catname)
             label = cfg["label"]
             rate_dict[label] = (rates[catname],errors[catname])
-            if fudges.has_key(catname):
+            if catname in fudges:
                 all_fudge_dict[label] = fudges[catname]
             else:
                 all_fudge_dict[label] = None
-
 
         rate_dict["Sig."] =  (rates["signal"],errors["signal"] )
         rate_dict["Bg."] = (rates["background"],errors["background"])
@@ -931,12 +1009,14 @@ class Dataset(object):
             format (str) : "html","latex","wiki"
 
         Returns:
-
+            str: formatted table in desired markup
         """
         def cellformatter(input):
-            print input
+            #print input
             if input is None:
                 return "-"
+            if isinstance(input[0],pd.Series):
+                input = (input[1][0],input[1][0])
             return "%4.2e +- %4.2e" %(input[0],input[1])
 
         rates,fudges = self._setup_table_data(signal=signal,background=background)

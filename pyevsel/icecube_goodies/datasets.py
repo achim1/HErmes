@@ -2,7 +2,15 @@
 Export a single dictionary holding nfiles
 information per each dataset
 """
-IC79_BS_LIVETIME = 2899974
+
+# livetime of some datasets
+IC79GS_LIVETIME = 26723588.380711164
+IC79BS_LIVETIME = 2899974
+IC86BS_LIVETIME = 739.59*3600
+IC86GS_LIVETIME = 7236.03*3600
+ic79ltime = IC79BS_LIVETIME + IC79GS_LIVETIME
+ic86ltime = IC86BS_LIVETIME + IC86GS_LIVETIME
+
 
 nue_ds79 = {
 6461 : 2000,
@@ -143,5 +151,18 @@ datasets = {
 9095: 10000,
 10099: 500
 }
+
+ic79ds_id = nue_ds79.keys() +\
+            numu_ds79.keys() +\
+            nutau_ds79.keys() +\
+            mu_ds79.keys() +\
+            mucc_ds79.keys() +\
+            [1000,1200]
+
+ic86ds_id = nue_ds86.keys() +\
+            numu_ds86.keys() +\
+            nutau_ds86.keys() +\
+            mu_ds86.keys() +\
+            [2000,2200]
 
 

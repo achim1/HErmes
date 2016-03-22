@@ -172,12 +172,54 @@ class CompoundVariable(Variable):
 
         if self._is_harvested:
             return
-        harvestable = filter(lambda var : var._is_harvested, self._variables)
-        if not len(harvestable) == len(self._variables):
+        harvested = filter(lambda var : var._is_harvested, self._variables)
+        if not len(harvested) == len(self._variables):
             Logger.error("Variables have to be harvested for compound variable %s first!" %self.name)
             return
         self.data = reduce(self._operation,[var.data for var in self._variables])
         self._is_harvested = True
+
+##########################################################
+
+class VariableList(Variable):
+    """
+    Holds several variable values
+    """
+
+    def __init__(self,name,variables=[],label="",bins=None,operation=lambda x,y : x + y):
+        self.name = name
+        self.label = label
+        self.bins = bins
+        self._variables = variables
+
+
+    def harvest(self,*filenames):
+        #FIXME: filenames is not used, just
+        #there for compatibility
+
+        if self._is_harvested:
+            return
+        harvested = filter(lambda var : var._is_harvested, self._variables)
+        if not len(harvested) == len(self._variables):
+            Logger.error("Variables have to be harvested for compound variable %s first!" %self.name)
+            return
+        self._is_harvested = True
+
+
+    def _rewire_variables(self,vardict):
+        """
+        Use to avoid the necesity to read out variables twice
+        as the variables are copied over by the categories,
+        the refernce is lost. Can be rewired though
+        """
+        newvars = []
+        for var in self._variables:
+            newvars.append(vardict[var.name])
+        self._variables = newvars
+
+    @property
+    def data(self):
+        return [x.data for x in self._variables]
 
 ##########################################################
 

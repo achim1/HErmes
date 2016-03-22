@@ -15,11 +15,11 @@ from pyevsel.plotting.plotcolors import GetColorPalette
 import pyevsel.plotting.canvases as c
 from pyevsel.utils.logger import Logger
 from pyevsel.plotting import GetCategoryConfig,LoadConfig
-reload(c)
+import pylab as p
 
 STD_CONF=os.path.join(os.path.split(__file__)[0],"plotsconfig.yaml")
 
-import pylab as p
+
 
 STYLE = os.path.join(os.path.split(__file__)[0],"pyevseldefault.mplstyle")
 p.style.use(STYLE)

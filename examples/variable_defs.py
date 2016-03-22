@@ -3,13 +3,16 @@ Define all variables here
 """
 
 import numpy as n
-
+import pandas as pd
 
 from pyevsel.variables.variables import Variable as V
 from pyevsel.variables.variables import CompoundVariable as CV
+from pyevsel.variables.variables import VariableList as VL
 from pyevsel.variables.categories import RUN_START,RUN_STOP,RUN,EVENT
 
 from pyevsel.icecube_goodies import conversions as conv
+from pyevsel.icecube_goodies.helpers import  IceCubeGeometry
+from pyevsel.icecube_goodies.datasets import ic79ds_id,ic86ds_id
 # abbreviations
 nbins = 70
 ls = n.linspace
@@ -46,11 +49,72 @@ containedbins = n.linspace(0,1.5,10)
 # dz_bins       = ls(-250,250,nbins)
 # dt_bins       = ls(-1000,2000,nbins)
 
+# some calculations
+def calc_uncontainment(l3containment,vertex_z):
+    masked_vertex_z = n.zeros(len(vertex_z))
+    masked_vertex_z[vertex_z < -450] = 1
+    bottom = n.logical_and(l3containment,masked_vertex_z)
+    side   = n.logical_not(l3containment)
+    return n.logical_or(bottom,side)
+
+def prepare_edge_string_distance():
+    """
+    Closure to avoid much IO
+    """
+    geo = IceCubeGeometry()
+
+    def stretch_array(length,arr):
+        newarr = list()
+        for i in arr:
+            newarr.append(n.ones(length)*i)
+        return newarr
+
+    def edge_string_distance(vertex,ic86,string):
+        """
+        Calculation of 'EdgeStringDistance' Variable is complicated
+        and performed here
+        """
+        ic86 = n.array(ic86)
+        #vertex_x,vertex_y,vertex_z = vertex[0],vertex[1],vertex[2]
+        #print vertex
+        #print geo.coordinates(1,60)
+        if string == 2 or string == 1:
+            edgepos = geo.coordinates(2,60)
+            edgepos86 = geo.coordinates(1,60)
+
+        if string == 41 or string == 31:
+            edgepos = geo.coordinates(41,60)
+            edgepos86 = geo.coordinates(31,60)
+
+        if string in [1,2,31,41]:
+            edgepos = stretch_array(len(vertex[0]),edgepos)
+            edgepos86 = stretch_array(len(vertex[0]),edgepos86)
+            dist79 = pdist(vertex,edgepos)
+            dist86 = pdist(vertex,edgepos86)
+
+            data = n.zeros(len(dist79))
+            data[ic86 == 1] = dist79[ic86 == 1]
+            data[ic86 == 0]= dist86[ic86 == 0]
+
+        else:
+            edgepos = geo.coordinates(string,60)
+            edgepos = stretch_array(len(vertex[0]),edgepos)
+            data = pdist(vertex,edgepos)
+
+        return pd.Series(data)
+    return edge_string_distance
+
+edge_string_distance = prepare_edge_string_distance()
 
 # transformations
 identity     = lambda i : i
 micsec       = lambda ns : ns/1000.
 pdist        = lambda p1, p2 : ((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 + (p1[2]-p2[2])**2).map(n.sqrt)
+
+def is_ic86(dataset):
+    #data = map(lambda x: x in ic86ds_id,dataset)
+    #return n.array(data)
+    return dataset in ic86ds_id
 
 # run and event id
 run   = V(RUN,definitions=[("I3EventHeader","Run")])
@@ -95,7 +159,11 @@ timesplit_dr   = V("timesplit_dr",bins=dr_bins,definitions=[("timesplit_dr2","va
 timesplti_dt   = V("timesplit_dt",bins = dt_bins,definitions=[("timesplit_dt2","value")],label=r"$t_{cscdllh}^{1} - t_{cscdllh}^{2}$ [ns]")
 coronasplit_dt = V("coronasplit_dt",bins = dt_bins,definitions=[("coronasplit_dt2","value")],label=r"$t_{cscdllh}^{corona} - t_{cscdllh}^{core}$ [ns]")
 acer_energy    = V("acer_logE",bins=energybins,definitions=[("AtmCscdEnergyReco","energy")],label=r"$\log_{10}(E_{acer}/$GeV$)$",transform=n.log10)
-
+qmax_dom       = V("qmax_dom",bins=qmaxdombins,definitions=[("qmax_dom","value")],label=r"\log(NPE)(qmax_{DOM})",transform=n.log10)
+monopod_exp_q  = V("monopod_exp_q",bins=totchargebins,definitions=[("Monopod4FitParams","qtotal")],label=r"pred. \log(NPE)",transform=n.log10)
+monopod_obs_q  = V("monopod_obs_q",bins=totchargebins,definitions=[("Monopod4FitParams","predicted_qtotal")],label=r"pred. \log(NPE)",transform=n.log10)
+containment    = V("containment",bins=containedbins,definitions=[("CascadeL3_Containment","value"),("CscdL3_Cont_Tag","value")],label="containment")
+ic86           = V("dataset",bins=containedbins,definitions=[("dataset","value")],label="dataset",transform=is_ic86)
 # timing information from header
 endtime_day    = V("endtime_day",definitions=[("I3EventHeader","time_end_mjd_day")],transform= lambda x: 24*3600.*x)
 endtime_sec    = V("endtime_sec",definitions=[("I3EventHeader","time_end_mjd_sec")]) 
@@ -103,7 +171,36 @@ endtime_ns     = V("endtime_ns",definitions=[("I3EventHeader","time_end_mjd_ns")
 starttime_day  = V("starttime_day",definitions=[("I3EventHeader","time_start_mjd_day")],transform= lambda x: 24*3600.*x)
 starttime_sec  = V("starttime_sec",definitions=[("I3EventHeader","time_start_mjd_sec")]) 
 starttime_ns   = V("starttime_ns",definitions=[("I3EventHeader","time_start_mjd_ns")],transform=lambda x : x*1e-9)
+
 runstart       = CV(RUN_START,variables=[starttime_day,starttime_sec,starttime_ns],operation=lambda x,y : x + y  )
 runsend        = CV(RUN_STOP,variables=[endtime_day,endtime_sec,endtime_ns],operation=lambda x,y : x + y  )
+maxdom_qtot    = CV("qmaxdom_qtot",variables=[qmax_dom,qtot],operation=lambda x,y : x/y)
+monopod_q_ratio= CV("monopod_q_ratio",variables=[monopod_exp_q,monopod_obs_q],operation=lambda x,y : ((10**x)/(10**y)))
+uncontainment  = CV("uncontainment",variables=[containment,l3credo_z],operation=calc_uncontainment)
+#monopod_xy    = CV("monopodxy",variables=[monopod_x,monopod_y],operation=lambda x,y : n.sqrt(x**2 + y**2))
+monopod_vertex = VL("monopod_vertex",variables=[monopod_x,monopod_y,monopod_z])
+
+edgedistA      = CV("edgedistA",variables=[monopod_vertex,ic86],operation=lambda x,y : edge_string_distance(x,y,2))
+edgedistB      = CV("edgedistB",variables=[monopod_vertex,ic86],operation=lambda x,y : edge_string_distance(x,y,6))
+edgedistC      = CV("edgedistC",variables=[monopod_vertex,ic86],operation=lambda x,y : edge_string_distance(x,y,41))
+edgedistD      = CV("edgedistD",variables=[monopod_vertex,ic86],operation=lambda x,y : edge_string_distance(x,y,50))
+edgedistE      = CV("edgedistE",variables=[monopod_vertex,ic86],operation=lambda x,y : edge_string_distance(x,y,74))
+edgedistF      = CV("edgedistF",variables=[monopod_vertex,ic86],operation=lambda x,y : edge_string_distance(x,y,75))
+edgedistG      = CV("edgedistG",variables=[monopod_vertex,ic86],operation=lambda x,y : edge_string_distance(x,y,78))
+
+
+#edgestrings = [2,41,75,78,74,50,6]
+#ic86edgestrings = [1,31,75,78,74,50,6]
+
+
+    #edgestringpositions = map(lambda x: geo.coordinates(x,60),edgestrings,)
+    #ic86edgestringpositions = map(lambda x: geo.coordinates(x,60),ic86edgestrings,)
+    ##vertex = (vertex_x,vertex_y,vertex_z)
+    #for index in range(edgestringpositions):
+    #    dist79 = pdist(vertex,edgestringpositions)
+    #    dist86 = pdist(vertex,ic86edgestringpositions)
+    #    data = n.zeros(len(dist79))
+    #    data[ic79] = dist79[ic79]
+    #    data[ic86] = dist86[ic86]
 
 

@@ -33,22 +33,22 @@ class Variable(object):
     label = None
     _is_harvested = False
 
-    def __init__(self,name,definitions,bins=None,label="",transform=lambda x : x):
+    def __init__(self,name,definitions=None,bins=None,label="",transform=lambda x : x):
         """
         Create a new variable
 
         Args:
             name (str): An unique identifier
-            definitions (list): table and/or column names in underlying data
 
         Keyword Args:
+            definitions (list): table and/or column names in underlying data
             bins (numpy.ndarray): used for histograms
             label (str): used for plotting and as a label in tables
             transform (func): apply to each member of the underlying data at readout
         """
 
-        assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions %s!" %definitions
-        if definitions:
+        if definitions is not None:
+            assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions %s!" %definitions
             self.defsize = len(definitions[0])
             assert not (False in [len(x) == self.defsize for x in definitions]), "All definitions must have the same length!"
         else:
@@ -106,12 +106,95 @@ class Variable(object):
         nbins = FreedmanDiaconisBins(self.data,min(self.data),max(self.data))
         self.bins = n.linspace(min(self.data),max(self.data),nbins)
 
+    def harvest_from_rootfile(self,rootfile,definition):
+        """
+        Get data from a root file
+
+        Args:
+            rootfile (str): Name of the *.root file
+            definition (tuple): Name of branches/leaves in the rootfile
+        Returns:
+            pd.Series or DataFrame
+        """
+        #FIXME: What happens if it is not found in the rootfile
+
+        data = rn.root2rec(rootfile,*definition)
+        if self.defsize == 2:
+            data = pd.Series(data)
+        elif self.defsize == 1:
+            data = pd.DataFrame(data)
+        else:
+            raise ValueError
+        return data
+
+    def harvest_from_hdftable(self,hdftable,definition):
+        """
+        Get the data from a pre-opened hdf file
+
+        Args:
+            hdftable (tables.Table): open hdf file
+            definition (tuple): names of tables in hdftable
+
+        Returns:
+            pd.Series or pd.DataFrame
+        """
+
+        if self.defsize == 2:
+            try:
+                #data = store.select_column(*definition)
+                data = hdftable.getNode("/" + definition[0]).col(definition[1])
+                data = pd.Series(data)
+            except AttributeError:
+                return None
+        elif self.defsize == 1: #FIXME what happens if it isn't found?
+            #data = store.select(self.definitions[defindex][0])
+            data = hdftable.getNode("/" + definition[0].read())
+            data = pd.DataFrame(data)
+        return data
+
+    def harvest_single_file(self,fileobject,filetype):
+        """
+        Get the variable data from a fileobject
+        Optimized for hdf files
+
+        Args:
+            fileobject (str or hdfNode):
+            filetype (str): the extension of the filename, eg "h5"
+
+        Returns:
+            pd.Series or pd.Dataframe
+        """
+        if filetype == ".h5" and not isinstance(fileobject,tables.table.Table):
+            #store = pd.HDFStore(filename)
+            store = tables.openFile(fileobject)
+
+        for definition in self.definitions:
+            if filetype == ".h5":
+                data = self.harvest_from_hdftable(store,definition)
+                if data is None:
+                    continue
+
+            elif filetype == ".root":
+                data = self.harvest_from_rootfile(fileobject,definition)
+
+        if filetype == ".h5":
+            store.close()
+
+        #FIXME: rework this and return always
+        # the same stuff
+        return data
+
     def harvest(self,*filenames):
         """
-        Get the variable from a datafile
+        Extract the variable data from the provided files
 
-        FIXME: this entire method needs to be reworked!
-        """
+        Args:
+            filenames (list): the files to extract from
+                              currently supported: %s
+
+        Returns:
+            pd.Series or pd.DataFrame
+        """ %(REGISTERED_FILEEXTENSIONS.__repr__())
         if self.harvested:
             return        
 
@@ -122,56 +205,15 @@ class Variable(object):
             data = pd.Series()
             if self.defsize == 1:
                 data = pd.DataFrame()
-            #defindex = 0
-            if ext == ".h5":
-                #store = pd.HDFStore(filename)
-                store = tables.openFile(filename)
 
-            for definition in self.definitions:
-                #if defindex == len(self.definitions):
-                #    Logger.warning("No data for definitions %s found!" %self.definitions)
-                #    return
-                if ext == ".h5":
-                    if self.defsize == 2:
-                        try:
-                            #data = store.select_column(*definition)
-                            data = store.getNode("/" + definition[0]).col(definition[1])
-                            data = pd.Series(data)
-                            #found_data = True
-                        except AttributeError:
-                            continue
-                    elif self.defsize == 1: #FIXME what happens if it isn't found?
-                        #data = store.select(self.definitions[defindex][0])
-                        data = store.getNode("/" + definition[0].read())
-                        data = pd.DataFrame(data)
-
-                elif ext == ".root":
-                    #FIXME: What happens if it is not found in the rootfile
-                    #found_data = True #FIXME
-                    data = rn.root2rec(filename,*definition)
-                    if self.defsize == 2:
-                        data = pd.Series(data)
-                    elif self.defsize == 1:
-                        data = pd.DataFrame(data)
-
-                #defindex += 1
-
-            if ext == ".h5":
-                store.close()
-
+            data = self.harvest_single_file(filename,ext)
             #self.data = self.data.append(data.map(self.transform))
             #concat should be much faster
-            if not len(self.data):
-                if isinstance(data,pd.Series):
-                    self.data = data.map(self.transform)
-                else:
-                    self.data = data
 
+            if isinstance(data,pd.Series):
+                self.data = pd.concat([self.data,data.map(self.transform)])
             else:
-                if isinstance(data,pd.Series):
-                    self.data = pd.concat([self.data,data.map(self.transform)])
-                else:
-                    self.data = pd.concat([self.data,data])
+                self.data = pd.concat([self.data,data])
             del data
 
         self.declare_harvested()

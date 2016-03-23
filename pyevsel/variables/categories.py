@@ -285,7 +285,6 @@ class Category(object):
 
         self.cutmask = n.array([])
 
-
     def delete_cuts(self):
         """
         Get rid of previously added cuts
@@ -385,9 +384,8 @@ class Simulation(Category):
     Allows to weight the events
     """
 
-    def __init__(*args,**kwargs):
-        Category.__init__(*args,**kwargs)    
-        self = args[0]
+    def __init__(self,name):
+        Category.__init__(self,name)
         self._mc_p_set     = False
         self._mc_p_readout = False
 
@@ -475,6 +473,7 @@ class ReweightedSimulation(Simulation):
     """
 
     def __init__(self,name,mother):
+        Simulation.__init__(self,name)
         self._mother = mother
         self.name = name
         self._weights = pd.Series()
@@ -488,29 +487,40 @@ class ReweightedSimulation(Simulation):
     def vardict(self):
         return self._mother.vardict
 
-    #def __getattr__(self,attr):
-    #    self._mother.__getattribute__(self,attr)
-
-    @property
-    def datasets(self):
+    def get_datasets(self):
         return self._mother.datasets
 
-    @property
-    def files(self):
+    def set_datasets(self,datasets):
+        pass
+
+    def get_files(self):
         return self._mother.files
 
-    @property
-    def _is_harvested(self):
+    def set_files(self,files):
+        pass
+
+    def get_is_harvested(self):
         return self._mother._is_harvested
 
-    @property
-    def _mc_p_set(self):
+    def set_is_harvested(self,value):
+        pass
+
+    def get_mc_p_set(self):
         return self._mother._mc_p_set
 
-    @property
-    def _mc_p_readout(self):
-        return self._mother._mc_p_readout 
+    def set_mc_p_set(self,value):
+        pass
 
+    def get_mc_p_readout(self):
+        return self._mother._mc_p_readout
+
+    def set_mc_p_readout(self,value):
+        pass
+
+    datasets = property(get_datasets,set_datasets)
+    files = property(get_files,set_files)
+    _is_harvested = property(get_is_harvested,set_is_harvested)
+    _mc_p_readout = property(get_mc_p_readout,set_mc_p_readout)
 
     def read_variables(self,names=[]):
         Logger.warning("Use read_variables of the mother category. Not doing anything...")
@@ -548,7 +558,7 @@ class Data(Category):
     Simplified weighting only
     """
 
-    def __init__(self,*args,**kwargs):
+    def __init__(self,name,livetime=0):
         """
         Instanciate a Data dataset. Provide livetime in **kwargs.
         Special keyword "guess" for livetime allows to guess the livetime later on
@@ -560,9 +570,7 @@ class Data(Category):
         Returns:
 
         """
-        assert "livetime" in kwargs, "Data livetime must be provided"
-        livetime = kwargs.pop("livetime")
-        Category.__init__(self,*args,**kwargs)
+        Category.__init__(self,name)
         self.set_livetime(livetime)
         self._runstartstop_set = False
 
@@ -745,7 +753,7 @@ class Dataset(object):
             for cat in self.categories:
                 cat.set_weightfunction(weightfunction)
 
-    def get_weights(self,models={}):
+    def get_weights(self,models):
         """
         Calculate the weights for all categories
 

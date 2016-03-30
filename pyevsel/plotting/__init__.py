@@ -11,12 +11,13 @@ STD_CONF=os.path.join(os.path.split(__file__)[0],"plotsconfig.yaml")
 
 # write configuration to tmpfile
 config = tempfile.NamedTemporaryFile(prefix="plotcfg",delete=False)
-configdata = open(STD_CONF,"r").read()
-config.write(configdata)
-config.close()
 CONFIGFILE = config.name
-
 SLASHES = re.compile(r"(\\+)")
+
+with open(STD_CONF,"r") as configfile:
+    configdata = configfile.read()
+    config.write(configdata)
+    config.close()
 
 #################################
 

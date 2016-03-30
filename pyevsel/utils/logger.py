@@ -8,7 +8,7 @@ LOGFORMAT = '%(levelname)s:%(message)s:%(module)s:%(funcName)s:%(lineno)d'
 
 alertstring = lambda x :  "\033[0;31m" + x + "\033[00m"
 
-def GetRootLogger(loglevel):
+def get_logger(loglevel):
     """
     Get the root logger from the logging
     module -> All logging will end up at 
@@ -21,12 +21,11 @@ def GetRootLogger(loglevel):
     formatter = logging.Formatter(LOGFORMAT)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
-    try:
+    #FIXME: this seems not to be necessary
+    if len(logger.handlers) > 1:
         logger.handlers = [logger.handlers[1]]
-    except IndexError:
-        pass
 
     return logger
 
-Logger = GetRootLogger(10)
+Logger = get_logger(10)
 

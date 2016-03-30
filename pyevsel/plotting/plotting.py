@@ -90,7 +90,7 @@ class VariableDistributionPlot(object):
     and ratio plots for variables
     """
 
-    def __init__(self,cuts=[]):
+    def __init__(self,cuts=None):
         self.histograms = {}
         self.histratios = {}
         self.cumuls     = {}
@@ -98,10 +98,10 @@ class VariableDistributionPlot(object):
         self.plotcumul  = False
         self.canvas     = None
         self.label      = ''
+        if cuts is None:
+            cuts = []
         self.cuts       = cuts
-        #self.categories = {}
-        #for k in categories.keys():
-        #    self.categories[k] = categories[k]
+
 
     def _add_data(self,dataname,variable_data,bins,weights=None,label=''):
         """

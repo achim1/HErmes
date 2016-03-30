@@ -84,9 +84,9 @@ class Category(object):
         """
 
         all_vars = inspect.getmembers(module)
-        all_vars = [x[1] for x in all_vars if isinstance(x[1],variables.Variable)]
+        all_vars = [x[1] for x in all_vars if isinstance(x[1],variables.AbstractBaseVariable)]
         for v in all_vars:
-            if self.vardict.has_key(v.name):
+            if v.name in self.vardict:
                 Logger.debug("Variable %s already defined,skipping!" %v.name)
                 continue
             self.add_variable(v)
@@ -197,7 +197,7 @@ class Category(object):
     def get_weights(self):
         raise NotImplementedError("Not implemented for base class!")
 
-    def get_datacube(self,variablenames=[]):
+    def get_datacube(self):
         cube = dict()
         for k in self.vardict.keys():
             cube[k] = self.get(k)
@@ -285,7 +285,6 @@ class Category(object):
         error = n.sqrt((self.weights**2).sum())
         return (rate,error)
 
-
     def add_livetime_weighted(self,other,self_livetime=None,other_livetime=None):
         """
         Combine two datasets livetime weighted. If it is simulated data,
@@ -326,7 +325,7 @@ class Category(object):
         self._weights = pd.concat([self_weight*self._weights,other_weight*other._weights])
         if isinstance(self,Data):
             self.set_livetime(self.livetime + other.livetime)
-        #self._get_raw_count()
+
 
     def __repr__(self):
         return """<Category: Category %s>""" %self.name
@@ -416,7 +415,7 @@ class Simulation(Category):
 
         self._mc_p_readout = True
 
-    def get_weights(self,model,model_kwargs = {}):
+    def get_weights(self,model,model_kwargs = None):
         """
         Calculate weights for the variables in this category
 
@@ -429,6 +428,8 @@ class Simulation(Category):
         if not self._mc_p_readout:
             self.read_mc_primary()
 
+        if model_kwargs is None:
+            model_kwargs = dict()
         func_kwargs = {MC_P_EN : self.get(MC_P_EN),\
                        MC_P_TY : self.get(MC_P_TY),\
                        MC_P_WE : self.get(MC_P_WE)}

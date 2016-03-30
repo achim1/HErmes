@@ -2,18 +2,17 @@
 Container classes for variables
 """
 
-DEFAULT_BINS = 70
-REGISTERED_FILEEXTENSIONS = [".h5",".root"]
-
 import numpy as n
-import inspect
 import os
 import pandas as pd
 import tables
+import abc
 
 from pyevsel.utils import files as f
 from pyevsel.utils.logger import Logger
-from pyevsel.utils import GetTiming
+
+DEFAULT_BINS = 70
+REGISTERED_FILEEXTENSIONS = [".h5",".root"]
 
 try:
     import root_numpy as rn
@@ -23,47 +22,9 @@ except ImportError:
 
 ################################################################
 
-class Variable(object):
-    """
-    Container class holding variable
-    properties
-    """
-    name  = None
-    bins  = None
-    label = None
+class AbstractBaseVariable(object):
+    __metaclass__ = abc.ABCMeta
     _is_harvested = False
-
-    def __init__(self,name,definitions=None,bins=None,label="",transform=lambda x : x):
-        """
-        Create a new variable
-
-        Args:
-            name (str): An unique identifier
-
-        Keyword Args:
-            definitions (list): table and/or column names in underlying data
-            bins (numpy.ndarray): used for histograms
-            label (str): used for plotting and as a label in tables
-            transform (func): apply to each member of the underlying data at readout
-        """
-
-        if definitions is not None:
-            assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions %s!" %definitions
-            self.defsize = len(definitions[0])
-            assert not (False in [len(x) == self.defsize for x in definitions]), "All definitions must have the same length!"
-        else:
-            self.defsize = 0
-
-        self.name        = name
-        self.bins        = bins # when histogrammed
-        self.label       = label
-        self.transform   = transform
-        self.definitions = definitions
-        if self.defsize  == 1:
-            self.data    = pd.DataFrame()
-        if self.defsize  == 2:
-            self.data    = pd.Series()    
-        self._is_harvested = False
 
     def __hash__(self):
         return self.name
@@ -73,9 +34,6 @@ class Variable(object):
 
     def __eq__(self,other):
         return self.name == other.name
-
-    def __neq__(self,other):
-        return self.name != other.name
 
     def __lt__(self, other):
         return sorted(self.name,other.name)[0] == self.name
@@ -96,15 +54,66 @@ class Variable(object):
         self._is_harvested = False
 
     @property
-    def harvested(self):
+    def is_harvested(self):
         return self._is_harvested
 
     def calculate_fd_bins(self):
         """
         Calculate a reasonable binning
         """
-        nbins = FreedmanDiaconisBins(self.data,min(self.data),max(self.data))
+        nbins = freedman_diaconis_bins(self.data,min(self.data),max(self.data))
         self.bins = n.linspace(min(self.data),max(self.data),nbins)
+
+    @abc.abstractmethod
+    def harvest(self,*files):
+        """
+        Read the data from the provided files
+
+        Args:
+            *files: walk through these files and readout
+
+        Returns:
+            None
+        """
+        return
+
+class Variable(AbstractBaseVariable):
+    """
+    Container class holding variable
+    properties
+    """
+
+    def __init__(self,name,definitions=None,bins=None,label="",transform=lambda x : x):
+        """
+        Create a new variable
+
+        Args:
+            name (str): An unique identifier
+
+        Keyword Args:
+            definitions (list): table and/or column names in underlying data
+            bins (numpy.ndarray): used for histograms
+            label (str): used for plotting and as a label in tables
+            transform (func): apply to each member of the underlying data at readout
+        """
+        AbstractBaseVariable.__init__(self)
+
+        if definitions is not None:
+            assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions %s!" %definitions
+            self.defsize = len(definitions[0])
+            assert not (False in [len(x) == self.defsize for x in definitions]), "All definitions must have the same length!"
+        else:
+            self.defsize = 0
+
+        self.name        = name
+        self.bins        = bins # when histogrammed
+        self.label       = label
+        self.transform   = transform
+        self.definitions = definitions
+        if self.defsize  == 1:
+            self.data    = pd.DataFrame()
+        if self.defsize  == 2:
+            self.data    = pd.Series()    
 
     def harvest_from_rootfile(self,rootfile,definition):
         """
@@ -176,7 +185,6 @@ class Variable(object):
                 else:
                     break
 
-
             elif filetype == ".root":
                 data = self.harvest_from_rootfile(fileobject,definition)
 
@@ -198,7 +206,7 @@ class Variable(object):
         Returns:
             pd.Series or pd.DataFrame
         """ %(REGISTERED_FILEEXTENSIONS.__repr__())
-        if self.harvested:
+        if self.is_harvested:
             return        
 
         for filename in filenames:
@@ -224,18 +232,22 @@ class Variable(object):
 
 ##########################################################
 
-class CompoundVariable(Variable):
+class CompoundVariable(AbstractBaseVariable):
     """
     A variable which can not be read out, but is calculated
     from other variables
     """
 
-    def __init__(self,name,variables=[],label="",bins=None,operation=lambda x,y : x + y):
+    def __init__(self,name,variables=None,label="",\
+                 bins=None,operation=lambda x,y : x + y):
+        AbstractBaseVariable.__init__(self)
         self.name = name
         self.label = label
         self.bins = bins
-        self._variables = variables
-        self._operation = operation
+        if variables is None:
+            variables = []
+        self.variables = variables
+        self.operation = operation
         self.data = pd.Series()
 
     def _rewire_variables(self,vardict):
@@ -245,9 +257,9 @@ class CompoundVariable(Variable):
         the refernce is lost. Can be rewired though
         """
         newvars = []
-        for var in self._variables:
+        for var in self.variables:
             newvars.append(vardict[var.name])
-        self._variables = newvars
+        self.variables = newvars
 
     def __repr__(self):
         return """<CompoundVariable %s created from: %s>""" %(self.name,"".join([x.name for x in self._variables ]))
@@ -256,36 +268,40 @@ class CompoundVariable(Variable):
         #FIXME: filenames is not used, just
         #there for compatibility
 
-        if self.harvested:
+        if self.is_harvested:
             return
-        harvested = filter(lambda var : var._is_harvested, self._variables)
-        if not len(harvested) == len(self._variables):
-            Logger.error("Variables have to be harvested for compound variable %s first!" %self.name)
+        harvested = filter(lambda var : var.is_harvested, self.variables)
+        if not len(harvested) == len(self.variables):
+            Logger.error("Variables have to be harvested for compound variable {0} first!".format(self.name))
             return
-        self.data = reduce(self._operation,[var.data for var in self._variables])
+        self.data = reduce(self.operation,[var.data for var in self.variables])
         self.declare_harvested()
 
 ##########################################################
 
-class VariableList(Variable):
+
+class VariableList(AbstractBaseVariable):
     """
     Holds several variable values
     """
 
-    def __init__(self,name,variables=[],label="",bins=None,operation=lambda x,y : x + y):
+    def __init__(self,name,variables=None,label="",bins=None):
+        AbstractBaseVariable.__init__(self)
         self.name = name
         self.label = label
         self.bins = bins
-        self._variables = variables
+        if variables is None:
+            variables = []
+        self.variables = variables
 
     def harvest(self,*filenames):
         #FIXME: filenames is not used, just
         #there for compatibility
 
-        if self.harvested:
+        if self.is_harvested:
             return
-        harvested = filter(lambda var : var._is_harvested, self._variables)
-        if not len(harvested) == len(self._variables):
+        harvested = filter(lambda var : var.is_harvested, self.variables)
+        if not len(harvested) == len(self.variables):
             Logger.error("Variables have to be harvested for compound variable %s first!" %self.name)
             return
         self.declare_harvested()
@@ -297,23 +313,35 @@ class VariableList(Variable):
         the refernce is lost. Can be rewired though
         """
         newvars = []
-        for var in self._variables:
+        for var in self.variables:
             newvars.append(vardict[var.name])
-        self._variables = newvars
+        self.   variables = newvars
 
     @property
     def data(self):
-        return [x.data for x in self._variables]
+        return [x.data for x in self.variables]
 
 ##########################################################
 
-def FreedmanDiaconisBins(data,leftedge,rightedge,minbins=20,maxbins=70):
+
+def freedman_diaconis_bins(data,leftedge,\
+                         rightedge,minbins=20,\
+                         maxbins=70,fallbackbins=DEFAULT_BINS):
     """
     Get a number of bins for a histogram
     following Freedman/Diaconis
+
+    Args:
+        leftedge (float): left bin edge
+        rightedge (float): right bin edge
+        minbins (int): the minimum number of bins
+        maxbins (int): the maximum number of bins
+        fallbackbins (int): a number of bins which is returned
+                            if calculation failse
+
+    Returns:
+        nbins (int): number of bins, minbins < bins < maxbins
     """
-    # default values
-    bins = DEFAULT_BINS
 
     try:
         finite_data = n.isfinite(data)
@@ -323,14 +351,17 @@ def FreedmanDiaconisBins(data,leftedge,rightedge,minbins=20,maxbins=70):
         h           = (2*(q3-q1))/(n_data**1./3)
         bins = (rightedge - leftedge)/h
     except Exception as e:
-        Logger.warn("Calculate Freedman-Draconis bins failed %s" %e.__repr__())
+        Logger.warn("Calculate Freedman-Draconis bins failed {0}".format( e.__repr__()))
+        bins = fallbackbins
 
-    if (bins < minbins):
+    if not n.isfinite(bins):
+        Logger.warn("Calculate Freedman-Draconis bins failed, calculated nan bins, returning fallback")
+        bins = fallbackbins
+
+    if bins < minbins:
         bins = minbins
-    elif  (bins > maxbins):
+    if bins > maxbins:
         bins = maxbins
-    elif not n.isfinite(bins):
-        Logger.warn("Calculate Freedman-Draconis bins failed, calculated nan bins, returning 70")
-        bins = DEFAULT_BINS
+
     return bins
 

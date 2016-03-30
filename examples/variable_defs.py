@@ -78,11 +78,11 @@ def prepare_edge_string_distance():
         #vertex_x,vertex_y,vertex_z = vertex[0],vertex[1],vertex[2]
         #print vertex
         #print geo.coordinates(1,60)
-        if string == 2 or string == 1:
+        if string in [1,2]:
             edgepos = geo.coordinates(2,60)
             edgepos86 = geo.coordinates(1,60)
 
-        if string == 41 or string == 31:
+        if string in [31,41]:
             edgepos = geo.coordinates(41,60)
             edgepos86 = geo.coordinates(31,60)
 

@@ -8,6 +8,14 @@ from pyevsel.utils import GetTiming
 from pyevsel.plotting.plotting import VariableDistributionPlot
 from pyevsel.plotting import GetCategoryConfig
 
+from magic_keywords import  MC_P_EN,\
+                            MC_P_TY,\
+                            MC_P_ZE,\
+                            MC_P_WE,\
+                            RUN_START,\
+                            RUN_STOP, \
+                            RUN,\
+                            EVENT
 import variables
 import pandas as pd
 import inspect
@@ -17,13 +25,7 @@ from dashi.tinytable import TinyTable
 
 from copy import deepcopy as copy
 
-MC_P_EN   = "mc_p_en"
-MC_P_TY   = "mc_p_ty"
-MC_P_ZE   = "mc_p_ze"
-RUN_START = "run_start_mjd"
-RUN_STOP  = "run_stop_mjd"
-RUN       = "run"
-EVENT     = "event"
+
 
 class Category(object):
     """
@@ -41,14 +43,9 @@ class Category(object):
         self.files = []
         self.cuts  = []
         self.cutmask = n.array([])
-
-        try:
-            self.vardict = {}
-        except AttributeError:
-            pass #This happens for our ReweightedSimulation class
+        self.vardict = {}
         self._weights     = pd.Series()
         self._weightfunction = None
-
         self._is_harvested = False
         self._raw_count = 0 #how much 'raw events' (unweighted)
 
@@ -64,20 +61,10 @@ class Category(object):
         """
         return DS_ID(filename)
 
-    def _get_raw_count(self):
-        """
-        Calculate how many raw events are in this
-        category
-
-        """
-
-        assert self._is_harvested,"Please read out variables first"
-        self._raw_count = len(self.get(RUN))
-
-    # read only
     @property
     def raw_count(self):
-        return self._raw_count
+        assert self._is_harvested,"Please read out variables first"
+        return len(self.get(RUN,uncut=True))
 
     def set_weightfunction(self,func):
         """
@@ -88,7 +75,6 @@ class Category(object):
         """
         self._weightfunction = func
 
-
     def load_vardefs(self,module):
         """
         Load the variable definitions from a module
@@ -97,20 +83,13 @@ class Category(object):
             module (python module): Needs to contain variable definitions
         """
 
-        def cleaner(x):
-            try:
-                return not(x.__name__.startswith("_"))
-            except:
-                return False
-        
-        all_vars = inspect.getmembers(module)#,cleaner)
+        all_vars = inspect.getmembers(module)
         all_vars = [x[1] for x in all_vars if isinstance(x[1],variables.Variable)]
         for v in all_vars:
             if self.vardict.has_key(v.name):
                 Logger.debug("Variable %s already defined,skipping!" %v.name)
                 continue
-            new_v = copy(v)
-            self.vardict[new_v.name] = new_v
+            self.add_variable(v)
 
     def add_variable(self,variable):
         """
@@ -159,12 +138,10 @@ class Category(object):
                 filtered_files.extend([x[1] for x in ds_files if x[0] == k])
 
             files = filtered_files
-            del filtered_files
         else:
             files = harvest_files(*args,**kwargs)
 
         self.files = files
-        del files
 
     def get(self,varkey,uncut=False):
         """        
@@ -186,7 +163,7 @@ class Category(object):
             return self.vardict[varkey].data
 
     @GetTiming
-    def read_variables(self,names=[]):
+    def read_variables(self,names=None):
         """
         Harvest the variables in self.vardict
 
@@ -194,8 +171,7 @@ class Category(object):
             names (list): if != [], havest variables these variables
         """    
     
-        #assert len([x for x in varlist if isinstance(x,variables.Variable)]) == len(varlist), "All variables must be instances of variables.Variable!"
-        if not names:
+        if names is None:
             names = self.vardict.keys()
         compound_variables = [] #harvest them later        
         for varname in names:
@@ -208,7 +184,7 @@ class Category(object):
                     compound_variables.append(varname)
                     continue
             except KeyError:
-                Logger.info("Cannot find %s in variables!" %varname)
+                Logger.warning("Cannot find %s in variables!" %varname)
                 continue
             self.vardict[varname].harvest(*self.files)
 
@@ -217,7 +193,6 @@ class Category(object):
             self.vardict[varname]._rewire_variables(self.vardict)
             self.vardict[varname].harvest()
         self._is_harvested = True
-        self._get_raw_count()
 
     def get_weights(self):
         raise NotImplementedError("Not implemented for base class!")
@@ -262,14 +237,18 @@ class Category(object):
         self.cutmask = n.array([])
         mask = n.ones(self.raw_count)
         for cut in self.cuts:
-            for varname,cutfunc in cut:
-                mask = n.logical_and(mask,self.get(varname).apply(cutfunc))
-                if not sum(mask):
-                    Logger.warning("After cutting on %s, no events are left!" %varname)
-            if cut.condition is not None:
-                if n.logical_or(mask,n.logical_not(cut.condition[self.name])):
+            for varname,(op,value) in cut:
+                s = self.get(varname)
+                mask = n.logical_and(mask,op(s,value)   )
+                #FIXME: too slow as well
+                #mask = n.logical_and(mask,self.get(varname).apply(cutfunc))
+                #FIXME: this is too slow!
+                #if not sum(mask):
+                #    Logger.warning("After cutting on %s, no events are left!" %varname)
+                if cut.condition is not None:
+                    mask = n.logical_or(mask,n.logical_not(cut.condition[self.name]))
                     #FIXME
-                    mask = n.logical_and(cut.condition,mask)
+                    #mask = n.logical_and(cut.condition,mask)
         if inplace:
             for k in self.vardict.keys():
                 self.vardict[k].data = self.vardict[k].data[mask]
@@ -291,9 +270,6 @@ class Category(object):
         """
 
         self.undo_cuts()
-        for cut in self.cuts:
-            del cut #FIXME: explicit call to destructor
-                    # should not be necessary
         self.cuts = []
 
     @property
@@ -307,7 +283,6 @@ class Category(object):
 
         rate  = self.weights.sum()
         error = n.sqrt((self.weights**2).sum())
-
         return (rate,error)
 
 
@@ -351,7 +326,7 @@ class Category(object):
         self._weights = pd.concat([self_weight*self._weights,other_weight*other._weights])
         if isinstance(self,Data):
             self.set_livetime(self.livetime + other.livetime)
-        self._get_raw_count()
+        #self._get_raw_count()
 
     def __repr__(self):
         return """<Category: Category %s>""" %self.name
@@ -377,7 +352,6 @@ class Category(object):
         assert len(selflen) == 1, "Different variable lengths!"
         return selflen[0]
 
-
 class Simulation(Category):
     """
     An interface to variables from simulated data
@@ -392,44 +366,55 @@ class Simulation(Category):
     def __repr__(self):
         return """<Category: Simulation %s>""" %self.name
     
-    def set_mc_primary(self,energy_var=variables.Variable(None),type_var=variables.Variable(None),zenith_var=variables.Variable(None)):
-        """
-        Let the simulation category know which 
-        are the paramters describing the primary
+    # def set_mc_primary(self,energy_var="mc_p_en",\
+    #                    type_var="mc_p_ty",\
+    #                    zenith_var="mc_p_ze"):
+    #     """
+    #     Let the simulation category know which
+    #     are the paramters describing the primary
+    #
+    #     Keyword Args:
+    #         energy_var (str): simulated primary energy
+    #         type_var (str): simulated primary type
+    #         zenith_var (str): simulated primary zenith
+    #     """
+    #     for varname,defaultname in [(energy_var,MC_P_EN),(type_var,MC_P_TY),(zenith_var,MC_P_ZE)]:
+    #         if varname in self.vardict:
+    #             Logger.debug("..%s already defined, skipping..." %varname)
+    #             continue
+    #
+    #         if varname != defaultname:
+    #             Logger.warning("..renaming %s to %s.." %(varname,defaultname))
+    #             var.name = name
+    #             newvar = copy(var)
+    #             self.vardict[name] = newvar
+    #
+    #     self._mc_p_set = True
 
-        Keyword Args:
-            energy_var (pyevself.variables.variables.Variable): simulated primary energy
-            type_var (pyevself.variables.variables.Variable): simulated primary type
-            zenith_var (pyevself.variables.variables.Variable): simulated primary zenith
-        """
-        for var,name in [(energy_var,MC_P_EN),(type_var,MC_P_TY),(zenith_var,MC_P_ZE)]:
-            if var.name is None:
-                Logger.warning("No %s available" %name)
-            elif name in self.vardict:
-                Logger.warning("..%s already defined, skipping...")
-                continue
-            
-            else:
-                if var.name != name:
-                    Logger.warning("..renaming %s to %s.." %(var.name,name))
-                    var.name = name
-                newvar = copy(var)
-                self.vardict[name] = newvar
-
-        self._mc_p_set = True
-
-    def read_mc_primary(self):
+    def read_mc_primary(self,energy_var=MC_P_EN,\
+                       type_var=MC_P_TY,\
+                       zenith_var=MC_P_ZE,\
+                       weight_var=MC_P_WE):
         """
         Trigger the readout of MC Primary information
-        """
-        if not self._mc_p_set:
-            raise ValueError("Variable for MC Primary are not defined! Run set_m_primary first!")
-        self.read_variables([MC_P_EN,MC_P_TY,MC_P_ZE])
-        self._mc_p_readout = True
+        Rename variables to magic keywords if necessary
 
-    #def read_variables(self,names=[])
-    #    super(Simulation,self).read_variable(names)
-    #    for k in self.vardict.keys()
+        Keyword Args:
+            energy_var (str): simulated primary energy
+            type_var (str): simulated primary type
+            zenith_var (str): simulated primary zenith
+            weight_var (str): a weight, e.g. interaction propability
+        """
+        self.read_variables([energy_var,type_var,zenith_var,weight_var])
+        for varname,defaultname in [(energy_var,MC_P_EN),\
+                                    (type_var,MC_P_TY),\
+                                    (zenith_var,MC_P_ZE),
+                                    (weight_var,MC_P_WE)]:
+            if varname != defaultname:
+                Logger.warning("..renaming %s to %s.." %(varname,defaultname))
+                self.vardict[varname].name = defaultname
+
+        self._mc_p_readout = True
 
     def get_weights(self,model,model_kwargs = {}):
         """
@@ -444,24 +429,23 @@ class Simulation(Category):
         if not self._mc_p_readout:
             self.read_mc_primary()
 
-        func_kwargs = {"mc_p_energy" : self.get(MC_P_EN),\
-                       "mc_p_type" :self.get(MC_P_TY)}
+        func_kwargs = {MC_P_EN : self.get(MC_P_EN),\
+                       MC_P_TY : self.get(MC_P_TY),\
+                       MC_P_WE : self.get(MC_P_WE)}
 
         #for key in func_kwargs.keys():
         #    if not key in self._weightfunction.func_code.co_varnames:
         #        func_kwargs.pop(key)
 
         try:
-            func_kwargs["mc_p_zenith"] = self.get(MC_P_ZE)
+            func_kwargs[MC_P_ZE] = self.get(MC_P_ZE)
         except KeyError:
             Logger.warning("No MCPrimary zenith informatiion! Trying to omit..")
 
         func_kwargs.update(model_kwargs)
-
+        Logger.info("Getting weights for datasets %s" %self.datasets.__repr__())
         self._weights = pd.Series(self._weightfunction(model,self.datasets,\
                                  **func_kwargs))
-                                 #self.vardict[mc_p_energy].data,\
-                                 #self.vardict[mc_p_type].data))
 
     @property
     def livetime(self):
@@ -478,56 +462,29 @@ class ReweightedSimulation(Simulation):
         self.name = name
         self._weights = pd.Series()
         self._weightfunction = None
-        self._raw_count = self._mother.raw_count
+        #self._raw_count = self._mother.raw_count
 
-    #proxy the stuff by hand
-    #FIXME: there must be a better way
+    # proxies
+
+    setter = lambda self,other : None
+    vardict       = property(lambda self: self._mother.vardict,\
+                        setter)
+    datasets      = property(lambda self: self._mother.datasets,\
+                        setter)
+    files         = property(lambda self: self._mother.files,\
+                        setter)
+    _is_harvested = property(lambda self: self._mother._is_harvested,\
+                             setter)
+    _mc_p_readout = property(lambda self: self._mother._mc_p_readout,\
+                             setter)
 
     @property
-    def vardict(self):
-        return self._mother.vardict
+    def raw_count(self):
+        return self._mother.raw_count
 
-    def get_datasets(self):
-        return self._mother.datasets
-
-    def set_datasets(self,datasets):
-        pass
-
-    def get_files(self):
-        return self._mother.files
-
-    def set_files(self,files):
-        pass
-
-    def get_is_harvested(self):
-        return self._mother._is_harvested
-
-    def set_is_harvested(self,value):
-        pass
-
-    def get_mc_p_set(self):
-        return self._mother._mc_p_set
-
-    def set_mc_p_set(self,value):
-        pass
-
-    def get_mc_p_readout(self):
-        return self._mother._mc_p_readout
-
-    def set_mc_p_readout(self,value):
-        pass
-
-    datasets = property(get_datasets,set_datasets)
-    files = property(get_files,set_files)
-    _is_harvested = property(get_is_harvested,set_is_harvested)
-    _mc_p_readout = property(get_mc_p_readout,set_mc_p_readout)
-
-    def read_variables(self,names=[]):
+    def read_variables(self,names=None):
         Logger.warning("Use read_variables of the mother category. Not doing anything...")
 
-    def __radd__(self,other):
-        raise NotImplementedError
- 
     def set_mc_primary(self,energy_var=variables.Variable(None),type_var=variables.Variable(None),zenith_var=variables.Variable(None)):
         return self._mother.set_mc_primary(energy_var=energy_var,type_var=type_var,zenith_var=zenith_var)
 
@@ -595,7 +552,6 @@ class Data(Category):
     @property
     def livetime(self):
         return self._livetime
-
 
     def set_run_start_stop(self,runstart_var=variables.Variable(None),runstop_var=variables.Variable(None)):
         """
@@ -676,9 +632,9 @@ class Data(Category):
             func:
 
         Returns:
-
+            None
         """
-        pass
+        return
 
     def get_weights(self):
         """
@@ -728,22 +684,23 @@ class Dataset(object):
 
         """
         for cat in self.categories:
-            if isinstance(cat,Simulation):
-                cat.set_mc_primary(energy_var=variable_defs.mc_p_en,\
-                                   type_var=variable_defs.mc_p_ty,\
-                                   zenith_var=variable_defs.mc_p_ze)
+            #if isinstance(cat,Simulation):
+            #    cat.set_mc_primary(energy_var=variable_defs.mc_p_en,\
+            #                       type_var=variable_defs.mc_p_ty,\
+            #                       zenith_var=variable_defs.mc_p_ze)
             cat.load_vardefs(variable_defs)
             cat.read_variables()
 
     def set_weightfunction(self,weightfunction=lambda x:x):
         """
+        Defines a function which is used for weighting
 
         Args:
             weightfunction (func or dict): if func is provided, set this to all categories
                                            if needed, provide dict, cat.name -> func for individula setting
 
-        Returns: None
-
+        Returns:
+            None
         """
         if isinstance(weightfunction,dict):
             for cat in self.categories:
@@ -870,7 +827,7 @@ class Dataset(object):
     def plot_distribution(self,name,\
                           ratio=([],[]),
                           cumulative=True,
-                          heights=[.4,.2,.2],
+                          heights=(.4,.2,.2),
                           savepath="",savename="vdistplot"):
         """
         One shot short-cut for one of the most used
@@ -881,6 +838,9 @@ class Dataset(object):
 
         Keyword Args:
             ratio (list): A ratio plot of these categories will be crated
+
+        Returns:
+            pyevsel.variables.VariableDistributonPlot
         """
         plot = VariableDistributionPlot()
         for cat in self.categories:
@@ -901,8 +861,7 @@ class Dataset(object):
 
         Returns (pandas.Panel): rate with error
         """
-        #ratedict = dict()
-        #errdict  = dict()
+
         rdata,edata,index = [],[],[]
         for cat in self.categories:
             rate,error = cat.integrated_rate
@@ -910,23 +869,23 @@ class Dataset(object):
             index.append(cat.name)
             edata.append(error)
 
-            #ratedict[cat.name] = [rate]
-            #errdict[cat.name] = [errdict]
         rate = pd.Series(rdata,index)
         err  = pd.Series(edata,index)
         return (rate,err)
 
-    def sum_rate(self,categories=[]):
+    def sum_rate(self,categories=None):
         """
         Sum up the integrated rates for categories
 
         Args:
-            background: categories considerred background
+            categories: categories considerred background
 
         Returns:
              tuple: rate with error
 
         """
+        if categories is None:
+            return 0,0
         rate,error = categories[0].integrated_rate
         error = error**2
         for cat in categories[1:]:
@@ -935,7 +894,7 @@ class Dataset(object):
             error += tmperror**2
         return (rate,n.sqrt(error))
 
-    def _setup_table_data(self,signal=[],background=[]):
+    def _setup_table_data(self,signal=None,background=None):
         """
         Setup data for a table
         If signal and background are given, also summed values
@@ -945,7 +904,8 @@ class Dataset(object):
             signal (list): category names which are considered signal
             background (list): category names which are considered background
 
-        Returns (dict): table dictionary
+        Returns
+            dict: table dictionary
         """
 
         rates, errors = self.integrated_rate
@@ -972,8 +932,6 @@ class Dataset(object):
                 fudges[cat.name] = (rate/simrate,error/simerror)
             except ZeroDivisionError:
                 fudges[cat.name] = n.Nan
-        #table_dict["rates (evts/sec)"] = self.integrated_rate[0]
-        #table_dict["stat. error (+-)"] = self.integrated_rate[1]
         rate_dict = dict()
         all_fudge_dict = dict()
         for catname in self.categorynames:
@@ -993,8 +951,8 @@ class Dataset(object):
         all_fudge_dict["Gr. Tot."] = None
         return rate_dict,all_fudge_dict
 
-    def tinytable(self,signal=[],\
-                    background=[],\
+    def tinytable(self,signal=None,\
+                    background=None,\
                     layout="v",\
                     format="html"):
         """
@@ -1018,6 +976,7 @@ class Dataset(object):
                 input = (input[1][0],input[1][0])
             return "%4.2e +- %4.2e" %(input[0],input[1])
 
+        #FIXME: sort the table columns
         rates,fudges = self._setup_table_data(signal=signal,background=background)
         tt = TinyTable()
         tt.add("Rate (1/s)", **rates)

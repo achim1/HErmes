@@ -11,15 +11,15 @@ import os
 import pandas as pd
 import tables
 
+from pyevsel.utils import files as f
+from pyevsel.utils.logger import Logger
+from pyevsel.utils import GetTiming
+
 try:
     import root_numpy as rn
 except ImportError:
-    print "No root_numpy found, root support is limited!"
+    Logger.warning("No root_numpy found, root support is limited!")
     REGISTERED_FILEEXTENSIONS.remove(".root")
-
-from pyevsel.utils import files as f 
-from pyevsel.utils.logger import Logger
-from pyevsel.utils import GetTiming
 
 ################################################################
 
@@ -143,8 +143,8 @@ class Variable(object):
             try:
                 #data = store.select_column(*definition)
                 data = hdftable.getNode("/" + definition[0]).col(definition[1])
-                data = pd.Series(data)
-            except AttributeError:
+                data = pd.Series(data,dtype=n.float64)
+            except tables.NoSuchNodeError:
                 return None
         elif self.defsize == 1: #FIXME what happens if it isn't found?
             #data = store.select(self.definitions[defindex][0])
@@ -173,6 +173,9 @@ class Variable(object):
                 data = self.harvest_from_hdftable(store,definition)
                 if data is None:
                     continue
+                else:
+                    break
+
 
             elif filetype == ".root":
                 data = self.harvest_from_rootfile(fileobject,definition)
@@ -237,7 +240,7 @@ class CompoundVariable(Variable):
 
     def _rewire_variables(self,vardict):
         """
-        Use to avoid the necesity to read out variables twice
+        Use to avoid the necessity to read out variables twice
         as the variables are copied over by the categories, 
         the refernce is lost. Can be rewired though
         """
@@ -275,7 +278,6 @@ class VariableList(Variable):
         self.bins = bins
         self._variables = variables
 
-
     def harvest(self,*filenames):
         #FIXME: filenames is not used, just
         #there for compatibility
@@ -287,7 +289,6 @@ class VariableList(Variable):
             Logger.error("Variables have to be harvested for compound variable %s first!" %self.name)
             return
         self.declare_harvested()
-
 
     def _rewire_variables(self,vardict):
         """

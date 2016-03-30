@@ -28,5 +28,5 @@ def GetRootLogger(loglevel):
 
     return logger
 
-Logger = GetRootLogger(20)
+Logger = GetRootLogger(10)
 

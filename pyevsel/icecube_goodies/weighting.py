@@ -3,8 +3,23 @@ An interface to icecube's weighting schmagoigl
 """
 
 from icecube.weighting.weighting import from_simprod, EnergyWeight,ParticleType
+from pyevsel.utils.logger import Logger
+from pyevsel.variables.magic_keywords import  MC_P_EN,\
+                            MC_P_TY,\
+                            MC_P_ZE,\
+                            MC_P_WE,\
+                            RUN_START,\
+                            RUN_STOP, \
+                            RUN,\
+                            EVENT
+
 import inspect
 import conversions as conv
+
+NUTYPES = [conv.PDGCode.NuE,conv.PDGCode.NuEBar]
+NUTYPES.extend([conv.PDGCode.NuMu,conv.PDGCode.NuMuBar])
+NUTYPES.extend([conv.PDGCode.NuTau,conv.PDGCode.NuTauBar])
+
 
 ###########################################
 
@@ -18,7 +33,24 @@ class Weight(object):
         self.gen = generator
         self.flux = flux
 
-    def __call__(self,energy,ptype,zenith=[],mapping=False):
+    def __call__(self,energy,ptype,\
+                 zenith=None,mapping=False,
+                 weight=None):
+        """
+
+
+        Args:
+            energy: primary MC energy
+            ptype: primary MC particle type
+            zenith: cos (?) zenith
+
+        Keyword Args:
+            mapping: do a mapping to pdg
+            weight: e.g. interactionprobabilityweights for nue
+
+        Returns:
+            numpy.ndarray: weights
+        """
 
         # FIXME: mapping argument should go away
         if mapping:
@@ -37,11 +69,12 @@ class Weight(object):
         else:
             args = inspect.getargs(self.flux.func_code) 
             if len(args.args) == 3:
-                can_use_zenith = True       
-
-        if (len(zenith) > 0) and can_use_zenith:
+                can_use_zenith = True
+        if (zenith is not None) and can_use_zenith:
+            Logger.debug("Using zenith!")
             return self.flux(energy,ptype,zenith)/self.gen(energy,particle_type=ptype,cos_theta=zenith)
         else:
+            Logger.debug("Not using zenith!")
             return self.flux(energy,ptype)/self.gen(energy,particle_type=ptype,cos_theta=zenith)
 
 ###########################################
@@ -67,31 +100,21 @@ def GetGenerator(datasets):
         # or just generator is returned
         if isinstance(generator,tuple):
             generator = generator[1]
+
         generators.append(nfiles*generator)
 
     generator = reduce(lambda x,y : x+y, generators)
     return generator
 
-#####################################
+###########################################
 
 
-def HowManyFilesDB(dataset):
-    """
-    What does the DB think how many files 
-    should be there
-
-    Args:
-        dataset (int): dataset_id
-
-    Returns (int): number of files from db
-    """
-    nfiles,__ = from_simprod(dataset)
-    return nfiles
-
-##########d##################################
-
-
-def GetModelWeight(model,datasets,mc_p_energy=[],mc_p_type=[],mc_p_zenith=[],**model_kwargs):
+def GetModelWeight(model,datasets,\
+                   mc_p_en=None,\
+                   mc_p_ty=None,\
+                   mc_p_ze=None,\
+                   mc_p_we=1.,\
+                   **model_kwargs):
     """
     Compute weights using a predefined model
 
@@ -100,9 +123,10 @@ def GetModelWeight(model,datasets,mc_p_energy=[],mc_p_type=[],mc_p_zenith=[],**m
         datasets (dict): Get the generation pdf for these datasets from the db
                          dict needs to be dataset_id -> nfiles
     Keyword Args:
-        mc_p_energy (array-like): primary energy
-        mc_p_type (array-like): primary particle type
-        mc_p_zenith (array-like): primary particle cos(zenith)
+        mc_p_en (array-like): primary energy
+        mc_p_ty (array-like): primary particle type
+        mc_p_ze (array-like): primary particle cos(zenith)
+        mc_p_we (array-like): weight for mc primary, e.g. some interaction probability
 
     Returns (array-like): Weights
     """
@@ -110,8 +134,12 @@ def GetModelWeight(model,datasets,mc_p_energy=[],mc_p_type=[],mc_p_zenith=[],**m
         flux = model(**model_kwargs)
     else:
         flux = model()
-
+    # FIXME: There is a factor of 5000 not accounted
+    # for -> 1e4 is for the conversion of
+    factor = 1.
     gen  = GetGenerator(datasets)
+    if gen.spectra.keys()[0] in NUTYPES:
+        factor = 5000
     weight = Weight(gen,flux)
-    return weight(mc_p_energy,mc_p_type,zenith=mc_p_zenith)
+    return factor*mc_p_we*weight(mc_p_en,mc_p_ty,zenith=mc_p_ze)
 

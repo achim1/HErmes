@@ -93,8 +93,8 @@ def prepare_edge_string_distance():
             dist86 = pdist(vertex,edgepos86)
 
             data = n.zeros(len(dist79))
-            data[ic86 == 1] = dist79[ic86 == 1]
-            data[ic86 == 0]= dist86[ic86 == 0]
+            data[ic86 == 1] = dist86[ic86 == 1]
+            data[ic86 == 0] = dist79[ic86 == 0]
 
         else:
             edgepos = geo.coordinates(string,60)
@@ -114,18 +114,22 @@ pdist        = lambda p1, p2 : ((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2 + (p1[2]-p2[
 def is_ic86(dataset):
     #data = map(lambda x: x in ic86ds_id,dataset)
     #return n.array(data)
-    return dataset in ic86ds_id
+    #print dataset, ic86ds_id
+    #print dataset in ic86ds_id
+    #print int(dataset) in ic86ds_id
+    #raise
+    return int(dataset) in ic86ds_id
 
 # run and event id
 run   = V(RUN,definitions=[("I3EventHeader","Run")])
 event = V(EVENT,definitions=[("I3EventHeader","Run")])
 
 # mc primary
-mc_p_en = V("mc_p_en",definitions=[("MCPrimary","energy"),("mostEnergeticPrimary","energy")])
-mc_p_ty = V("mc_p_ty",definitions=[("MCPrimary","type"),("mostEnergeticPrimary","type")],transform=conv.ConvertPrimaryToPDG)
-mc_p_ze = V("mc_p_zen",definitions=[("MCPrimary","zenith"),("mostEnergeticPrimary","zenith")],transform=n.cos)
-
-
+# the variable names are magic!
+mc_p_en     = V("mc_p_en",definitions=[("MCPrimary","energy"),("mostEnergeticPrimary","energy")])
+mc_p_ty     = V("mc_p_ty",definitions=[("MCPrimary","type"),("mostEnergeticPrimary","type")],transform=conv.ConvertPrimaryToPDG)
+mc_p_ze     = V("mc_p_ze",definitions=[("MCPrimary","zenith"),("mostEnergeticPrimary","zenith")],transform=n.cos)
+mc_p_we     = V("mc_p_we",definitions=[("I3MCWeightDict","TotalInteractionProbabilityWeight"),("CorsikaWeightMap","DiplopiaWeight")])
 # MC refvis cascade
 mc_refvis_logE = V("mc_refvis_logE",bins=energybins,definitions=[("RefCscdVisEn_new","value")],label=r"$\log_{10}(E_{ref,vis}$ / GeV)",transform=n.log10)
 mc_refvis_x    = V("mc_refvis_x",bins=vertexbins,definitions=[("mostEnergeticCascade","x")],label=r"$x_{ref}$ [m]")
@@ -163,7 +167,8 @@ qmax_dom       = V("qmax_dom",bins=qmaxdombins,definitions=[("qmax_dom","value")
 monopod_exp_q  = V("monopod_exp_q",bins=totchargebins,definitions=[("Monopod4FitParams","qtotal")],label=r"pred. \log(NPE)",transform=n.log10)
 monopod_obs_q  = V("monopod_obs_q",bins=totchargebins,definitions=[("Monopod4FitParams","predicted_qtotal")],label=r"pred. \log(NPE)",transform=n.log10)
 containment    = V("containment",bins=containedbins,definitions=[("CascadeL3_Containment","value"),("CscdL3_Cont_Tag","value")],label="containment")
-ic86           = V("dataset",bins=containedbins,definitions=[("dataset","value")],label="dataset",transform=is_ic86)
+ic86           = V("ic86",bins=containedbins,definitions=[("dataset","value")],label="isic86",transform=is_ic86)
+dataset        = V("dataset",bins=containedbins,definitions=[("dataset","value")],label="dataset")
 # timing information from header
 endtime_day    = V("endtime_day",definitions=[("I3EventHeader","time_end_mjd_day")],transform= lambda x: 24*3600.*x)
 endtime_sec    = V("endtime_sec",definitions=[("I3EventHeader","time_end_mjd_sec")]) 
@@ -174,8 +179,8 @@ starttime_ns   = V("starttime_ns",definitions=[("I3EventHeader","time_start_mjd_
 
 runstart       = CV(RUN_START,variables=[starttime_day,starttime_sec,starttime_ns],operation=lambda x,y : x + y  )
 runsend        = CV(RUN_STOP,variables=[endtime_day,endtime_sec,endtime_ns],operation=lambda x,y : x + y  )
-maxdom_qtot    = CV("qmaxdom_qtot",variables=[qmax_dom,qtot],operation=lambda x,y : x/y)
-monopod_q_ratio= CV("monopod_q_ratio",variables=[monopod_exp_q,monopod_obs_q],operation=lambda x,y : ((10**x)/(10**y)))
+maxdom_qtot    = CV("qmaxdom_qtot",bins=fillratiobins,variables=[qmax_dom,qtot],operation=lambda x,y : ((10**x)/(10**y)))
+monopod_q_ratio= CV("monopod_q_ratio",bins=n.linspace(-1,3,nbins),variables=[monopod_exp_q,monopod_obs_q],operation=lambda x,y : ((10**x)/(10**y)))
 uncontainment  = CV("uncontainment",variables=[containment,l3credo_z],operation=calc_uncontainment)
 #monopod_xy    = CV("monopodxy",variables=[monopod_x,monopod_y],operation=lambda x,y : n.sqrt(x**2 + y**2))
 monopod_vertex = VL("monopod_vertex",variables=[monopod_x,monopod_y,monopod_z])

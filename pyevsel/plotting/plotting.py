@@ -277,8 +277,8 @@ class VariableDistributionPlot(object):
                     axes_locator +=[(x+ len(axes_locator),"h") for x  in range(len(self.histograms))]
         return axes_locator
 
-    def plot(self,heights=[.5,.2,.2],\
-             axes_locator=[(0,"c"),(1,"r"),(2,"h")],\
+    def plot(self,heights=(.5,.2,.2),\
+             axes_locator=((0,"c"),(1,"r"),(2,"h")),\
              combined_distro=True,\
              combined_ratio=True,\
              combined_cumul=True,

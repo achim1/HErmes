@@ -5,6 +5,13 @@ Use with pyevsel.categories.Category to perfom cuts
 from pyevsel.variables.variables import Variable as V
 
 import operator
+operator_lookup = {\
+    ">" : operator.gt,\
+    "==" : operator.eq,\
+    "<" : operator.lt,\
+    ">=" : operator.ge,\
+    "<=" : operator.le\
+    }
 
 def create_func(operation,value):
     """operator_lookup
@@ -18,14 +25,6 @@ def create_func(operation,value):
     Returns:
         func
     """
-    operator_lookup = {\
-    ">" : operator.gt,\
-    "==" : operator.eq,\
-    "<" : operator.lt,\
-    ">=" : operator.ge,\
-    "<=" : operator.le\
-    }
-
     def func(x):
         return operator_lookup[operation](x,value)
     return func
@@ -36,7 +35,7 @@ class Cut(object):
     category to reduce its mightiness
     """
 
-    def __init__(self,condition=None,*cuts):
+    def __init__(self,*cuts,**kwargs):
         """
         Create a new cut, with the variables and operations
         given in cuts
@@ -51,7 +50,9 @@ class Cut(object):
             None
         """
 
-        self.condition = condition
+        self.condition = None
+        if "condition" in kwargs:
+            self.condition = kwargs["condition"]
         self.cutdict = dict()
         self.compiled_cuts = dict()
         for var,operation,value in cuts:
@@ -59,8 +60,12 @@ class Cut(object):
                 name = var.name
             if isinstance(var,str):
                 name = var
-            self.cutdict[name] = (operation,value)
-            self.compiled_cuts[name] = create_func(operation,value)
+            self.cutdict[name] = (operator_lookup[operation],value)
+
+            # The idea of compiled cuts
+            # and using pandas.Series.apply is
+            # nice, but too slow!
+            #self.compiled_cuts[name] = create_func(operation,value)
 
     def __iter__(self):
         """
@@ -68,7 +73,8 @@ class Cut(object):
         """
 
         for k in self.cutdict.keys():
-            yield k,self.compiled_cuts[k]
+            #yield k,self.compiled_cuts[k]
+            yield k,self.cutdict[k]
 
     def __repr__(self):
         rep = """<Cut """

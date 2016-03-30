@@ -97,8 +97,23 @@ def GetCategoryConfig(name):
             cleanlabel = SLASHES.sub(r"\\",cfg["label"])
             cfg["label"] = cleanlabel
             return cfg
-    Logger.warning("No config for %s found!" %name)
+    Logger.warning("No config for {0} found!".format(name))
     return cfg
+
+########################################
+
+def get_config_item(key,filename=STD_CONF):
+    """
+    Returns an item from upper level tree in the config
+
+    Args:
+        item (str): the key in the config file
+
+    Returns:
+        str: config setting
+    """
+    cfg = yaml.load(open(filename,"r"))
+    return cfg[key]
 
 ########################################
 

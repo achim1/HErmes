@@ -11,7 +11,7 @@ class ColorDict(dict):
     """
 
     def __getitem__(self,item):
-        if self.has_key(item):
+        if item in self:
             return self.get(item)
         else:
             return item
@@ -22,7 +22,7 @@ try:
     import seaborn.apionly as sb
 
     seaborn_loaded = True
-    Logger.info("Seaborn found!")
+    Logger.debug("Seaborn found!")
 except ImportError:
     Logger.warning("Seaborn not found! Using predefined color palette")
 

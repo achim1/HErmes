@@ -1,3 +1,4 @@
+[![Code Issues](https://www.quantifiedcode.com/api/v1/project/d563ba797fe649cab31d9750733c5fad/badge.svg)](https://www.quantifiedcode.com/app/project/d563ba797fe649cab31d9750733c5fad)
 # pyevsel
 An API for event selection as used in HEP analysis.
 

@@ -476,20 +476,18 @@ class Data(AbstractBaseCategory):
     Simplified weighting only
     """
 
-    def __init__(self,name,livetime=0):
+    def __init__(self,name):
         """
         Instanciate a Data dataset. Provide livetime in **kwargs.
         Special keyword "guess" for livetime allows to guess the livetime later on
 
         Args:
             name: a unique identifier
-            livetime: how long did the detector run?
 
         Returns:
 
         """
         AbstractBaseCategory.__init__(self,name)
-        self.set_livetime(livetime)
         self._runstartstop_set = False
 
     @staticmethod
@@ -588,11 +586,14 @@ class Data(AbstractBaseCategory):
         self.set_livetime(est_ltime)
         return 
 
-    def get_weights(self):
+    def get_weights(self,livetime):
         """
         Calculate weights as rate, that is number of
         events per livetime
         """
+        #FIXME: Move lifetime to arguments? It would make sense...
+
+        self.set_livetime(livetime)
         if self.livetime == "guess":
             self.estimate_livetime()
         self._weights = pd.Series(n.ones(self.raw_count,dtype=n.float64)/self.livetime)

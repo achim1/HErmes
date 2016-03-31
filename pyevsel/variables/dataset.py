@@ -29,17 +29,10 @@ class Dataset(object):
 
         """
         self.categories = []
-        livetimes = []
         for cat in args:
             self.categories.append(cat)
             self.__dict__[cat.name] = cat
 
-            if isinstance(cat,categories.Data):
-                livetimes.append(cat.livetime)
-
-        assert len(set(livetimes)) == 1,"Can not yet use data with different livetime!"
-        if livetimes:
-            self.livetime = livetimes[0]
 
     def read_all_vars(self,variable_defs):
         """
@@ -344,3 +337,6 @@ class Dataset(object):
         tt.add("Ratio",**fudges)
         return tt.render(layout=layout,format=format,format_cell=cellformatter)
 
+    def __len__(self):
+        #FIXME: to be implemented
+        return None

@@ -207,15 +207,16 @@ class Variable(AbstractBaseVariable):
             pd.Series or pd.DataFrame
         """ %(REGISTERED_FILEEXTENSIONS.__repr__())
         if self.is_harvested:
-            return        
+            return
+
+        data = pd.Series()
+        if self.defsize == 1:
+            data = pd.DataFrame()
 
         for filename in filenames:
             ext = f.strip_all_endings(filename)[1]
             assert ext in REGISTERED_FILEEXTENSIONS, "Filetype %s not know" %ext
             assert os.path.exists(filename), "File %s does not exist!" %ext
-            data = pd.Series()
-            if self.defsize == 1:
-                data = pd.DataFrame()
 
             data = self.harvest_single_file(filename,ext)
             #self.data = self.data.append(data.map(self.transform))

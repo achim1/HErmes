@@ -10,7 +10,7 @@ from pyevsel.plotting.plotting import VariableDistributionPlot
 from pyevsel.plotting import GetCategoryConfig
 from dashi.tinytable import TinyTable
 
-from categories import Data
+import categories
 
 class Dataset(object):
     """
@@ -33,11 +33,13 @@ class Dataset(object):
         for cat in args:
             self.categories.append(cat)
             self.__dict__[cat.name] = cat
-            if isinstance(cat,Data):
+
+            if isinstance(cat,categories.Data):
                 livetimes.append(cat.livetime)
-        assert len(set(livetimes) == 1),"Can not yet use data with different livetime!"
+
+        assert len(set(livetimes)) == 1,"Can not yet use data with different livetime!"
         if livetimes:
-            self.livetime = livetime[0]
+            self.livetime = livetimes[0]
 
     def read_all_vars(self,variable_defs):
         """
@@ -80,11 +82,8 @@ class Dataset(object):
             weightfunction (func): set func used for medel weight calculation
             models (dict): A dictionary of categoryname -> model
         """
-        for cat in self.categories:
-            if not cat.name in models:
-                cat.get_weights()
-            else:
-                cat.get_weights(models[cat.name])
+        for catname in models:
+            self.get_category(catname).get_weights(models[catname])
 
     def add_category(self,category):
         """
@@ -281,7 +280,7 @@ class Dataset(object):
 
         datacats = []
         for cat in self.categories:
-            if isinstance(cat,Data):
+            if isinstance(cat,categories.Data):
                 datacats.append(cat)
         if datacats:
             simcats = [cat for cat in self.categories if cat.name not in [kitty.name for kitty in datacats]]

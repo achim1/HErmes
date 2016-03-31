@@ -250,7 +250,7 @@ class CompoundVariable(AbstractBaseVariable):
         self.operation = operation
         self.data = pd.Series()
 
-    def _rewire_variables(self,vardict):
+    def rewire_variables(self,vardict):
         """
         Use to avoid the necessity to read out variables twice
         as the variables are copied over by the categories, 
@@ -306,7 +306,7 @@ class VariableList(AbstractBaseVariable):
             return
         self.declare_harvested()
 
-    def _rewire_variables(self,vardict):
+    def rewire_variables(self,vardict):
         """
         Use to avoid the necesity to read out variables twice
         as the variables are copied over by the categories,

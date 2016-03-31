@@ -35,7 +35,6 @@ class AbstractBaseCategory(object):
     def __init__(self,name):
         self.name = name
         self.datasets = dict()
-        self.name = ""
         self.vardict = dict()
         self._weightfunction = lambda x : x
         self.cuts = []
@@ -44,7 +43,7 @@ class AbstractBaseCategory(object):
         self._is_harvested = False
 
     def __repr__(self):
-        return """<{0}: {1}>""".format((self.__class__,self.name))
+        return """<{0}: {1}>""".format(self.__class__,self.name)
 
     def __hash__(self):
         return hash((self.name,"".join(map(str,self.datasets.keys()))))
@@ -72,7 +71,14 @@ class AbstractBaseCategory(object):
         assert self.is_harvested,"Please read out variables first"
         return len(self.get(RUN,uncut=True))
 
-    @abc.abstractmethod
+    @property
+    def variablenames(self):
+        return self.vardict.keys()
+
+    @property
+    def is_harvested(self):
+        return self._is_harvested
+
     def set_weightfunction(self,func):
         """
         Register a function used for weighting
@@ -80,11 +86,7 @@ class AbstractBaseCategory(object):
         Args:
             func (func): the function to be used
         """
-        return
-
-    @property
-    def variablenames(self):
-        return self.vardict.keys()
+        self._weightfunction = func
 
     def add_cut(self,cut):
         """
@@ -268,7 +270,7 @@ class AbstractBaseCategory(object):
 
         for varname in compound_variables:
             #FIXME check if this causes a memory leak
-            self.vardict[varname]._rewire_variables(self.vardict)
+            self.vardict[varname].rewire_variables(self.vardict)
             self.vardict[varname].harvest()
         self._is_harvested = True
 
@@ -351,6 +353,9 @@ class Simulation(AbstractBaseCategory):
     Allows to weight the events
     """
     _mc_p_readout = False
+
+    def __init__(self,name):
+        AbstractBaseCategory.__init__(self,name)
 
     @property
     def mc_p_readout(self):
@@ -491,6 +496,9 @@ class Data(AbstractBaseCategory):
     def _ds_regexp(filename):
         return EXP_RUN_ID(filename)
 
+    def set_weightfunction(self,func):
+        return
+
     def set_livetime(self,livetime):
         """
         Override the private _livetime member
@@ -522,14 +530,14 @@ class Data(AbstractBaseCategory):
         #FIXME
         for var,name in [(runstart_var,RUN_START),(runstop_var,RUN_STOP)]:
             if var.name is None:
-                Logger.warning("No %s available" %name)
-            elif self.vardict.has_key(name):
-                Logger.info("..%s already defined, skipping..." %name)
+                Logger.warning("No {0} available".format(name))
+            elif name in self.vardict:
+                Logger.info("..{0} already defined, skipping...".format(name))
                 continue
             
             else:
                 if var.name != name:
-                    Logger.info("..renaming %s to %s.." %(var.name,name))        
+                    Logger.info("..renaming {0} to {1}..".format(var.name,name))
                     var.name = name
                 newvar = copy(var)
                 self.vardict[name] = newvar

@@ -3,6 +3,8 @@ Use with pyevsel.categories.Category to perfom cuts
 """
 
 from pyevsel.variables.variables import Variable as V
+from pyevsel.utils.logger import Logger
+from collections import defaultdict
 
 import operator
 operator_lookup = {\
@@ -13,21 +15,8 @@ operator_lookup = {\
     "<=" : operator.le\
     }
 
-def create_func(operation,value):
-    """operator_lookup
-    Create conditional function for the provide operator
-    value pair
+inv_operator_lookup = {v: k for k, v in operator_lookup.items()}
 
-    Args:
-        operation (str): an operator string, '<', '==", etc
-        value (float): goes with operation
-
-    Returns:
-        func
-    """
-    def func(x):
-        return operator_lookup[operation](x,value)
-    return func
 
 class Cut(object):
     """
@@ -53,57 +42,32 @@ class Cut(object):
         self.condition = None
         if "condition" in kwargs:
             self.condition = kwargs["condition"]
-        self.cutdict = dict()
+        self.cutdict = defaultdict(list)
         self.compiled_cuts = dict()
         for var,operation,value in cuts:
             if isinstance(var,V):
                 name = var.name
             if isinstance(var,str):
                 name = var
-            self.cutdict[name] = (operator_lookup[operation],value)
-
-            # The idea of compiled cuts
-            # and using pandas.Series.apply is
-            # nice, but too slow!
-            #self.compiled_cuts[name] = create_func(operation,value)
+            self.cutdict[name].append((operator_lookup[operation],value))
 
     def __iter__(self):
         """
         Return name, cutfunc pairs
         """
-
+        # flatten out the cutdict
         for k in self.cutdict.keys():
-            #yield k,self.compiled_cuts[k]
-            yield k,self.cutdict[k]
+            for j in self.cutdict[k]:
+                yield k,j
 
     def __repr__(self):
-        rep = """<Cut """
-        for k in self.cutdict.keys():
-            rep += """|%s %s %4.2f """ %(k,self.cutdict[k][0],self.cutdict[k][1])
+        if self.condition is not None:
+            rep = """< Cut with condition | \n"""
+        else:
+            rep = """< Cut | \n"""
+        for i,(j,k) in sorted(self):
+            rep += """| {0} {1} {2} \n""".format(i,inv_operator_lookup[j],k)
 
-        rep += """>"""
+        rep += """| >"""
         return rep
 
-    #def __call__(self,category):
-    #    """
-    #    do it!
-    #    """
-    #    newcat = category
-    #    total_mask = n.ones(len(category),dtype=n.bool)
-    #    for v in self._cutdict.keys():
-    #        ops = self._cutdict[v]
-    #        if not callable(ops):
-    #            ops = self._condition_map[ops]
-    #            newcat.vardict[v].data = category.vardict[v].data.__getattribute__(ops)()
-    #        else:
-    #            mask = category.vardict[v].data.map(ops)
-    #            self.maskdict[v] = mask
-    #            total_mask = n.logical_and(total_mask,mask)
-    #    print len(total_mask) == len(total_mask[n.isfinite(total_mask)])
-    #    print total_mask
-    #    total_mask = n.array(total_mask)
-    #    for v in category.vardict.keys():
-    #        print v
-    #        print category.vardict[v].data
-    #        newcat.vardict[v].data = category.vardict[v].data.where(total_mask)
-    #    return newcat

@@ -181,6 +181,7 @@ class Variable(AbstractBaseVariable):
             if filetype == ".h5":
                 data = self.harvest_from_hdftable(store,definition)
                 if data is None:
+                    Logger.debug("Can not find definition {0} in {1}! ".format(definition,fileobject))
                     continue
                 else:
                     break
@@ -217,7 +218,7 @@ class Variable(AbstractBaseVariable):
             ext = f.strip_all_endings(filename)[1]
             assert ext in REGISTERED_FILEEXTENSIONS, "Filetype %s not know" %ext
             assert os.path.exists(filename), "File %s does not exist!" %ext
-
+            #Logger.debug("Attempting to harvest file {0}".format(filename))
             data = self.harvest_single_file(filename,ext)
             #self.data = self.data.append(data.map(self.transform))
             #concat should be much faster

@@ -4,7 +4,6 @@ Categories of data, like "signal" of "background" etc
 
 from pyevsel.utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from pyevsel.utils.logger import Logger
-from pyevsel.utils import GetTiming
 
 from magic_keywords import  MC_P_EN,\
                             MC_P_TY,\
@@ -20,8 +19,8 @@ import inspect
 import numpy as n
 import numpy as np
 import abc
+import tqdm
 
-from dashi.tinytable import TinyTable
 from copy import deepcopy as copy
 
 class AbstractBaseCategory(object):
@@ -109,16 +108,31 @@ class AbstractBaseCategory(object):
         """
         self.undo_cuts()
         mask = n.ones(self.raw_count)
+        
+        # only apply the condition to the mask
+        # created for the cut with the condition
+        # not the others
+        cond_masks = []
         for cut in self.cuts:
+            cond_mask = n.ones(self.raw_count)
+            if cut.condition is None:
+                continue
             for varname,(op,value) in cut:
                 s = self.get(varname)
-                mask = n.logical_and(mask,op(s,value)   )
+                cond_mask = n.logical_and(cond_mask,op(s,value) )
+            cond_mask = n.logical_or(cond_mask,n.logical_not(cut.condition[self.name]))
+            cond_masks.append(cond_mask)
 
-                #    Logger.warning("After cutting on %s, no events are left!" %varname)
-                if cut.condition is not None:
-                    mask = n.logical_or(mask,n.logical_not(cut.condition[self.name]))
-                    #FIXME
-                    #mask = n.logical_and(cut.condition,mask)
+        # finish the conditional part
+        for m in cond_masks:
+            mask = n.logical_and(mask,m)
+
+        for cut in self.cuts:
+            if cut.condition is not None:
+                continue
+            for varname,(op,value) in cut:
+                s = self.get(varname)
+                mask = n.logical_and(mask,op(s,value) )
         if inplace:
             for k in self.vardict.keys():
                 self.vardict[k].data = self.vardict[k].data[mask]
@@ -242,7 +256,6 @@ class AbstractBaseCategory(object):
         else:
             return self.vardict[varkey].data
 
-    @GetTiming
     def read_variables(self,names=None):
         """
         Harvest the variables in self.vardict
@@ -254,7 +267,8 @@ class AbstractBaseCategory(object):
         if names is None:
             names = self.vardict.keys()
         compound_variables = [] #harvest them later
-        for varname in names:
+
+        for varname in tqdm.tqdm(names,desc="Reading variables"):
             try:
                 if isinstance(self.vardict[varname],variables.CompoundVariable):
                     compound_variables.append(varname)

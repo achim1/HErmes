@@ -8,6 +8,8 @@ import numpy as np
 
 from pyevsel.plotting.plotting import VariableDistributionPlot
 from pyevsel.plotting import GetCategoryConfig
+from pyevsel.utils import GetTiming
+
 from dashi.tinytable import TinyTable
 
 import categories
@@ -33,7 +35,7 @@ class Dataset(object):
             self.categories.append(cat)
             self.__dict__[cat.name] = cat
 
-
+    @GetTiming
     def read_all_vars(self,variable_defs):
         """
         Read out the variable for all categories
@@ -285,7 +287,7 @@ class Dataset(object):
             try:
                 fudges[cat.name] = (rate/simrate,error/simerror)
             except ZeroDivisionError:
-                fudges[cat.name] = np.Nan
+                fudges[cat.name] = np.NaN
         rate_dict = dict()
         all_fudge_dict = dict()
         for catname in self.categorynames:

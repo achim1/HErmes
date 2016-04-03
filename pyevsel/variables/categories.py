@@ -20,8 +20,10 @@ import numpy as n
 import numpy as np
 import abc
 import tqdm
+import multiprocessing as mp
 
-from copy import deepcopy as copy
+
+from copy import deepcopy
 
 class AbstractBaseCategory(object):
     """
@@ -189,7 +191,7 @@ class AbstractBaseCategory(object):
         Args:
             variable (pyevsel.variables.variables.Variable): A Variable instalce
         """
-        tmpvar = copy(variable)
+        tmpvar = deepcopy(variable)
         self.vardict[tmpvar.name] = tmpvar
 
     def get_files(self,*args,**kwargs):
@@ -268,7 +270,9 @@ class AbstractBaseCategory(object):
             names = self.vardict.keys()
         compound_variables = [] #harvest them later
 
-        for varname in tqdm.tqdm(names,desc="Reading variables"):
+        workers = mp.Pool(processes=4) # 4 is random
+
+        for varname in tqdm.tqdm(names,desc="Reading {0} variables".format(self.name)):
             try:
                 if isinstance(self.vardict[varname],variables.CompoundVariable):
                     compound_variables.append(varname)
@@ -280,8 +284,11 @@ class AbstractBaseCategory(object):
             except KeyError:
                 Logger.warning("Cannot find %s in variables!" %varname)
                 continue
-            self.vardict[varname].harvest(*self.files)
-
+            workers.apply_async(self.vardict[varname].harvest,args=self.files)
+            #self.vardict[varname].harvest(*self.files)
+    
+        workers.close()
+        workers.join()
         for varname in compound_variables:
             #FIXME check if this causes a memory leak
             self.vardict[varname].rewire_variables(self.vardict)
@@ -551,7 +558,7 @@ class Data(AbstractBaseCategory):
                 if var.name != name:
                     Logger.info("..renaming {0} to {1}..".format(var.name,name))
                     var.name = name
-                newvar = copy(var)
+                newvar = deepcopy(var)
                 self.vardict[name] = newvar
 
         self._runstartstop_set = True

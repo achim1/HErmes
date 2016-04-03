@@ -114,14 +114,15 @@ class Dataset(object):
         Args:
             varname (str): A name of a variable
 
-        Returns (pandas.DataFrame): A 2d dataframe category -> variable
+        Returns:
+            pandas.DataFrame: A 2d dataframe category -> variable
         """
 
         var = dict()
         for cat in self.categories:
             var[cat.name] = cat.get(varname)
 
-        df = pd.DataFrame(var)
+        df = pd.DataFrame.from_dict(var,orient="index")
         return df
 
     @property

@@ -6,6 +6,8 @@ categories
 import pandas as pd
 import numpy as np
 
+from collections import OrderedDict
+
 from pyevsel.plotting.plotting import VariableDistributionPlot
 from pyevsel.plotting import GetCategoryConfig
 from pyevsel.utils import GetTiming
@@ -14,18 +16,47 @@ from dashi.tinytable import TinyTable
 
 import categories
 
+class CombinedCategory(object):
+    """
+    Create a combined category out of serveral others
+    This is mainly useful for plotting
+    FIXME: should this inherit from category as well?
+    The difference compared to the dataset is that
+    this is flat
+    """
+
+    def __init__(self,name,categories):
+        self.name = name
+        self.categories = categories
+        self.plot = True
+       
+    @property
+    def weights(self):
+        return pd.concat([cat.weights for cat in self.categories])
+
+    @property
+    def vardict(self):
+        return self.categories[0].vardict
+
+    def get(self,varname):
+        return pd.concat([cat.get(varname) for cat in self.categories])
+
+
 class Dataset(object):
     """
     Holds different categories, relays calls to each
     of them
     """
 
-    def __init__(self,*args):
+    def __init__(self,*args,**kwargs):
         """
         Iniitalize with the categories
 
         Args:
             *args: pyevsel.variables.categories.Category list
+
+        Keyword Args:
+            combined_categories: 
 
         Returns:
 
@@ -33,7 +64,11 @@ class Dataset(object):
         self.categories = []
         for cat in args:
             self.categories.append(cat)
+            self.combined_categories = []
             self.__dict__[cat.name] = cat
+        if 'combined_categories' in kwargs:
+            for name in kwargs['combined_categories'].keys():
+                self.combined_categories.append(CombinedCategory(name,kwargs['combined_categories'][name]))
 
     @GetTiming
     def read_all_vars(self,variable_defs):
@@ -68,6 +103,7 @@ class Dataset(object):
         else:
             for cat in self.categories:
                 cat.set_weightfunction(weightfunction)
+
 
     def get_weights(self,models):
         """
@@ -199,8 +235,12 @@ class Dataset(object):
         Returns:
             pyevsel.variables.VariableDistributonPlot
         """
-        plot = VariableDistributionPlot()
+        cuts = dict()
         for cat in self.categories:
+            cuts[cat.name] = cat.cuts
+        plot = VariableDistributionPlot(cuts=cuts)
+        plotcategories = self.categories + self.combined_categories 
+        for cat in filter(lambda x: x.plot,plotcategories):
             plot.add_variable(cat,name)
             if cumulative:
                 plot.add_cumul(cat.name)
@@ -289,8 +329,8 @@ class Dataset(object):
                 fudges[cat.name] = (rate/simrate,error/simerror)
             except ZeroDivisionError:
                 fudges[cat.name] = np.NaN
-        rate_dict = dict()
-        all_fudge_dict = dict()
+        rate_dict = OrderedDict()
+        all_fudge_dict = OrderedDict()
         for catname in self.categorynames:
             cfg = GetCategoryConfig(catname)
             label = cfg["label"]
@@ -311,7 +351,9 @@ class Dataset(object):
     def tinytable(self,signal=None,\
                     background=None,\
                     layout="v",\
-                    format="html"):
+                    format="html",\
+                    order_by=lambda x:x,
+                    livetime=1.):
         """
         Use dashi.tinytable.TinyTable to render a nice
         html representation of a rate table
@@ -335,10 +377,15 @@ class Dataset(object):
 
         #FIXME: sort the table columns
         rates,fudges = self._setup_table_data(signal=signal,background=background)
+        events = dict()
+        for k in rates:
+            events[k] = rates[k][0] * livetime, rates[k][1] * livetime
+
         tt = TinyTable()
         tt.add("Rate (1/s)", **rates)
         tt.add("Ratio",**fudges)
-        return tt.render(layout=layout,format=format,format_cell=cellformatter)
+        tt.add("Events",**events)
+        return tt.render(layout=layout,format=format,format_cell=cellformatter,order_by=order_by)
 
     def __len__(self):
         #FIXME: to be implemented

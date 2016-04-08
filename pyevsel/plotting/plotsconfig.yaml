@@ -76,7 +76,8 @@ categories: [{name: 'data',
          hatch: False
          },
     dashistylescatter:{
-        marker: 'None'
+        marker: 'None',
+        color: 0
         },
     histscatter: 'overlay'
     },
@@ -90,30 +91,31 @@ categories: [{name: 'data',
          hatch: False         
          },
     dashistylescatter:{
-        marker: 'None'
+        marker: 'None',
+        color: 0
         },
     histscatter: 'overlay'
     },
-    {name: 'corsika_coinc',
+    {name: 'atmos_cc_mu',
     label: 'cc $\mu_{atm}$',
     dashistyle:{
-         color: -1,
+         color: 5,
          linewidth: 3,
          alpha: .8,
          filled: True,
-         linestyle: '-',
+         linestyle: 'solid',
          hatch: '//'         
          },
     histscatter: 'line'
     },
-    {name: 'signal',
+    {name: 'astro_nu',
     label: '$\nu_{astr}$',
     dashistyle:{
          color: 2,
          linewidth: 3,
          alpha: 1.,
          filled: False,
-         linestyle: '-',
+         linestyle: 'solid',
          },
     histscatter: 'line'
     },
@@ -124,7 +126,7 @@ categories: [{name: 'data',
          linewidth: 3,
          alpha: 1.,
          filled: False,
-         linestyle: '-',
+         linestyle: 'solid',
          },
     histscatter: 'line'
     },
@@ -135,7 +137,7 @@ categories: [{name: 'data',
          linewidth: 3,
          alpha: 1.,
          filled: False,
-         linestyle: '-',
+         linestyle: 'solid',
          },
     histscatter: 'line'
     },
@@ -146,7 +148,7 @@ categories: [{name: 'data',
          linewidth: 3,
          alpha: 1.,
          filled: False,
-         linestyle: '-',
+         linestyle: 'solid',
          },
     histscatter: 'line'
     },
@@ -157,7 +159,7 @@ categories: [{name: 'data',
          linewidth: 3,
          alpha: 1.,
          filled: False,
-         linestyle: '-',
+         linestyle: 'solid',
          },
     histscatter: 'line'
     },
@@ -168,7 +170,7 @@ categories: [{name: 'data',
          linewidth: 3,
          alpha: 1.,
          filled: False,
-         linestyle: '-',
+         linestyle: 'solid',
          },
     histscatter: 'line'
     },
@@ -179,7 +181,7 @@ categories: [{name: 'data',
          linewidth: 3,
          alpha: 1.,
          filled: False,
-         linestyle: '-',
+         linestyle: 'solid',
          },
     histscatter: 'line'
     },
@@ -200,7 +202,7 @@ categories: [{name: 'data',
          linewidth: 3,
          alpha: 1.,
          filled: False,
-         linestyle: '-',
+         linestyle: 'solid',
          },
     histscatter: 'line'
     },
@@ -211,7 +213,7 @@ categories: [{name: 'data',
          linewidth: 3,
          alpha: 1.,
          filled: False,
-         linestyle: '-',
+         linestyle: 'solid',
          },
     histscatter: 'line'
     } 

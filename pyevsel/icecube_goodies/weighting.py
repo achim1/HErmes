@@ -138,7 +138,8 @@ def GetModelWeight(model,datasets,\
     # for -> 1e4 is for the conversion of
     factor = 1.
     gen  = GetGenerator(datasets)
-    if gen.spectra.keys()[0] in NUTYPES:
+    if map(int,gen.spectra.keys())[0] in NUTYPES:
+        Logger.debug('Patching weights')
         factor = 5000
     weight = Weight(gen,flux)
     return factor*mc_p_we*weight(mc_p_en,mc_p_ty,zenith=mc_p_ze)

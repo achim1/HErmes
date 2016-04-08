@@ -181,7 +181,7 @@ class Variable(AbstractBaseVariable):
             if filetype == ".h5":
                 data = self.harvest_from_hdftable(store,definition)
                 if data is None:
-                    Logger.debug("Can not find definition {0} in {1}! ".format(definition,fileobject))
+                    #Logger.debug("Can not find definition {0} in {1}! ".format(definition,fileobject))
                     continue
                 else:
                     break

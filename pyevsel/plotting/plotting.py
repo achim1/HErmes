@@ -11,7 +11,7 @@ import numpy as n
 import dashi as d
 d.visual()
 
-from pyevsel.plotting.plotcolors import GetColorPalette
+from pyevsel.plotting.plotcolors import get_color_palette
 import pyevsel.plotting.canvases as c
 from pyevsel.utils.logger import Logger
 from pyevsel.plotting import GetCategoryConfig,LoadConfig
@@ -19,14 +19,12 @@ import pylab as p
 
 STD_CONF=os.path.join(os.path.split(__file__)[0],"plotsconfig.yaml")
 
-
-
 STYLE = os.path.join(os.path.split(__file__)[0],"pyevseldefault.mplstyle")
 p.style.use(STYLE)
 
 ###############################################
 
-def CreateArrow(x_0,y_0,dx,dy,length,\
+def create_arrow(x_0,y_0,dx,dy,length,\
                 width = .1,shape="right",\
                 fc="k",ec="k",\
                 alpha=1.,log=False):
@@ -90,7 +88,7 @@ class VariableDistributionPlot(object):
     and ratio plots for variables
     """
 
-    def __init__(self,cuts=None):
+    def __init__(self,cuts=None,color_palette="dark"):
         self.histograms = {}
         self.histratios = {}
         self.cumuls     = {}
@@ -101,6 +99,7 @@ class VariableDistributionPlot(object):
         if cuts is None:
             cuts = []
         self.cuts       = cuts
+        self.color_palette = get_color_palette(color_palette)
 
 
     def _add_data(self,dataname,variable_data,bins,weights=None,label=''):
@@ -119,6 +118,17 @@ class VariableDistributionPlot(object):
             weights = n.ones(len(variable_data))
         self.histograms[dataname] = d.factory.hist1d(variable_data,bins,weights=weights)
         self.label = label
+
+    def add_variable(self,category,variable_name):
+        """
+        Convenience interface if data is sorted in categories already
+
+        Args:
+           category (pyevsel.variables.category.Category): Get variable from this category
+           variable_name (string): The name of the variable
+
+        """
+        self._add_data(category.name,category.get(variable_name),category.vardict[variable_name].bins,weights=category.weights,label=category.vardict[variable_name].label)
 
     def indicate_cut(self,ax):
         """
@@ -140,23 +150,13 @@ class VariableDistributionPlot(object):
                 shape = 'right'
                 inversed = True
 
-            arr = CreateArrow(cutval,vmax*0.1, -1., 0, length, width= width,shape=shape,log=True)
+            arr = create_arrow(cutval,vmax*0.1, -1., 0, length, width= width,shape=shape,log=True)
             ax.add_patch(arr)
             if not inversed:
                 ax.axvspan(value, hmax, facecolor=st.helpercolors["prohibited"], alpha=0.5)
             else:
                 ax.axvspan(hmin, value, facecolor=st.helpercolors["prohibited"], alpha=0.5)
 
-    def add_variable(self,category,variable_name):
-        """
-        Convenience interface if data is sorted in categories already
-
-        Args:
-           category (pyevsel.variables.category.Category): Get variable from this category
-           variable_name (string): The name of the variable
-
-        """
-        self._add_data(category.name,category.get(variable_name),category.vardict[variable_name].bins,weights=category.weights,label=category.vardict[variable_name].label)
 
     def add_ratio(self,names_upper,names_under,total_ratio=None,total_ratio_errors=None,log=False,label="data/$\Sigma$ bg"):
         """
@@ -204,16 +204,19 @@ class VariableDistributionPlot(object):
         self.cumuls[name] = self.histograms[name].normalized()
         
 
-    def _draw_distribution(self,ax,name,log=True,cumulative=False,configfilename=STD_CONF,color_palette="dark"):
+    def _draw_distribution(self,ax,name,log=True,cumulative=False,configfilename=STD_CONF):
         """
         Paint the histograms!
         """
-        color_palette = GetColorPalette(color_palette)
         cfg = GetCategoryConfig(name)
-        color = cfg["dashistyle"]["color"]
+        color = cfg["dashistyle"].pop('color')
+        if 'dashistylescatter' in cfg:
+            scattercolor = cfg["dashistylescatter"].pop('color')
+            if isinstance(scattercolor,int):
+                scattercolor = self.color_palette[scattercolor]
         if isinstance(color,int):
-            color = color_palette[color]
-        cfg["dashistyle"]["color"] = color
+            color = self.color_palette[color]
+
         if cumulative:
             histograms = self.cumuls
             log = False # no log, no way!
@@ -221,16 +224,23 @@ class VariableDistributionPlot(object):
             histograms = self.histograms
 
         if cfg['histscatter'] == 'scatter':
-            histograms[name].scatter(log=log,cumulative=cumulative,label=cfg["label"],**cfg["dashistylescatter"])
+            histograms[name].scatter(log=log,cumulative=cumulative,label=cfg["label"],color=scattercolor,**cfg["dashistylescatter"])
         elif cfg['histscatter'] == "line":
-            histograms[name].line(log=log,cumulative=cumulative,label=cfg["label"],**cfg["dashistyle"])
+            histograms[name].line(log=log,cumulative=cumulative,label=cfg["label"],color=color,**cfg["dashistyle"])
         elif cfg['histscatter'] == "overlay":
-            histograms[name].line(log=log,cumulative=cumulative,label=cfg["label"],**cfg["dashistyle"])
-            histograms[name].scatter(log=log,cumulative=cumulative,**cfg["dashistylescatter"])
+            histograms[name].line(log=log,cumulative=cumulative,label=cfg["label"],color=color,**cfg["dashistyle"])
+            histograms[name].scatter(log=log,cumulative=cumulative,color=scattercolor,**cfg["dashistylescatter"])
         if cumulative:
             ax.set_ylabel('fraction')
         else:
             ax.set_ylabel('rate/bin [1/s]')
+        minbincontent =  histograms[name].bincontent[histograms[name].bincontent > 0]
+        if not minbincontentent:
+            minbincontent = n.inf
+        else:
+            minbincontent = min(minbincontent)
+        return max(histograms[name].bincontent),\
+               minbincontent
 
     def _draw_histratio(self,name,axes,ylim=(0.1,2.5)):
         """
@@ -298,6 +308,8 @@ class VariableDistributionPlot(object):
         cu_axes = filter(lambda x : x[1] == "c",axes_locator)
         h_axes = filter(lambda x : x[1] == "h",axes_locator)
         r_axes = filter(lambda x : x[1] == "r",axes_locator)
+        maxheights = []
+        minheights = []
         for ax in cu_axes:
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_cumul:
@@ -306,7 +318,7 @@ class VariableDistributionPlot(object):
                 break
             else:
                 k = self.cumuls[self.cumuls.keys()[ax[0]]]
-                self._draw_distribution(cur_ax,cumulative=True,log=log)    
+                self._draw_distribution(cur_ax,cumulative=True,log=log)
         for ax in r_axes:
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_ratio:
@@ -322,11 +334,12 @@ class VariableDistributionPlot(object):
             if combined_distro:
                 for k in self.histograms.keys():
                     print "drawing..",k
-                    self._draw_distribution(cur_ax,k,log=log)
+                    ymax,ymin = self._draw_distribution(cur_ax,k,log=log)
                 break
             else:
                 k = self.histograms[self.histograms.keys()[ax[0]]]
-                self._draw_distribution(cur_ax,k,log=log)    
+                ymax, ymin = self._draw_distribution(cur_ax,k,log=log)
+            cur_ax.set_ylim(ymin=ymin - 0.1*ymin,ymax=1.1*ymax)
         lgax = self.canvas.select_axes(-1)#most upper one
         lg = lgax.legend(**LoadConfig()['legend'])
         legendwidth = LoadConfig()
@@ -350,22 +363,3 @@ class VariableDistributionPlot(object):
             kwargs = {"bbox_to_anchor" :(0.,1.0, 1., .102), "loc" : 3, "ncol" :3, "mode" :"expand", "borderaxespad":0., "handlelength": 2,"numpoints" :1}
         self.canvas.global_legend(**kwargs)
  
-
-
-#
-#class PlotConfigLoader(dict):
-#    """
-#    Extract a configuration
-#    from a predefined plotconfig
-#    file
-#    """
-#
-#    def __init__(self,filename):
-#        dict.__init__(self)
-#        self.filename = filename
-#        data = yaml.loads(open(filename,"w"))
-#        for d in data:
-#            self[d["name"]] = {}
-#
-#    def get_dashidict(self,)
-#

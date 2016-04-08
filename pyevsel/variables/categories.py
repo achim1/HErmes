@@ -21,7 +21,8 @@ import numpy as np
 import abc
 import tqdm
 import multiprocessing as mp
-
+import threading as thr
+import concurrent.futures as fut
 
 from copy import deepcopy
 
@@ -40,6 +41,7 @@ class AbstractBaseCategory(object):
         self._weightfunction = lambda x : x
         self.cuts = []
         self.cutmask = np.array([])
+        self.plot = True
         self._weights = pd.Series()
         self._is_harvested = False
 
@@ -263,16 +265,17 @@ class AbstractBaseCategory(object):
         Harvest the variables in self.vardict
 
         Keyword Args:
-            names (list): if != [], havest variables these variables
+            names (list): havest only these variables
         """
 
         if names is None:
             names = self.vardict.keys()
         compound_variables = [] #harvest them later
 
-        workers = mp.Pool(processes=4) # 4 is random
-
-        for varname in tqdm.tqdm(names,desc="Reading {0} variables".format(self.name)):
+        #workers = mp.Pool(processes=4) # 4 is random
+        threads = []
+        #executor = fut.ProcessPoolExecutor(max_workers=4)
+        for varname in tqdm.tqdm(names,desc="Reading {0} variables".format(self.name), leave=True):
             try:
                 if isinstance(self.vardict[varname],variables.CompoundVariable):
                     compound_variables.append(varname)
@@ -284,11 +287,16 @@ class AbstractBaseCategory(object):
             except KeyError:
                 Logger.warning("Cannot find %s in variables!" %varname)
                 continue
-            workers.apply_async(self.vardict[varname].harvest,args=self.files)
-            #self.vardict[varname].harvest(*self.files)
+            #workers.apply_async(self.vardict[varname].harvest,args=self.files)
+            self.vardict[varname].harvest(*self.files)
+            #thefuture.result()
+            #threads.append(thefuture)            
     
-        workers.close()
-        workers.join()
+        for t in threads:
+            t.result()
+        #fut.as_completed(*threads)
+        #workers.close()
+        #workers.join()
         for varname in compound_variables:
             #FIXME check if this causes a memory leak
             self.vardict[varname].rewire_variables(self.vardict)
@@ -618,5 +626,4 @@ class Data(AbstractBaseCategory):
         if self.livetime == "guess":
             self.estimate_livetime()
         self._weights = pd.Series(n.ones(self.raw_count,dtype=n.float64)/self.livetime)
-
 

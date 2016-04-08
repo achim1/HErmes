@@ -37,6 +37,7 @@ class YStackedCanvas(object):
             self.figure.add_axes(subplot)
             
         self.figure.subplots_adjust(hspace=0)
+        self.savekwargs = dict()
 
     def create_top_stacked_axes(self,heights=(1.)):
         """
@@ -91,9 +92,9 @@ class YStackedCanvas(object):
         which is not the lowest
         """    
         for ax in self.axes[1:]:
-            p.sca(ax)
+            #p.sca(ax)
             ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
-
+            ax.yaxis.get_major_ticks()[-1].label1.set_visible(False)
 
     def select_axes(self, axes):
         """
@@ -151,6 +152,8 @@ class YStackedCanvas(object):
         if not kwargs:
             kwargs = get_config_item("savefig")
 
+        self.savekwargs = kwargs
+        self.savekwargs.update({'path' : path,'name' : name, 'endings' : endings})
         for ending in endings:
             filename = os.path.join(path,name + '.' + ending)
             self.figure.savefig(filename,format=ending,**kwargs)
@@ -165,7 +168,9 @@ class YStackedCanvas(object):
         Returns:
             IPython.core.Image: the plot
         """
-
+        path = self.savekwargs.pop('path')
+        name = self.savekwargs.pop('name')
+        self.save(path,name,**self.savekwargs)
         return Image(self.png_filename)
 
 

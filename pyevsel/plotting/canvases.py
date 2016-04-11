@@ -73,7 +73,7 @@ class YStackedCanvas(object):
     
         self.axes = axes
 
-    def limit_yrange(self,ymin=10**(-12)):
+    def limit_yrange(self,ymin=None,ymax=None):
         """
         Walk through all axes and adjust ymin
 
@@ -81,10 +81,29 @@ class YStackedCanvas(object):
             ymin (float): min ymin value
         """
         for ax in self.axes:
-            p.sca(ax)
-            axymin,__ =  ax.get_ylim()    
-            if abs(axymin) < ymin:
+            if ymin is not None:
                 ax.set_ylim(ymin=ymin)
+            if ymax is not None:
+                ax.set_ylim(ymax=ymax)
+
+    def limit_xrange(self,xmin=None,xmax=None):
+        '''
+        Walk through all axes and set xlims
+
+        Keyword Args:
+            xmin (float): left x edge of axes
+            xmax (float): right x edge of axes
+
+        Returns:
+            None
+        '''
+        for ax in self.axes:
+            if xmin is not None:
+                ax.set_xlim(xmin=xmin)
+
+            if xmax is not None:
+                ax.set_xlim(xmax=xmax)
+
 
     def eliminate_lower_yticks(self):
         """

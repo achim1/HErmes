@@ -64,7 +64,10 @@ def AtmosphericNuFlux(modelname='honda2006',knee=False,fluxconst=1.):
                 mc_p_type = conv.ConvertPrimaryFromPDG(mc_p_type)
             else:
                 mc_p_type = conv.ConvertPrimaryToPDG(mc_p_type)
-            return fluxconst*nuflux.getFlux(mc_p_type,mc_p_energy,mc_p_zenith)
+            # FIXME: is this still the case?
+            # the fluxes given by newnuflux are only for anti/neutrinos
+            # so to calculate the total flux, there is a number of 2 necessary
+            return 2*fluxconst*nuflux.getFlux(mc_p_type,mc_p_energy,mc_p_zenith)
     return flux
 
 ##############################################

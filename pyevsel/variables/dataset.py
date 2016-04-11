@@ -218,9 +218,11 @@ class Dataset(object):
         return [cat.name for cat in self.categories]
 
     def plot_distribution(self,name,\
+                          path="",
                           ratio=([],[]),
                           cumulative=True,
                           heights=(.4,.2,.2),
+                          color_palette='dark',
                           savepath="",savename="vdistplot"):
         """
         One shot short-cut for one of the most used
@@ -230,14 +232,14 @@ class Dataset(object):
             name (string): The name of the variable to plot
 
         Keyword Args:
+            path (str): The path under which the plot will be saved.
             ratio (list): A ratio plot of these categories will be crated
+            color_palette (str): A predifined color palette (from seaborn or plotcolors.py
 
         Returns:
             pyevsel.variables.VariableDistributonPlot
         """
-        cuts = dict()
-        for cat in self.categories:
-            cuts[cat.name] = cat.cuts
+        cuts = self.categories[0].cuts
         plot = VariableDistributionPlot(cuts=cuts)
         plotcategories = self.categories + self.combined_categories 
         for cat in filter(lambda x: x.plot,plotcategories):
@@ -248,7 +250,7 @@ class Dataset(object):
             plot.add_ratio(ratio[0],ratio[1])
         plot.plot(heights=heights)
         #plot.add_legend()
-        plot.canvas.save("",savename,dpi=350)
+        plot.canvas.save(path,savename,dpi=350)
         return plot
 
     @property

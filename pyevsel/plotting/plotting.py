@@ -96,6 +96,7 @@ class VariableDistributionPlot(object):
         self.plotcumul  = False
         self.canvas     = None
         self.label      = ''
+        self.dataname   = ''
         if cuts is None:
             cuts = []
         self.cuts       = cuts
@@ -118,6 +119,7 @@ class VariableDistributionPlot(object):
             weights = n.ones(len(variable_data))
         self.histograms[dataname] = d.factory.hist1d(variable_data,bins,weights=weights)
         self.label = label
+        self.name = dataname
 
     def add_variable(self,category,variable_name):
         """
@@ -140,22 +142,26 @@ class VariableDistributionPlot(object):
         """
         vmin,vmax = ax.get_ylim()
         hmin,hmax = ax.get_xlim()
-        for __,operator,value in self.cuts:
-            width = vmax/50.
-            ax.vlines(value,ymin=vmin,ymax=vmax,linestyle=':')
-            length = (hmax - hmin)*0.1
-            shape = 'left'
-            inversed = False
-            if operator in ('>','>='):
-                shape = 'right'
-                inversed = True
+        for cut in self.cuts:
+            for name,(operator,value) in cut:
+                if name != self.dataname:
+                    continue
 
-            arr = create_arrow(cutval,vmax*0.1, -1., 0, length, width= width,shape=shape,log=True)
-            ax.add_patch(arr)
-            if not inversed:
-                ax.axvspan(value, hmax, facecolor=st.helpercolors["prohibited"], alpha=0.5)
-            else:
-                ax.axvspan(hmin, value, facecolor=st.helpercolors["prohibited"], alpha=0.5)
+                width = vmax/50.
+                ax.vlines(value,ymin=vmin,ymax=vmax,linestyle=':')
+                length = (hmax - hmin)*0.1
+                shape = 'left'
+                inversed = False
+                if operator in ('>','>='):
+                    shape = 'right'
+                    inversed = True
+
+                arr = create_arrow(value,vmax*0.1, -1., 0, length, width= width,shape=shape,log=True)
+                ax.add_patch(arr)
+                if not inversed:
+                    ax.axvspan(value, hmax, facecolor=self.color_palette["prohibited"], alpha=0.5)
+                else:
+                    ax.axvspan(hmin, value, facecolor=self.color_palette["prohibited"], alpha=0.5)
 
 
     def add_ratio(self,names_upper,names_under,total_ratio=None,total_ratio_errors=None,log=False,label="data/$\Sigma$ bg"):
@@ -234,13 +240,7 @@ class VariableDistributionPlot(object):
             ax.set_ylabel('fraction')
         else:
             ax.set_ylabel('rate/bin [1/s]')
-        minbincontent =  histograms[name].bincontent[histograms[name].bincontent > 0]
-        if not minbincontentent:
-            minbincontent = n.inf
-        else:
-            minbincontent = min(minbincontent)
-        return max(histograms[name].bincontent),\
-               minbincontent
+
 
     def _draw_histratio(self,name,axes,ylim=(0.1,2.5)):
         """
@@ -334,7 +334,7 @@ class VariableDistributionPlot(object):
             if combined_distro:
                 for k in self.histograms.keys():
                     print "drawing..",k
-                    ymax,ymin = self._draw_distribution(cur_ax,k,log=log)
+                    self._draw_distribution(cur_ax,k,log=log)
                 break
             else:
                 k = self.histograms[self.histograms.keys()[ax[0]]]
@@ -345,8 +345,35 @@ class VariableDistributionPlot(object):
         legendwidth = LoadConfig()
         legendwidth = legendwidth['legendwidth']
         lg.get_frame().set_linewidth(legendwidth)
+        # plot the cuts
+        if self.cuts:
+            for ax in self.canvas.axes:
+                self.indicate_cut(ax)
         # cleanup
-        #self.canvas.limit_yrange()
+        leftplotedge = n.inf
+        rightplotedge = -n.inf
+        minplotrange = n.inf
+        maxplotrange = -n.inf
+        for h in self.histograms.values():
+            if not h.bincenters[h.bincontent > 0].sum():
+                continue
+            if h.bincenters[h.bincontent > 0][0] < leftplotedge:
+                leftplotedge = h.bincenters[h.bincontent > 0][0]
+            if h.bincenters[h.bincontent > 0][-1] > rightplotedge:
+                rightplotedge = h.bincenters[h.bincontent > 0][-1]
+            if min(h.bincontent[h.bincontent > 0]) < minplotrange:
+                minplotrange = min(h.bincontent[h.bincontent > 0])
+            if max(h.bincontent[h.bincontent > 0]) > maxplotrange:
+                maxplotrange = max(h.bincontent[h.bincontent > 0])
+
+        if n.isfinite(leftplotedge):
+            self.canvas.limit_xrange(xmin=leftplotedge)
+        if n.isfinite(rightplotedge):
+            self.canvas.limit_xrange(xmax=rightplotedge)
+        if n.isfinite(minplotrange):
+            self.canvas.limit_yrange(ymin=minplotrange - 0.1*minplotrange)
+        if n.isfinite(maxplotrange):
+            self.canvas.limit_yrange(ymax=1.1*maxplotrange)
         self.canvas.eliminate_lower_yticks()
         # set the label on the lowest axes
         self.canvas.axes[0].set_xlabel(self.label)

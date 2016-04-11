@@ -88,7 +88,16 @@ class VariableDistributionPlot(object):
     and ratio plots for variables
     """
 
-    def __init__(self,cuts=None,color_palette="dark"):
+    def __init__(self,cuts=None,color_palette="dark",bins=None):
+        '''
+
+
+        Keyword Args:
+            bins (array-like): desired binning, if None use default
+        :param cuts:
+        :param color_palette:
+        :param bins:
+        '''
         self.histograms = {}
         self.histratios = {}
         self.cumuls     = {}
@@ -97,6 +106,7 @@ class VariableDistributionPlot(object):
         self.canvas     = None
         self.label      = ''
         self.dataname   = ''
+        self.bins       = bins
         if cuts is None:
             cuts = []
         self.cuts       = cuts
@@ -129,8 +139,13 @@ class VariableDistributionPlot(object):
            category (pyevsel.variables.category.Category): Get variable from this category
            variable_name (string): The name of the variable
 
+
+
         """
-        self._add_data(category.name,category.get(variable_name),category.vardict[variable_name].bins,weights=category.weights,label=category.vardict[variable_name].label)
+        if self.bins is None:
+            self.bins = category.vardict[variable_name].bins
+        self.dataname = variable_name
+        self._add_data(category.name,category.get(variable_name),self.bins,weights=category.weights,label=category.vardict[variable_name].label)
 
     def indicate_cut(self,ax):
         """
@@ -146,7 +161,7 @@ class VariableDistributionPlot(object):
             for name,(operator,value) in cut:
                 if name != self.dataname:
                     continue
-
+                Logger.debug('Found cut! {0} on {1}'.format(name,value))
                 width = vmax/50.
                 ax.vlines(value,ymin=vmin,ymax=vmax,linestyle=':')
                 length = (hmax - hmin)*0.1
@@ -366,14 +381,21 @@ class VariableDistributionPlot(object):
             if max(h.bincontent[h.bincontent > 0]) > maxplotrange:
                 maxplotrange = max(h.bincontent[h.bincontent > 0])
 
+        if log:
+            maxplotrange *= 8
+        else:
+            maxplotrange *= 1.2
         if n.isfinite(leftplotedge):
             self.canvas.limit_xrange(xmin=leftplotedge)
         if n.isfinite(rightplotedge):
             self.canvas.limit_xrange(xmax=rightplotedge)
-        if n.isfinite(minplotrange):
-            self.canvas.limit_yrange(ymin=minplotrange - 0.1*minplotrange)
-        if n.isfinite(maxplotrange):
-            self.canvas.limit_yrange(ymax=1.1*maxplotrange)
+        for ax in h_axes:
+            self.canvas.select_axes(ax[0]).set_ylim(ymax=maxplotrange,ymin=minplotrange)
+
+        #if n.isfinite(minplotrange):
+        #    self.canvas.limit_yrange(ymin=minplotrange - 0.1*minplotrange)
+        #if n.isfinite(maxplotrange):
+        #    self.canvas.limit_yrange(ymax=maxplotrange)
         self.canvas.eliminate_lower_yticks()
         # set the label on the lowest axes
         self.canvas.axes[0].set_xlabel(self.label)

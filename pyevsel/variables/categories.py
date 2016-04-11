@@ -42,6 +42,7 @@ class AbstractBaseCategory(object):
         self.cuts = []
         self.cutmask = np.array([])
         self.plot = True
+        self.show_in_table = True
         self._weights = pd.Series()
         self._is_harvested = False
 

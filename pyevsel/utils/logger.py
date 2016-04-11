@@ -27,5 +27,5 @@ def get_logger(loglevel):
 
     return logger
 
-Logger = get_logger(30)
+Logger = get_logger(20)
 

@@ -152,7 +152,7 @@ monopod_en_res = CV("monopod_en_res",variables=[monopod_energy,mc_refvis_logE],b
 
 scale_xy       = V("scale_xy",bins=scalebins,definitions=[("I3XYScale2","value")],label="scalefactor (x surface area)")
 dt_nearly_ice  = V("dt_nearly_ice",bins = dt_timebins,definitions=[("DT_Nearly_ice2","value")],label="ns")
-nchan          = V("nchan",bins = nchanbins,definitions=[("EventInfofromRecoPulses","nchan")],label=r"N_{DOM}")
+nchan          = V("nchan",bins = nchanbins,definitions=[("EventInfofromRecoPulses","nchan")],label=r"$N_{DOM}$")
 qtot           = V("tot_charge",bins=totchargebins,definitions=[("EventInfofromRecoPulses","tot_charge")], label= r"$\log_{10}$(NPE)",transform=n.log10)
 toposplit_cnt  = V("toposplit_count",bins = ls(-0.5,4.5,6),definitions=[("TopologicalSplitSplitCount","value")],label=r"counts")
 toi_evalr      = V("PoleToI_evalratio",bins = poletoibins,definitions=[("PoleToIParams","evalratio"),("CascadeFilt_ToiVal","value")],label =r"$E_{min}/(E_1+E_2+E_3)$")

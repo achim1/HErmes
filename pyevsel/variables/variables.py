@@ -60,9 +60,13 @@ class AbstractBaseVariable(object):
     def calculate_fd_bins(self):
         """
         Calculate a reasonable binning
+
+        Returns:
+            numpy.ndarray: Freedman Diaconis bins
         """
         nbins = freedman_diaconis_bins(self.data,min(self.data),max(self.data))
         self.bins = n.linspace(min(self.data),max(self.data),nbins)
+        return self.bins
 
     @abc.abstractmethod
     def harvest(self,*files):

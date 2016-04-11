@@ -29,6 +29,7 @@ class CombinedCategory(object):
         self.name = name
         self.categories = categories
         self.plot = True
+        self.show_in_table = True
        
     @property
     def weights(self):
@@ -41,6 +42,18 @@ class CombinedCategory(object):
     def get(self,varname):
         return pd.concat([cat.get(varname) for cat in self.categories])
 
+    @property
+    def integrated_rate(self):
+        """
+        Calculate the total eventrate of this category
+        (requires weights)
+
+        Returns (tuple): rate and quadratic error
+        """
+
+        rate = self.weights.sum()
+        error = np.sqrt((self.weights ** 2).sum())
+        return (rate, error)
 
 class Dataset(object):
     """
@@ -217,6 +230,30 @@ class Dataset(object):
     def categorynames(self):
         return [cat.name for cat in self.categories]
 
+    @property
+    def combined_categorynames(self):
+        return [cat.name for cat in self.combined_categories]
+
+    def get_sparsest_category(self,omit_zeros=True):
+        '''
+        Find out which category of the dataset has the least statiscal power
+
+        Keyword Args:
+            omit_zeros (bool): if a category has no entries at all, omit
+        Returns:
+            str: category name
+        '''
+
+        name  = self.categories[0].name
+        count = self.categories[0].raw_count
+        for cat in self.categories:
+            if cat.raw_count < count:
+                if (cat.raw_count == 0) and omit_zeros:
+                    continue
+                count = cat.raw_count
+                name  = cat.name
+        return name
+
     def plot_distribution(self,name,\
                           path="",
                           ratio=([],[]),
@@ -240,6 +277,9 @@ class Dataset(object):
             pyevsel.variables.VariableDistributonPlot
         """
         cuts = self.categories[0].cuts
+        sparsest = self.get_sparsest_category()
+
+        bins = self.get_category(sparsest).vardict[name].calculate_fd_bins()
         plot = VariableDistributionPlot(cuts=cuts)
         plotcategories = self.categories + self.combined_categories 
         for cat in filter(lambda x: x.plot,plotcategories):
@@ -262,7 +302,7 @@ class Dataset(object):
         """
 
         rdata,edata,index = [],[],[]
-        for cat in self.categories:
+        for cat in self.categories + self.combined_categories:
             rate,error = cat.integrated_rate
             rdata.append(rate)
             index.append(cat.name)
@@ -317,7 +357,7 @@ class Dataset(object):
         errors = errors.append(tmperrors)
 
         datacats = []
-        for cat in self.categories:
+        for cat in self.categories + self.combined_categories:
             if isinstance(cat,categories.Data):
                 datacats.append(cat)
         if datacats:
@@ -333,7 +373,7 @@ class Dataset(object):
                 fudges[cat.name] = np.NaN
         rate_dict = OrderedDict()
         all_fudge_dict = OrderedDict()
-        for catname in self.categorynames:
+        for catname in sorted(self.categorynames) + sorted(self.combined_categorynames):
             cfg = GetCategoryConfig(catname)
             label = cfg["label"]
             rate_dict[label] = (rates[catname],errors[catname])
@@ -383,10 +423,33 @@ class Dataset(object):
         for k in rates:
             events[k] = rates[k][0] * livetime, rates[k][1] * livetime
 
+        def get_label(catname):
+            cfg = GetCategoryConfig(catname)
+            return cfg['label']
+
+        showcats =  [get_label(cat.name) for cat in self.categories if cat.show_in_table]
+        showcats += [get_label(cat.name) for cat in self.combined_categories if cat.show_in_table]
+        showcats.extend(['Sig.',"Bg.","Gr. Tot."])
+        orates = OrderedDict()
+        ofudges = OrderedDict()
+        oevents = OrderedDict()
+        for k in rates.keys():
+            if k in showcats:
+                orates[k] = rates[k]
+                ofudges[k] = fudges[k]
+                oevents[k] = events[k]
+        #rates  = {k : rates[k] for k in rates if k in showcats}
+        #fudges = {k : fudges[k] for k in fudges if k in showcats}
+        #events = {k : events[k] for k in events if k in showcats}
         tt = TinyTable()
-        tt.add("Rate (1/s)", **rates)
-        tt.add("Ratio",**fudges)
-        tt.add("Events",**events)
+
+        #bypass the add function ot add an ordered dict
+        for label,data in [('Rate (1/s)', orates),("Ratio", ofudges),("Events",oevents)]:
+            tt.x_labels.append(label)
+            tt.label_data[label] = data
+        #tt.add("Rate (1/s)", **rates)
+        #tt.add("Ratio",**fudges)
+        #tt.add("Events",**events)
         return tt.render(layout=layout,format=format,format_cell=cellformatter,order_by=order_by)
 
     def __len__(self):

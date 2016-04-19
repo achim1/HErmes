@@ -179,7 +179,7 @@ class Dataset(object):
         w = dict()
         for cat in self.categories:
             w[cat.name] = cat.weights
-        df = pd.DataFrame(w)
+        df = pd.DataFrame.from_dict(w,orient='index')
         return df
 
     def __repr__(self):
@@ -255,9 +255,9 @@ class Dataset(object):
         return name
 
     def plot_distribution(self,name,\
-                          path="",
                           ratio=([],[]),
                           cumulative=True,
+                          axes_locator=((0,"c"),(1,"r"),(2,"h")),
                           heights=(.4,.2,.2),
                           color_palette='dark',
                           savepath="",savename="vdistplot"):
@@ -280,7 +280,7 @@ class Dataset(object):
         sparsest = self.get_sparsest_category()
 
         bins = self.get_category(sparsest).vardict[name].calculate_fd_bins()
-        plot = VariableDistributionPlot(cuts=cuts)
+        plot = VariableDistributionPlot(cuts=cuts,bins=bins)
         plotcategories = self.categories + self.combined_categories 
         for cat in filter(lambda x: x.plot,plotcategories):
             plot.add_variable(cat,name)
@@ -290,7 +290,7 @@ class Dataset(object):
             plot.add_ratio(ratio[0],ratio[1])
         plot.plot(heights=heights)
         #plot.add_legend()
-        plot.canvas.save(path,savename,dpi=350)
+        plot.canvas.save(savepath,savename,dpi=350)
         return plot
 
     @property
@@ -312,6 +312,7 @@ class Dataset(object):
         err  = pd.Series(edata,index)
         return (rate,err)
 
+    #FIXME static method!
     def sum_rate(self,categories=None):
         """
         Sum up the integrated rates for categories
@@ -451,6 +452,28 @@ class Dataset(object):
         #tt.add("Ratio",**fudges)
         #tt.add("Events",**events)
         return tt.render(layout=layout,format=format,format_cell=cellformatter,order_by=order_by)
+
+
+
+
+    #def cut_progression_table(self,cuts,\
+    #                signal=None,\
+    #                background=None,\
+    #                layout="v",\
+    #                format="html",\
+    #                order_by=lambda x:x,
+    #                livetime=1.):
+
+    #    self.delete_cuts()
+    #    self.undo_cuts()
+    #    for cut in cuts:
+    #        self.add_cut(cut)
+    #        self.apply_cuts()
+
+
+
+
+
 
     def __len__(self):
         #FIXME: to be implemented

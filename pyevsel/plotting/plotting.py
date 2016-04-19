@@ -24,7 +24,7 @@ p.style.use(STYLE)
 
 ###############################################
 
-def create_arrow(x_0,y_0,dx,dy,length,\
+def create_arrow(ax,x_0,y_0,dx,dy,length,\
                 width = .1,shape="right",\
                 fc="k",ec="k",\
                 alpha=1.,log=False):
@@ -53,8 +53,8 @@ def create_arrow(x_0,y_0,dx,dy,length,\
         head_length = length*0.2
 
     arrow_params={'length_includes_head':False, 'shape':shape, 'head_starts_at_zero':head_starts_at_zero}
-    arr = p.arrow(x_0, y_0, dx*length, dy*length, fc=fc, ec=ec, alpha=alpha, width=width, head_width=head_width,head_length=head_length, **arrow_params)
-    return arr
+    arr = ax.arrow(x_0, y_0, dx*length, dy*length, fc=fc, ec=ec, alpha=alpha, width=width, head_width=head_width,head_length=head_length, **arrow_params)
+    return ax#arr
 
 ###########################
 
@@ -171,15 +171,17 @@ class VariableDistributionPlot(object):
                     shape = 'right'
                     inversed = True
 
-                arr = create_arrow(value,vmax*0.1, -1., 0, length, width= width,shape=shape,log=True)
-                ax.add_patch(arr)
+                ax = create_arrow(ax,value,vmax*0.1, -1., 0, length, width= width,shape=shape,log=True)
+                #ax.add_patch(arr)
                 if not inversed:
                     ax.axvspan(value, hmax, facecolor=self.color_palette["prohibited"], alpha=0.5)
                 else:
                     ax.axvspan(hmin, value, facecolor=self.color_palette["prohibited"], alpha=0.5)
 
 
-    def add_ratio(self,names_upper,names_under,total_ratio=None,total_ratio_errors=None,log=False,label="data/$\Sigma$ bg"):
+    def add_ratio(self,names_upper,names_under,\
+                  total_ratio=None,total_ratio_errors=None,\
+                  log=False,label="data/$\Sigma$ bg"):
         """
         Add a ratio plot to the canvas
 
@@ -281,7 +283,7 @@ class VariableDistributionPlot(object):
             else:
                 axes_locator += [(x,"c") for x in range(len(self.cumuls))]
 
-        if self.ratios:
+        if self.histratios:
             if combined_ratio:
                 if axes_locator:
                     axes_locator.append((axes_locator[-1] + 1,"r"))
@@ -289,7 +291,7 @@ class VariableDistributionPlot(object):
                     axes_locator.append((0,"r"))
             else:
                 if axes_locator:
-                    axes_locator +=[(x+ len(axes_locator),"r") for x  in range(len(self.ratios))]
+                    axes_locator +=[(x+ len(axes_locator),"r") for x  in range(len(self.histratios))]
 
         if self.histograms:
             if combined_distro:

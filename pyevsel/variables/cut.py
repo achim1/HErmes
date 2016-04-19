@@ -40,16 +40,23 @@ class Cut(object):
         """
 
         self.condition = None
+        self.name = None
         if "condition" in kwargs:
             self.condition = kwargs["condition"]
+        if 'name' in kwargs:
+            self.name = kwargs['name']
         self.cutdict = defaultdict(list)
-        self.compiled_cuts = dict()
         for var,operation,value in cuts:
             if isinstance(var,V):
                 name = var.name
             if isinstance(var,str):
                 name = var
             self.cutdict[name].append((operator_lookup[operation],value))
+
+    @property
+    def variablenames(self):
+        return self.cutdict.keys()
+
 
     def __iter__(self):
         """
@@ -70,4 +77,7 @@ class Cut(object):
 
         rep += """| >"""
         return rep
+
+
+
 

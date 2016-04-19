@@ -142,7 +142,7 @@ class AbstractBaseCategory(object):
             for k in self.vardict.keys():
                 self.vardict[k].data = self.vardict[k].data[mask]
         else:
-            self.cutmask = n.array(mask)
+            self.cutmask = n.array(mask,dtype=bool)
 
     def undo_cuts(self):
         """

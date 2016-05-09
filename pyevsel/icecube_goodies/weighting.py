@@ -108,12 +108,14 @@ def GetGenerator(datasets):
 
 ###########################################
 
-
 def GetModelWeight(model,datasets,\
                    mc_p_en=None,\
                    mc_p_ty=None,\
                    mc_p_ze=None,\
-                   mc_p_we=1.,\
+                   mc_p_we=1.,\,
+                   mc_p_ts=1.,\
+                   mc_p_gw=1.,\
+                   mc_datasets,\
                    **model_kwargs):
     """
     Compute weights using a predefined model
@@ -144,3 +146,44 @@ def GetModelWeight(model,datasets,\
     weight = Weight(gen,flux)
     return factor*mc_p_we*weight(mc_p_en,mc_p_ty,zenith=mc_p_ze)
 
+##################################################################################
+
+def get_weight_from_weightmap(model,datasets,\
+                   mc_p_en=None,\
+                   mc_p_ty=None,\
+                   mc_p_ze=None,\
+                   mc_p_we=1.,\
+                   mc_p_ts=1.,\
+                   mc_p_gw=1.,\
+                   mc_datasets,\
+                   **model_kwargs):
+  """
+  Get weights for weighted datasets (generation spectra is already the target flux)
+  
+    Args:
+        model (func): Not used, only for compatibility
+        datasets (dict): used to provide nfiles
+        
+    Keyword Args:
+        mc_p_en (array-like): primary energy
+        mc_p_ty (array-like): primary particle type
+        mc_p_ze (array-like): primary particle cos(zenith)
+        mc_p_we (array-like): weight for mc primary, e.g. some interaction probability
+        mc_p_gw (array-like): generation weight
+        mc_p_ts (array-like): mc timescale
+        mc_datasets (array-like): an array which has per-event dataset information
+    
+    Returns (array-like): Weights
+    """
+    timescale    = n.zeros(len(mc_p_ts))
+    nfiles    = n.zeros(len(mc_p_ts))
+    for ds in datasets.keys():
+        nfiles[datasets==ds] = dataset.nfiles
+        timescale[datasets==ds] += nfiles[mc_datasets==ds]*timescale[mc_datasets==ds]
+
+    weight = mc_p_gw*mc_p_we/timescale
+    return weight
+  
+  
+  
+  

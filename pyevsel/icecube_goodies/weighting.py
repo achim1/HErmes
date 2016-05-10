@@ -13,8 +13,10 @@ from pyevsel.variables.magic_keywords import  MC_P_EN,\
                             RUN,\
                             EVENT
 
+import numpy as np
 import inspect
 import conversions as conv
+
 
 NUTYPES = [conv.PDGCode.NuE,conv.PDGCode.NuEBar]
 NUTYPES.extend([conv.PDGCode.NuMu,conv.PDGCode.NuMuBar])
@@ -109,13 +111,13 @@ def GetGenerator(datasets):
 ###########################################
 
 def GetModelWeight(model,datasets,\
+                   mc_datasets=None,\
                    mc_p_en=None,\
                    mc_p_ty=None,\
                    mc_p_ze=None,\
-                   mc_p_we=1.,\,
+                   mc_p_we=1.,\
                    mc_p_ts=1.,\
                    mc_p_gw=1.,\
-                   mc_datasets,\
                    **model_kwargs):
     """
     Compute weights using a predefined model
@@ -149,16 +151,16 @@ def GetModelWeight(model,datasets,\
 ##################################################################################
 
 def get_weight_from_weightmap(model,datasets,\
+                   mc_datasets=None,\
                    mc_p_en=None,\
                    mc_p_ty=None,\
                    mc_p_ze=None,\
                    mc_p_we=1.,\
                    mc_p_ts=1.,\
                    mc_p_gw=1.,\
-                   mc_datasets,\
                    **model_kwargs):
-  """
-  Get weights for weighted datasets (generation spectra is already the target flux)
+    """
+    Get weights for weighted datasets (generation spectra is already the target flux)
   
     Args:
         model (func): Not used, only for compatibility
@@ -175,11 +177,9 @@ def get_weight_from_weightmap(model,datasets,\
     
     Returns (array-like): Weights
     """
-    timescale    = n.zeros(len(mc_p_ts))
-    nfiles    = n.zeros(len(mc_p_ts))
+    timescale    = np.zeros(len(mc_p_ts))
     for ds in datasets.keys():
-        nfiles[datasets==ds] = dataset.nfiles
-        timescale[datasets==ds] += nfiles[mc_datasets==ds]*timescale[mc_datasets==ds]
+        timescale[mc_datasets==ds] += datasets[ds]*mc_p_ts[mc_datasets==ds]
 
     weight = mc_p_gw*mc_p_we/timescale
     return weight

@@ -130,6 +130,9 @@ mc_p_en     = V("mc_p_en",definitions=[("MCPrimary","energy"),("mostEnergeticPri
 mc_p_ty     = V("mc_p_ty",definitions=[("MCPrimary","type"),("mostEnergeticPrimary","type")],transform=conv.ConvertPrimaryToPDG)
 mc_p_ze     = V("mc_p_ze",definitions=[("MCPrimary","zenith"),("mostEnergeticPrimary","zenith")],transform=n.cos)
 mc_p_we     = V("mc_p_we",definitions=[("I3MCWeightDict","TotalInteractionProbabilityWeight"),("CorsikaWeightMap","DiplopiaWeight")])
+mc_p_gw     = V('mc_p_gw',definitions=[('CorsikaWeightMap','Weight')])
+mc_p_ts     = V('mc_p_ts',definitions=[('CorsikaWeightMap','TimeScale')])
+
 # MC refvis cascade
 mc_refvis_logE = V("mc_refvis_logE",bins=energybins,definitions=[("RefCscdVisEn_new","value")],label=r"$\log_{10}(E_{ref,vis}$ / GeV)",transform=n.log10)
 mc_refvis_x    = V("mc_refvis_x",bins=vertexbins,definitions=[("mostEnergeticCascade","x")],label=r"$x_{ref}$ [m]")

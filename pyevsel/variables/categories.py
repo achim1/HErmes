@@ -9,10 +9,13 @@ from magic_keywords import  MC_P_EN,\
                             MC_P_TY,\
                             MC_P_ZE,\
                             MC_P_WE,\
+                            MC_P_GW,\
+                            MC_P_TS,\
                             RUN_START,\
                             RUN_STOP, \
                             RUN,\
-                            EVENT
+                            EVENT,\
+                            DATASETS
 import variables
 import pandas as pd
 import inspect
@@ -435,10 +438,14 @@ class Simulation(AbstractBaseCategory):
                        MC_P_TY : self.get(MC_P_TY),\
                        MC_P_WE : self.get(MC_P_WE)}
 
-        try:
-            func_kwargs[MC_P_ZE] = self.get(MC_P_ZE)
-        except KeyError:
-            Logger.warning("No MCPrimary zenith informatiion! Trying to omit..")
+        for key in MC_P_ZE,MC_P_GW,MC_P_TS,DATASETS:
+            reg = key
+            if key == DATASETS:
+                reg = 'mc_datasets'
+            try:
+                func_kwargs[reg] = self.get(key)
+            except KeyError:
+                Logger.warning("No MCPrimary {0} informatiion! Trying to omit..".format(key))
 
         func_kwargs.update(model_kwargs)
         Logger.info("Getting weights for datasets %s" %self.datasets.__repr__())

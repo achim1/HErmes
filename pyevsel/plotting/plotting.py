@@ -94,9 +94,9 @@ class VariableDistributionPlot(object):
 
         Keyword Args:
             bins (array-like): desired binning, if None use default
-        :param cuts:
-        :param color_palette:
-        :param bins:
+            cuts :
+            color_palette:
+            bins:
         '''
         self.histograms = {}
         self.histratios = {}
@@ -145,9 +145,11 @@ class VariableDistributionPlot(object):
         if self.bins is None:
             self.bins = category.vardict[variable_name].bins
         self.dataname = variable_name
-        self._add_data(category.name,category.get(variable_name),self.bins,weights=category.weights,label=category.vardict[variable_name].label)
+        self._add_data(category.name,category.get(variable_name),\
+                       self.bins,weights=category.weights,\
+                       label=category.vardict[variable_name].label)
 
-    def indicate_cut(self,ax):
+    def indicate_cut(self,ax,arrow=True):
         """
         If cuts are given, indicate them by lines
 
@@ -171,7 +173,8 @@ class VariableDistributionPlot(object):
                     shape = 'right'
                     inversed = True
 
-                ax = create_arrow(ax,value,vmax*0.1, -1., 0, length, width= width,shape=shape,log=True)
+                if arrow:
+                    ax = create_arrow(ax,value,vmax*0.1, -1., 0, length, width= width,shape=shape,log=True)
                 #ax.add_patch(arr)
                 if not inversed:
                     ax.axvspan(value, hmax, facecolor=self.color_palette["prohibited"], alpha=0.5)
@@ -211,9 +214,9 @@ class VariableDistributionPlot(object):
                                       log=False,ylabel=label)
         if total_ratio is None:
             total_ratio = upper_ws/under_ws
-            Logger.info("Calculated scaler ratio of %4.2f from histos" %total_ratio)
+            Logger.info("Calculated scalar ratio of %4.2f from histos" %total_ratio)
 
-        ratio.y[ratio.y > 0] = ratio.y[ratio.y > 0] + total_ratio -1
+        #ratio.y[ratio.y > 0] = ratio.y[ratio.y > 0] + total_ratio -1
         self.histratios[name] = (ratio,total_ratio,total_ratio_errors,label)
         return name
 
@@ -310,6 +313,20 @@ class VariableDistributionPlot(object):
              combined_ratio=True,\
              combined_cumul=True,
              log=True):
+        '''
+        Create the plot
+
+        Args:
+            heights:
+            axes_locator:
+            combined_distro:
+            combined_ratio:
+            combined_cumul:
+            log:
+
+        Returns:
+
+        '''
 
         Logger.info("Found %i distributions" %len(self.histograms))
         Logger.info("Found %i ratios" %len(self.histratios))
@@ -364,8 +381,10 @@ class VariableDistributionPlot(object):
         lg.get_frame().set_linewidth(legendwidth)
         # plot the cuts
         if self.cuts:
-            for ax in self.canvas.axes:
-                self.indicate_cut(ax)
+            for ax in h_axes:
+                self.indicate_cut(ax,arrow=True)
+            for ax in r_axes + cu_axes:
+                self.indicate_cut(ax,arrow=False)
         # cleanup
         leftplotedge = n.inf
         rightplotedge = -n.inf

@@ -280,6 +280,8 @@ class Dataset(object):
         sparsest = self.get_sparsest_category()
 
         bins = self.get_category(sparsest).vardict[name].calculate_fd_bins()
+        tratio,tratio_err = self.calc_ratio(nominator=map(self.get_category,ratio[0]),\
+                                          denominator=map(self.get_category,ratio[1]))
         plot = VariableDistributionPlot(cuts=cuts,bins=bins)
         plotcategories = self.categories + self.combined_categories 
         for cat in filter(lambda x: x.plot,plotcategories):
@@ -287,8 +289,8 @@ class Dataset(object):
             if cumulative:
                 plot.add_cumul(cat.name)
         if len(ratio[0]) and len(ratio[1]):
-            plot.add_ratio(ratio[0],ratio[1])
-        plot.plot(heights=heights)
+            plot.add_ratio(ratio[0],ratio[1],total_ratio=tratio,total_ratio_errors=tratio_err)
+        plot.plot(axes_locator=axes_locator,heights=heights)
         #plot.add_legend()
         plot.canvas.save(savepath,savename,dpi=350)
         return plot
@@ -333,6 +335,24 @@ class Dataset(object):
             rate  += tmprate # categories should be independent
             error += tmperror**2
         return (rate,np.sqrt(error))
+
+    def calc_ratio(self,nominator=None,denominator=None):
+        '''
+        Calculate a ratio of the given categories
+
+        Args:
+            nominator (list):
+            denominator (list):
+
+        Returns:
+            tuple
+        '''
+        a,a_err = self.sum_rate(categories=nominator)
+        b,b_err = self.sum_rate(categories=denominator)
+        if b == 0:
+            return np.nan, np.nan
+        sum_err = np.sqrt((a_err / b) ** 2 + ((-a * b_err) / (b ** 2)) ** 2)
+        return a/b, sum_err
 
     def _setup_table_data(self,signal=None,background=None):
         """

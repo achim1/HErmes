@@ -177,11 +177,26 @@ def get_weight_from_weightmap(model,datasets,\
     
     Returns (array-like): Weights
     """
-    timescale    = np.zeros(len(mc_p_ts))
+    #timescale    = np.zeros(len(mc_p_ts))
+    all_ts = 0
+    factors = np.ones(len(mc_p_ts))
+    ts = {ds : mc_p_ts[mc_datasets==ds][0] for ds in datasets.keys()}
     for ds in datasets.keys():
-        timescale[mc_datasets==ds] += datasets[ds]*mc_p_ts[mc_datasets==ds]
-
-    weight = mc_p_gw*mc_p_we/timescale
+        #ts = datasets[ds]*mc_p_ts[mc_datasets==ds][0]
+        #timescale[mc_datasets==ds] += datasets[ds]*mc_p_ts[mc_datasets==ds]
+        #mc_p_we[mc_datasets==ds]*=(datasets[ds]*mc_p_ts[mc_datasets==ds])
+        #all_ts += ts
+        factors[mc_datasets == ds] /= (ts[ds]*datasets[ds])
+    all_ts = sum([ts[x]*datasets[x] for x in datasets.keys()])
+    print all_ts
+    print factors[0]
+    print mc_p_we[0]
+    print mc_p_gw[0]
+    weight = (factors*np.array(mc_p_gw)*np.array(mc_p_we))#/all_ts
+    #weight = mc_p_gw*mc_p_we/factors
+    if len(datasets) == 1:
+        weight /= all_ts
+    print weight.sum()  
     return weight
   
   

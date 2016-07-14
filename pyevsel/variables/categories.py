@@ -276,6 +276,10 @@ class AbstractBaseCategory(object):
             names = self.vardict.keys()
         compound_variables = [] #harvest them later
 
+        def work(variablename,func_args,func_kwargs):
+
+            return variablename,variables.harvest(*func_args,**func_kwargs)
+
         #workers = mp.Pool(processes=4) # 4 is random
         threads = []
         #executor = fut.ProcessPoolExecutor(max_workers=4)
@@ -291,6 +295,7 @@ class AbstractBaseCategory(object):
             except KeyError:
                 Logger.warning("Cannot find %s in variables!" %varname)
                 continue
+
             #workers.apply_async(self.vardict[varname].harvest,args=self.files)
             self.vardict[varname].harvest(*self.files)
             #thefuture.result()

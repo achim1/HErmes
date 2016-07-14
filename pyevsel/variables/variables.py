@@ -11,6 +11,7 @@ import abc
 from pyevsel.utils import files as f
 from pyevsel.utils.logger import Logger
 
+
 DEFAULT_BINS = 70
 REGISTERED_FILEEXTENSIONS = [".h5",".root"]
 
@@ -19,6 +20,80 @@ try:
 except ImportError:
     Logger.warning("No root_numpy found, root support is limited!")
     REGISTERED_FILEEXTENSIONS.remove(".root")
+
+################################################################
+# define some non-member function so that they can be used in a
+# multiprocessing approach
+
+def harvest_single_file(filename, filetype, definitions):
+    """
+    Get the variable data from a fileobject
+    Optimized for hdf files
+
+    Args:
+        filename (str):
+        filetype (str): the extension of the filename, eg "h5"
+
+    Returns:
+        pd.Series
+    """
+    if filetype == ".h5" and not isinstance(filename, tables.table.Table):
+        # store = pd.HDFStore(filename)
+        hdftable = tables.openFile(filename)
+
+    for definition in definitions:
+        if filetype == ".h5":
+            try:
+                # data = store.select_column(*definition)
+                data = hdftable.getNode("/" + definition[0]).col(definition[1])
+                data = pd.Series(data, dtype=n.float64)
+                break
+            except tables.NoSuchNodeError:
+                Logger.debug("Can not find definition {0} in {1}! ".format(definition, filename))
+                continue
+
+        elif filetype == ".root":
+            data = rn.root2rec(filename, *definition)
+            data = pd.Series(data)
+    if filetype == ".h5":
+        hdftable.close()
+
+    return data
+
+
+def harvest(*filenames,**kwargs):
+    """
+    Extract the variable data from the provided files
+
+    Args:
+        filenames (list): the files to extract from
+                          currently supported: %s
+
+    Keyword Args:
+        transformation (func): will be applied to the read out data
+
+    Returns:
+        pd.Series or pd.DataFrame
+    """ % (REGISTERED_FILEEXTENSIONS.__repr__())
+
+    data = pd.Series()
+
+    for filename in filenames:
+        ext = f.strip_all_endings(filename)[1]
+        assert ext in REGISTERED_FILEEXTENSIONS, "Filetype %s not know" % ext
+        assert os.path.exists(filename), "File %s does not exist!" % ext
+        # Logger.debug("Attempting to harvest file {0}".format(filename))
+        tmpdata = harvest_single_file(filename, ext)
+        # self.data = self.data.append(data.map(self.transform))
+        # concat should be much faster
+        if "transformation" in kwargs:
+            transform = kwargs['transformation']
+            data = pd.concat([data, tmpdata.map(transform)])
+        else:
+            data = pd.concat([data, tmpdata])
+        del tmpdata
+
+    return data
 
 ################################################################
 

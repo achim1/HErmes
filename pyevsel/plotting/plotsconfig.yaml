@@ -81,6 +81,21 @@ categories: [{name: 'data',
         },
     histscatter: 'overlay'
     },
+    {name: 'mu',
+    label: '$\mu_{atm}$',
+    dashistyle:{
+         color: 3,
+         linewidth: 3,
+         alpha: .6,
+         filled: True,
+         hatch: False
+         },
+    dashistylescatter:{
+        marker: 'None',
+        color: 0
+        },
+    histscatter: 'overlay'
+    },
     {name: 'corsika',
     label: '$\mu_{atm}$',
     dashistyle:{

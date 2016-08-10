@@ -34,10 +34,10 @@ def GetTiming(func):
         res_seconds  = int(seconds)%3600
         mins         = int(res_seconds)/60
         left_seconds = int(res_seconds)%60
-        Logger.info('Execution of %s took %i hours, %i mins and %i seconds' %(func.func_name,hours,mins,left_seconds))
-        Logger.info('Execution of %s took %f seconds' %(func.func_name,seconds))
+        Logger.info('Execution of {0} took {1} hours, {2} mins and {3} seconds'.format(func.func_name,hours,mins,left_seconds))
+        Logger.info('Execution of {0} took {1} seconds'.format(func.func_name,seconds))
         max_mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        Logger.info('Execution might have needed %i kB in memory (highly uncertain)!' %max_mem)
+        Logger.info('Execution might have needed {0} kB in memory (highly uncertain)!'.format(max_mem))
         return res
 
     return wrapper

@@ -154,7 +154,7 @@ class Dataset(object):
             if cat.name == categoryname:
                 return cat
 
-        raise KeyError("Can not find category %s" %categoryname)
+        raise KeyError("Can not find category {}".format(categoryname))
 
     def get_variable(self,varname):
         """
@@ -192,7 +192,7 @@ class Dataset(object):
 
         rep = """ <Dataset: """
         for cat in self.categories:
-            rep += "%s " %cat.name
+            rep += "{} ".format(cat.name)
         rep += ">"
 
     def add_cut(self,cut):
@@ -439,7 +439,7 @@ class Dataset(object):
                 return "-"
             if isinstance(input[0],pd.Series):
                 input = (input[1][0],input[1][0])
-            return "%4.2e +- %4.2e" %(input[0],input[1])
+            return "{:4.2e} +- {:4.2e}".format(input[0],input[1])
 
         #FIXME: sort the table columns
         rates,fudges = self._setup_table_data(signal=signal,background=background)

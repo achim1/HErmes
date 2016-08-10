@@ -25,7 +25,7 @@ def slicer(list_to_slice,slices):
     maxslice = len(list_to_slice)/slices
     if (maxslice*slices) < len(list_to_slice) :
         maxslice += 1
-    Logger.info("Sliced list in %i slices with a maximum slice index of %i" %(slices,maxslice))
+    Logger.info("Sliced list in {} slices with a maximum slice index of {}" .format(slices,maxslice))
     for index in range(0,slices):
         lower_bound = index*maxslice
         upper_bound = lower_bound + maxslice

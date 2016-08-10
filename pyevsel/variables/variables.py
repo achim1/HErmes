@@ -80,8 +80,8 @@ def harvest(*filenames,**kwargs):
 
     for filename in filenames:
         ext = f.strip_all_endings(filename)[1]
-        assert ext in REGISTERED_FILEEXTENSIONS, "Filetype %s not know" % ext
-        assert os.path.exists(filename), "File %s does not exist!" % ext
+        assert ext in REGISTERED_FILEEXTENSIONS, "Filetype {} not known!".format(ext)
+        assert os.path.exists(filename), "File {} does not exist!".format(ext)
         # Logger.debug("Attempting to harvest file {0}".format(filename))
         tmpdata = harvest_single_file(filename, ext)
         # self.data = self.data.append(data.map(self.transform))
@@ -114,7 +114,7 @@ class AbstractBaseVariable(object):
         return self.name
 
     def __repr__(self):
-        return """<Variable: %s>""" %self.name
+        return """<Variable: {}>""".format(self.name)
 
     def __eq__(self,other):
         return self.name == other.name
@@ -187,7 +187,7 @@ class Variable(AbstractBaseVariable):
         AbstractBaseVariable.__init__(self)
 
         if definitions is not None:
-            assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions %s!" %definitions
+            assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions {}!".format(definitions)
             self.defsize = len(definitions[0])
             assert not (False in [len(x) == self.defsize for x in definitions]), "All definitions must have the same length!"
         else:
@@ -290,11 +290,11 @@ class Variable(AbstractBaseVariable):
 
         Args:
             filenames (list): the files to extract from
-                              currently supported: %s
+                              currently supported: {}
 
         Returns:
             pd.Series or pd.DataFrame
-        """ %(REGISTERED_FILEEXTENSIONS.__repr__())
+        """.format(REGISTERED_FILEEXTENSIONS.__repr__())
         if self.is_harvested:
             return
 
@@ -304,8 +304,8 @@ class Variable(AbstractBaseVariable):
 
         for filename in filenames:
             ext = f.strip_all_endings(filename)[1]
-            assert ext in REGISTERED_FILEEXTENSIONS, "Filetype %s not know" %ext
-            assert os.path.exists(filename), "File %s does not exist!" %ext
+            assert ext in REGISTERED_FILEEXTENSIONS, "Filetype {} not known!".format(ext)
+            assert os.path.exists(filename), "File {} does not exist!".format(filename)
             #Logger.debug("Attempting to harvest file {0}".format(filename))
             data = self.harvest_single_file(filename,ext)
             #self.data = self.data.append(data.map(self.transform))
@@ -352,7 +352,7 @@ class CompoundVariable(AbstractBaseVariable):
         self.variables = newvars
 
     def __repr__(self):
-        return """<CompoundVariable %s created from: %s>""" %(self.name,"".join([x.name for x in self._variables ]))
+        return """<CompoundVariable {} created from: {}>""".format(self.name,"".join([x.name for x in self._variables ]))
 
     def harvest(self,*filenames):
         #FIXME: filenames is not used, just
@@ -392,7 +392,7 @@ class VariableList(AbstractBaseVariable):
             return
         harvested = filter(lambda var : var.is_harvested, self.variables)
         if not len(harvested) == len(self.variables):
-            Logger.error("Variables have to be harvested for compound variable %s first!" %self.name)
+            Logger.error("Variables have to be harvested for compound variable {} first!".format(self.name))
             return
         self.declare_harvested()
 

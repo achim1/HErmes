@@ -214,7 +214,7 @@ class VariableDistributionPlot(object):
                                       log=False,ylabel=label)
         if total_ratio is None:
             total_ratio = upper_ws/under_ws
-            Logger.info("Calculated scalar ratio of %4.2f from histos" %total_ratio)
+            Logger.info("Calculated scalar ratio of {:4.2f} from histos".format(total_ratio))
 
         #ratio.y[ratio.y > 0] = ratio.y[ratio.y > 0] + total_ratio -1
         self.histratios[name] = (ratio,total_ratio,total_ratio_errors,label)
@@ -328,9 +328,9 @@ class VariableDistributionPlot(object):
 
         '''
 
-        Logger.info("Found %i distributions" %len(self.histograms))
-        Logger.info("Found %i ratios" %len(self.histratios))
-        Logger.info("Found %i cumulative distributions" %len(self.cumuls))
+        Logger.info("Found {} distributions".format(len(self.histograms)))
+        Logger.info("Found {} ratios".format(len(self.histratios))
+        Logger.info("Found {} cumulative distributions".format(len(self.cumuls)))
         if not axes_locator:
             axes_locator = self._locate_axes(combined_cumul,combined_ratio,combined_distro)
 

@@ -186,7 +186,7 @@ class AbstractBaseCategory(object):
         all_vars = [x[1] for x in all_vars if isinstance(x[1],variables.AbstractBaseVariable)]
         for v in all_vars:
             if v.name in self.vardict:
-                Logger.debug("Variable %s already defined,skipping!" %v.name)
+                Logger.debug("Variable {} already defined,skipping!".format(v.name))
                 continue
             self.add_variable(v)
 
@@ -257,7 +257,7 @@ class AbstractBaseCategory(object):
         """
 
         if varkey not in self.vardict:
-            raise KeyError("%s not found!" %varkey)
+            raise KeyError("{} not found!".format(varkey))
 
         if len(self.cutmask) and not uncut:
             return self.vardict[varkey].data[self.cutmask]
@@ -293,7 +293,7 @@ class AbstractBaseCategory(object):
                     compound_variables.append(varname)
                     continue
             except KeyError:
-                Logger.warning("Cannot find %s in variables!" %varname)
+                Logger.warning("Cannot find {} in variables!".format(varname))
                 continue
 
             #workers.apply_async(self.vardict[varname].harvest,args=self.files)
@@ -419,7 +419,7 @@ class Simulation(AbstractBaseCategory):
                                     (zenith_var,MC_P_ZE),
                                     (weight_var,MC_P_WE)]:
             if varname != defaultname:
-                Logger.warning("..renaming %s to %s.." %(varname,defaultname))
+                Logger.warning("..renaming {} to {}..".format(varname,defaultname))
                 self.vardict[varname].name = defaultname
 
         self._mc_p_readout = True
@@ -453,7 +453,7 @@ class Simulation(AbstractBaseCategory):
                 Logger.warning("No MCPrimary {0} informatiion! Trying to omit..".format(key))
 
         func_kwargs.update(model_kwargs)
-        Logger.info("Getting weights for datasets %s" %self.datasets.__repr__())
+        Logger.info("Getting weights for datasets {}".format(self.datasets.__repr__()))
         self._weights = pd.Series(self._weightfunction(model,self.datasets,\
                                  **func_kwargs))
 
@@ -592,7 +592,7 @@ class Data(AbstractBaseCategory):
             force (bool): overide existing livetime
         """
         if self.livetime and (not self.livetime=="guess"):
-            Logger.warning("There is already a livetime of %4.2f " %self.livetime)
+            Logger.warning("There is already a livetime of {:4.2f} ".format(self.livetime))
             if force:
                 Logger.warning("Applying force...")
             else:

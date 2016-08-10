@@ -92,7 +92,7 @@ def harvest_files(path,ending=".bz2",sanitizer=lambda x : x,use_ls=False,prefix=
     """
 
     if (not os.path.exists(path)) or (not os.path.isdir(path)):
-        raise SystemError('Path does not exist or it might not be a directory! %s' %path)
+        raise SystemError('Path does not exist or it might not be a directory! {}'.format(path))
     
     path = os.path.abspath(path)
     if use_ls:
@@ -152,11 +152,11 @@ def group_names_by_regex(names,regex=EXP_RUN_ID,firstpattern=GCD,estimate_first=
         for k in groupdict.keys():
             first = filter(firstpattern,groupdict[k])
             if len(first) > 1: 
-                Logger.info("First entry is not unique! %s" %first.__repr__())  
+                Logger.info("First entry is not unique! {}".format(first.__repr__()))  
                 for j in first:
                     groupdict[k].remove(j)
                 first = estimate_first(first)
-                Logger.info("Picked %s by given estimate_first fct!" %first[0])
+                Logger.info("Picked {} by given estimate_first fct!".format(first[0]))
         
             else:
                 first = first[0]

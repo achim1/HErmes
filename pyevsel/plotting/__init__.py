@@ -56,11 +56,13 @@ def SetConfigFile(configfile):
     Returns:
         None
     """
-    data = open(configfile,"r")
-    data = data.read()
-    config = open(CONFIGFILE,"w")
-    config.write(data)
-    config.close()
+    with open(configfile,"r") as cfgfile:
+        data = cfgfile.read()
+
+    with  open(CONFIGFILE,"w") as config:
+        config.write(data)
+        config.close()
+
     return None
 
 ######################################

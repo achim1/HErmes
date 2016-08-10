@@ -67,14 +67,14 @@ def harvest(*filenames,**kwargs):
 
     Args:
         filenames (list): the files to extract from
-                          currently supported: %s
+                          currently supported: {0}
 
     Keyword Args:
         transformation (func): will be applied to the read out data
 
     Returns:
         pd.Series or pd.DataFrame
-    """ % (REGISTERED_FILEEXTENSIONS.__repr__())
+    """.format(REGISTERED_FILEEXTENSIONS.__repr__())
 
     data = pd.Series()
 
@@ -98,6 +98,15 @@ def harvest(*filenames,**kwargs):
 ################################################################
 
 class AbstractBaseVariable(object):
+    """
+    A 'variable' is a large set of numerical data
+    stored in some file or database.
+    This class purpose is to read this data
+    and load it into memory so that it cna be
+    used with pandas/numpy
+    """    
+
+
     __metaclass__ = abc.ABCMeta
     _is_harvested = False
 

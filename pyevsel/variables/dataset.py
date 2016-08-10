@@ -176,6 +176,9 @@ class Dataset(object):
 
     @property
     def weights(self):
+        """
+        Get the weights for all categories in this dataset
+        """
         w = dict()
         for cat in self.categories:
             w[cat.name] = cat.weights

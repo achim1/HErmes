@@ -55,6 +55,11 @@ class Cut(object):
 
     @property
     def variablenames(self):
+        """
+        Returns a list of strings with the names of the 
+        variables
+        """
+
         return self.cutdict.keys()
 
 

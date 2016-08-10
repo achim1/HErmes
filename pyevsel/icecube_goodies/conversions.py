@@ -223,12 +223,18 @@ ptype = ParticleType()
 pdgtype = PDGCode()
 
 # wrap these to dicts
-ptype_to_pdg = dict([(ptype.__getattribute__(x),pdgtype.__getattribute__(x))\
+#ptype_to_pdg = dict([(ptype.__getattribute__(x),pdgtype.__getattribute__(x))\
+#                     for x in dir(ParticleType)\
+#                     if not x.startswith('_') and x in dir(PDGCode)])
+ptype_to_pdg = {ptype.__getattribute__(x) : pdgtype.__getattribute__(x)\
                      for x in dir(ParticleType)\
-                     if not x.startswith('_') and x in dir(PDGCode)])
-pdg_to_ptype = dict([(pdgtype.__getattribute__(x),ptype.__getattribute__(x))\
+                     if not x.startswith('_') and x in dir(PDGCode)}
+#pdg_to_ptype = dict([(pdgtype.__getattribute__(x),ptype.__getattribute__(x))\
+#                     for x in dir(PDGCode)\
+#                     if not x.startswith('_') and x in dir(ParticleType)])
+pdg_to_ptype = {pdgtype.__getattribute__(x) : ptype.__getattribute__(x)\
                      for x in dir(PDGCode)\
-                     if not x.startswith('_') and x in dir(ParticleType)])
+                     if not x.startswith('_') and x in dir(ParticleType)}
 
 
 def IsPDGEncoded(pid,neutrino=False):

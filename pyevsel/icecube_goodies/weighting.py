@@ -30,6 +30,12 @@ NUTYPES.extend([conv.PDGCode.NuTau,conv.PDGCode.NuTauBar])
 # is entirely kosher there 
 
 class Weight(object):
+    """
+    Provides the weights for 
+    weighted MC simulation.
+    Uses the pdf from simulation 
+    and the desired flux
+    """
 
     def __init__(self,generator,flux):
         self.gen = generator

@@ -2,6 +2,8 @@
 Categories of data, like "signal" of "background" etc
 """
 
+MAX_CORES = 6
+
 from pyevsel.utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from pyevsel.utils.logger import Logger
 
@@ -276,14 +278,14 @@ class AbstractBaseCategory(object):
             names = self.vardict.keys()
         compound_variables = [] #harvest them later
 
-        def work(variablename,func_args,func_kwargs):
+        executor = fut.ProcessPoolExecutor(max_workers=MAX_CORES)
+        future_to_varname = {}
 
-            return variablename,variables.harvest(*func_args,**func_kwargs)
-
-        #workers = mp.Pool(processes=4) # 4 is random
-        threads = []
-        #executor = fut.ProcessPoolExecutor(max_workers=4)
-        for varname in tqdm.tqdm(names,desc="Reading {0} variables".format(self.name), leave=True):
+        # first read out variables,
+        # then compound variables
+        # so make sure they are in the 
+        # right order
+        for varname in names:
             try:
                 if isinstance(self.vardict[varname],variables.CompoundVariable):
                     compound_variables.append(varname)
@@ -296,16 +298,23 @@ class AbstractBaseCategory(object):
                 Logger.warning("Cannot find {} in variables!".format(varname))
                 continue
 
-            #workers.apply_async(self.vardict[varname].harvest,args=self.files)
-            self.vardict[varname].harvest(*self.files)
-            #thefuture.result()
-            #threads.append(thefuture)            
-    
-        for t in threads:
-            t.result()
-        #fut.as_completed(*threads)
-        #workers.close()
-        #workers.join()
+            # FIXME: Make it an option to not use
+            # multi cpu readout!
+            #self.vardict[varname].data = variables.harvest(self.files,self.vardict[varname].definitions)
+            future_to_varname[executor.submit(variables.harvest,self.files,self.vardict[varname].definitions)] = varname
+        for future in tqdm.tqdm(fut.as_completed(future_to_varname),desc="Reading {0} variables".format(self.name), leave=True):
+        #for future in fut.as_completed(future_to_varname):
+            varname = future_to_varname[future]
+            try:
+                data = future.result()
+                data = self.vardict[varname].transform(data)
+            except Exception as exc:
+                Logger.warning('{} generated an exception: {}'.format(varname, exc))
+                data = pd.Series([])
+
+            self.vardict[varname].data = data
+            self.vardict[varname].declare_harvested()
+
         for varname in compound_variables:
             #FIXME check if this causes a memory leak
             self.vardict[varname].rewire_variables(self.vardict)

@@ -41,6 +41,10 @@ def harvest_single_file(filename, filetype, definitions):
         # store = pd.HDFStore(filename)
         hdftable = tables.openFile(filename)
 
+    else:
+        hdftable = filename
+
+    data = pd.Series()
     for definition in definitions:
         if filetype == ".h5":
             try:
@@ -61,7 +65,7 @@ def harvest_single_file(filename, filetype, definitions):
     return data
 
 
-def harvest(*filenames,**kwargs):
+def harvest(filenames,definitions,**kwargs):
     """
     Extract the variable data from the provided files
 
@@ -77,13 +81,13 @@ def harvest(*filenames,**kwargs):
     """.format(REGISTERED_FILEEXTENSIONS.__repr__())
 
     data = pd.Series()
-
     for filename in filenames:
         ext = f.strip_all_endings(filename)[1]
         assert ext in REGISTERED_FILEEXTENSIONS, "Filetype {} not known!".format(ext)
         assert os.path.exists(filename), "File {} does not exist!".format(ext)
-        # Logger.debug("Attempting to harvest file {0}".format(filename))
-        tmpdata = harvest_single_file(filename, ext)
+        Logger.debug("Attempting to harvest {1} file {0}".format(filename,ext))
+        
+        tmpdata = harvest_single_file(filename, ext,definitions)
         # self.data = self.data.append(data.map(self.transform))
         # concat should be much faster
         if "transformation" in kwargs:
@@ -92,7 +96,6 @@ def harvest(*filenames,**kwargs):
         else:
             data = pd.concat([data, tmpdata])
         del tmpdata
-
     return data
 
 ################################################################

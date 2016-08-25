@@ -194,15 +194,15 @@ def get_weight_from_weightmap(model,datasets,\
         #all_ts += ts
         factors[mc_datasets == ds] /= (ts[ds]*datasets[ds])
     all_ts = sum([ts[x]*datasets[x] for x in datasets.keys()])
-    print all_ts
-    print factors[0]
-    print mc_p_we[0]
-    print mc_p_gw[0]
+    #print all_ts
+    #print factors[0]
+    #print mc_p_we[0]
+    #print mc_p_gw[0]
     weight = (factors*np.array(mc_p_gw)*np.array(mc_p_we))#/all_ts
     #weight = mc_p_gw*mc_p_we/factors
     if len(datasets) == 1:
         weight /= all_ts
-    print weight.sum()  
+    #print weight.sum()  
     return weight
   
   

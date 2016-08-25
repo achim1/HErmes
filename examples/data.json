@@ -1,0 +1,119 @@
+{
+// define files and paths 
+// and names for the different
+// data 
+//
+// datatype can be either "simulation","reweighted", or 'data'
+  "files_basepath": "/lustre/fs15/group/icecube/stoessl/analysis_data/",
+  "variable_definitions": "variable_defs",
+  "combined_categories": {"astro_nu": ["astro_nue","astro_numu","astro_nutau"],
+                          "conv_nu": ["conv_nue","conv_numu"],
+                          "prompt_nu": ["prompt_nue","prompt_numu"],
+                          "mu": ["atmos_mu","atmos_cc_mu"]},  
+  "categories": {"astro_nue": {
+                        "subpath": "nue",
+                        "file_prefix": "",
+                        "file_type": ".h5",
+                        "datatype": "simulation",
+                        "datasets": {"6461": 2000,
+                                     "6725":  10000,
+                                     "9250": 10000},
+                        "model_method": "GetModelWeight",
+                        "model": "NuFluxes.E2",
+                        "plotting": {"label": "'$\nu_{astr}$'",
+                                     "dashistyle": {"color": 2,
+                                                    "linewidth": 3,
+                                                    "alpha": 1,
+                                                    "filled": 0,
+                                                    "linestyle": "solid"},
+                                    "histscatter": "line"}       
+                     },
+                   "astro_numu": {
+                        "subpath": "numu",
+                        "file_prefix": "",
+                        "file_type": ".h5",
+                        "datatype": "simulation",
+                        "datasets": {"9095": 10000,
+                                     "6726": 10000,
+                                     "6454": 500},
+                        "model_method": "GetModelWeight",
+                        "model": "NuFluxes.E2"
+                                },
+                    "astro_nutau": {
+                        "subpath": "nutau",
+                        "file_prefix": "",
+                        "file_type": ".h5",
+                        "datatype": "simulation",
+                        "datasets": {"8962": 500,
+                                     "10099": 500},
+                        "model_method": "GetModelWeight",
+                        "model": "NuFluxes.E2"
+                                },
+                    "atmos_mu": {
+                        "subpath": "mu",
+                        "file_prefix": "",
+                        "file_type": ".h5",
+                        "datatype": "simulation",
+                        "datasets": {"6514": 99802,
+                                     //9622: 100000,
+                                     //6451: 100000,
+                                     "9086": 76673,
+                                     "9505": 100000,
+                                     "9654": 100000,
+                                     "9493": 99663,
+                                     "9106": 99999,
+                                     //ic86
+                                     "10309": 10000,
+                                     "10282": 19997,
+                                     "10651": 19994,
+                                     "10784": 19714,
+                                     "10899": 19882,
+                                     "10475": 19435},
+                        "model_method": "GetModelWeight",
+                        "model": "MuFluxes.GaisserH3a"
+                                },
+                    "atmos_cc_mu": {
+                        "subpath": "mu-cc",
+                        "file_prefix": "",
+                        "file_type": ".h5",
+                        "datatype": "simulation",
+                        "datasets": {"6451": 100000,
+                                     "6939": 10000,
+                                     "7260": 30000},
+                        "model_method": "get_weight_from_weightmap",
+                        "model": ""
+                                },
+                    "exp": {
+                        "subpath": "exp",
+                        "file_prefix": "",
+                        "file_type": ".h5",
+                        "datatype": "data",
+                        "model_method": "GetModelWeight", //FIXME just here for compatibilty
+                        "livetime": 58335794.3807 //seconds
+                                },
+                    "conv_nue": {
+                        "datatype": "reweighted",
+                        "parent": "astro_nue",
+                        "model_method": "GetModelWeight",
+                        "model": "NuFluxes.Honda2006H3a"
+                                },
+                    "conv_numu": {
+                        "datatype": "reweighted",
+                        "parent": "astro_numu",
+                        "model_method": "GetModelWeight",
+                        "model": "NuFluxes.Honda2006H3a"
+                                },
+                    "prompt_nue": {
+                        "datatype": "reweighted",
+                        "parent": "astro_nue",
+                        "model_method": "GetModelWeight",
+                        "model": "NuFluxes.ERSH3a"
+                                },
+                    "prompt_numu": {
+                        "datatype": "reweighted",
+                        "parent": "astro_numu",
+                        "model_method": "GetModelWeight",
+                        "model": "NuFluxes.ERSH3a"
+                                }
+            }
+}

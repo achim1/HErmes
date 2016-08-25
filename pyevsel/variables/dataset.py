@@ -11,7 +11,7 @@ from collections import OrderedDict
 from pyevsel.plotting.plotting import VariableDistributionPlot
 from pyevsel.plotting import GetCategoryConfig
 from pyevsel.utils import GetTiming
-
+from pyevsel.utils.logger import Logger
 from dashi.tinytable import TinyTable
 
 import categories
@@ -75,28 +75,39 @@ class Dataset(object):
 
         """
         self.categories = []
+        self.combined_categories = []
+        # sort categories, do reweighted simulation last
+        # FIXME: if not, there will be problems
+        # FIXME: investigate!
+        reweighted_categories = []
         for cat in args:
-            self.categories.append(cat)
-            self.combined_categories = []
             self.__dict__[cat.name] = cat
+            if isinstance(cat,categories.ReweightedSimulation):
+                reweighted_categories.append(cat)
+                continue 
+            self.categories.append(cat)
+        self.categories = self.categories + reweighted_categories
         if 'combined_categories' in kwargs:
             for name in kwargs['combined_categories'].keys():
                 self.combined_categories.append(CombinedCategory(name,kwargs['combined_categories'][name]))
 
-    @GetTiming
-    def read_all_vars(self,variable_defs):
+    #@GetTiming
+    def read_variables(self,variable_defs,names=None):
         """
         Read out the variable for all categories
 
         Args:
             variable_defs: A python module containing variable definitions
-
+        
+        Keyword Args:
+            names (str): Readout only these variables if given
         Returns:
 
         """
         for cat in self.categories:
+            Logger.debug("Reading variables for {}".format(cat))
             cat.load_vardefs(variable_defs)
-            cat.read_variables()
+            cat.read_variables(names=names)
 
     def set_weightfunction(self,weightfunction=lambda x:x):
         """
@@ -194,6 +205,7 @@ class Dataset(object):
         for cat in self.categories:
             rep += "{} ".format(cat.name)
         rep += ">"
+        return rep
 
     def add_cut(self,cut):
         """

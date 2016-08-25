@@ -115,10 +115,13 @@ def is_ic86(dataset):
     #data = map(lambda x: x in ic86ds_id,dataset)
     #return n.array(data)
     #print dataset, ic86ds_id
+    #print type(dataset),type(ic86ds_id)
     #print dataset in ic86ds_id
     #print int(dataset) in ic86ds_id
     #raise
-    return int(dataset) in ic86ds_id
+    #return int(dataset) in ic86ds_id
+    return dataset.isin(ic86ds_id)
+
 
 # run and event id
 run   = V(RUN,definitions=[("I3EventHeader","Run")])

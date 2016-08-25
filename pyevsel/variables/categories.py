@@ -24,7 +24,7 @@ import inspect
 import numpy as n
 import numpy as np
 import abc
-import tqdm
+#import tqdm
 import multiprocessing as mp
 import threading as thr
 import concurrent.futures as fut
@@ -234,13 +234,11 @@ class AbstractBaseCategory(object):
             self.datasets = kwargs.pop("datasets")
             files = harvest_files(*args,**kwargs)
             datasets = [self._ds_regexp(x) for x in files]
-
             assert len(datasets) == len(files)
 
             ds_files = zip(datasets,files)
             for k in self.datasets.keys():
                 filtered_files.extend([x[1] for x in ds_files if x[0] == k])
-
             files = filtered_files
         else:
             files = harvest_files(*args,**kwargs)
@@ -285,40 +283,57 @@ class AbstractBaseCategory(object):
         # then compound variables
         # so make sure they are in the 
         # right order
+        simple_vars = []
         for varname in names:
             try:
                 if isinstance(self.vardict[varname],variables.CompoundVariable):
                     compound_variables.append(varname)
                     continue
 
-                if isinstance(self.vardict[varname],variables.VariableList):
+                elif isinstance(self.vardict[varname],variables.VariableList):
                     compound_variables.append(varname)
                     continue
+                else:
+                    simple_vars.append(varname)
             except KeyError:
                 Logger.warning("Cannot find {} in variables!".format(varname))
                 continue
-
+        for varname in simple_vars:
             # FIXME: Make it an option to not use
             # multi cpu readout!
             #self.vardict[varname].data = variables.harvest(self.files,self.vardict[varname].definitions)
             future_to_varname[executor.submit(variables.harvest,self.files,self.vardict[varname].definitions)] = varname
-        for future in tqdm.tqdm(fut.as_completed(future_to_varname),desc="Reading {0} variables".format(self.name), leave=True):
-        #for future in fut.as_completed(future_to_varname):
+        #for future in tqdm.tqdm(fut.as_completed(future_to_varname),desc="Reading {0} variables".format(self.name), leave=True):
+        progbar = False
+        try:
+            import pyprind
+            n_it = len(future_to_varname.keys())
+            bar = pyprind.ProgBar(n_it,monitor=False,bar_char='#',title=self.name)
+            progbar = True
+        except ImportError:
+            pass
+
+        exc_caught = """"""
+        for future in fut.as_completed(future_to_varname):
             varname = future_to_varname[future]
+            Logger.debug("Reading {} finished".format(varname))
             try:
                 data = future.result()
+                Logger.debug("Found {} entries ...".format(len(data)))
                 data = self.vardict[varname].transform(data)
             except Exception as exc:
-                Logger.warning('{} generated an exception: {}'.format(varname, exc))
+                exc_caught += "Reading {} for {} generated an exception: {}\n".format(varname,self.name, exc)
                 data = pd.Series([])
 
             self.vardict[varname].data = data
             self.vardict[varname].declare_harvested()
-
+            if progbar: bar.update()
         for varname in compound_variables:
             #FIXME check if this causes a memory leak
             self.vardict[varname].rewire_variables(self.vardict)
             self.vardict[varname].harvest()
+        if exc_caught:
+            Logger.warning("During the variable readout some exceptions occured!\n" + exc_caught)
         self._is_harvested = True
 
     @abc.abstractmethod
@@ -422,6 +437,7 @@ class Simulation(AbstractBaseCategory):
             zenith_var (str): simulated primary zenith
             weight_var (str): a weight, e.g. interaction propability
         """
+
         self.read_variables([energy_var,type_var,zenith_var,weight_var])
         for varname,defaultname in [(energy_var,MC_P_EN),\
                                     (type_var,MC_P_TY),\
@@ -443,7 +459,7 @@ class Simulation(AbstractBaseCategory):
         Keyword Args:
             model_kwargs (dict): Will be passed to model
         """
-        if not self._mc_p_readout:
+        if not self.mc_p_readout:
             self.read_mc_primary()
 
         if model_kwargs is None:

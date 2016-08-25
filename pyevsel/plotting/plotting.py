@@ -329,7 +329,7 @@ class VariableDistributionPlot(object):
         '''
 
         Logger.info("Found {} distributions".format(len(self.histograms)))
-        Logger.info("Found {} ratios".format(len(self.histratios))
+        Logger.info("Found {} ratios".format(len(self.histratios)))
         Logger.info("Found {} cumulative distributions".format(len(self.cumuls)))
         if not axes_locator:
             axes_locator = self._locate_axes(combined_cumul,combined_ratio,combined_distro)

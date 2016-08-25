@@ -22,47 +22,47 @@ except ImportError:
     REGISTERED_FILEEXTENSIONS.remove(".root")
 
 ################################################################
-# define some non-member function so that they can be used in a
+# define a non-member function so that it can be used in a
 # multiprocessing approach
 
-def harvest_single_file(filename, filetype, definitions):
-    """
-    Get the variable data from a fileobject
-    Optimized for hdf files
-
-    Args:
-        filename (str):
-        filetype (str): the extension of the filename, eg "h5"
-
-    Returns:
-        pd.Series
-    """
-    if filetype == ".h5" and not isinstance(filename, tables.table.Table):
-        # store = pd.HDFStore(filename)
-        hdftable = tables.openFile(filename)
-
-    else:
-        hdftable = filename
-
-    data = pd.Series()
-    for definition in definitions:
-        if filetype == ".h5":
-            try:
-                # data = store.select_column(*definition)
-                data = hdftable.getNode("/" + definition[0]).col(definition[1])
-                data = pd.Series(data, dtype=n.float64)
-                break
-            except tables.NoSuchNodeError:
-                Logger.debug("Can not find definition {0} in {1}! ".format(definition, filename))
-                continue
-
-        elif filetype == ".root":
-            data = rn.root2rec(filename, *definition)
-            data = pd.Series(data)
-    if filetype == ".h5":
-        hdftable.close()
-
-    return data
+#def harvest_single_file(filename, filetype, definitions):
+#    """
+#    Get the variable data from a fileobject
+#    Optimized for hdf files
+#
+#    Args:
+#        filename (str):
+#        filetype (str): the extension of the filename, eg "h5"
+#
+#    Returns:
+#        pd.Series
+#    """
+#    if filetype == ".h5" and not isinstance(filename, tables.table.Table):
+#        # store = pd.HDFStore(filename)
+#        hdftable = tables.openFile(filename)
+#
+#    else:
+#        hdftable = filename
+#
+#    data = pd.Series()
+#    for definition in definitions:
+#        if filetype == ".h5":
+#            try:
+#                # data = store.select_column(*definition)
+#                data = hdftable.getNode("/" + definition[0]).col(definition[1])
+#                data = pd.Series(data, dtype=n.float64)
+#                break
+#            except tables.NoSuchNodeError:
+#                Logger.debug("Can not find definition {0} in {1}! ".format(definition, filename))
+#                continue
+#
+#        elif filetype == ".root":
+#            data = rn.root2rec(filename, *definition)
+#            data = pd.Series(data)
+#    if filetype == ".h5":
+#        hdftable.close()
+#
+#    return data
 
 
 def harvest(filenames,definitions,**kwargs):
@@ -82,12 +82,38 @@ def harvest(filenames,definitions,**kwargs):
 
     data = pd.Series()
     for filename in filenames:
-        ext = f.strip_all_endings(filename)[1]
-        assert ext in REGISTERED_FILEEXTENSIONS, "Filetype {} not known!".format(ext)
-        assert os.path.exists(filename), "File {} does not exist!".format(ext)
-        Logger.debug("Attempting to harvest {1} file {0}".format(filename,ext))
+        filetype = f.strip_all_endings(filename)[1]
+        assert filetype in REGISTERED_FILEEXTENSIONS, "Filetype {} not known!".format(filetype)
+        assert os.path.exists(filename), "File {} does not exist!".format(filetype)
+        Logger.debug("Attempting to harvest {1} file {0}".format(filename,filetype))
         
-        tmpdata = harvest_single_file(filename, ext,definitions)
+        if filetype == ".h5" and not isinstance(filename, tables.table.Table):
+            # store = pd.HDFStore(filename)
+            hdftable = tables.openFile(filename)
+
+        else:
+            hdftable = filename
+
+        tmpdata = pd.Series()
+        for definition in definitions:
+            if filetype == ".h5":
+                try:
+                    # data = store.select_column(*definition)
+                    tmpdata = hdftable.getNode("/" + definition[0]).col(definition[1])
+                    tmpdata = pd.Series(tmpdata, dtype=n.float64)
+                    Logger.debug("Found {} entries in table for {}{}".format(len(tmpdata),definition[0],definition[1]))
+                    break
+                except tables.NoSuchNodeError:
+                    Logger.debug("Can not find definition {0} in {1}! ".format(definition, filename))
+                    continue
+
+            elif filetype == ".root":
+                tmpdata = rn.root2rec(filename, *definition)
+                tmpdata = pd.Series(data)
+        if filetype == ".h5":
+            hdftable.close()
+
+        #tmpdata = harvest_single_file(filename, filetype,definitions)
         # self.data = self.data.append(data.map(self.transform))
         # concat should be much faster
         if "transformation" in kwargs:

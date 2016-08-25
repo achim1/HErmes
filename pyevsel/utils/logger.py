@@ -5,8 +5,10 @@ Convenience function to provide easy logging
 import logging
 
 LOGFORMAT = '%(levelname)s:%(message)s:%(module)s:%(funcName)s:%(lineno)d'
-
+LOGLEVEL  = 30
 alertstring = lambda x :  "\033[0;31m" + x + "\033[00m"
+
+
 
 def get_logger(loglevel):
     """
@@ -27,5 +29,5 @@ def get_logger(loglevel):
 
     return logger
 
-Logger = get_logger(20)
+Logger = get_logger(LOGLEVEL)
 

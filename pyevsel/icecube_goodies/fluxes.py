@@ -4,10 +4,14 @@ as well as power law fluxes
 """
 
 from icecube import icetray,dataclasses,NewNuFlux
+from icecube.weighting.weighting import from_simprod
+
 import icecube.weighting.fluxes as mufluxes
 import conversions as conv
 
 import numpy as np
+
+AREA_SUM = 18946832.9035663
 
 ###############################################
 
@@ -109,6 +113,68 @@ def PowerWrap(*args,**kwargs):
 
 ##############################################
 
+def generated_corsika_flux(ebinc,datasets):
+    """
+    Calculate the livetime of a number of given coriska datasets using the weighting moduel
+    The calculation here means a comparison of the number of produced events per energy bin
+    with the expected event yield from fluxes in nature. If necessary call home to the simprod db.
+    Works for 5C datasets.
+
+    Args:
+        ebinc (np.array): Energy bins (centers)
+        datasets (list): A list of dictionaries with properties of the datasets or dataset numbers. If only nu8mbers are given, then simprod db will be queried
+            format of dataset dict:
+            example_datasets ={42: {"nevents": 1,\
+                   "nfiles": 1,\
+                   "emin": 1,\
+                   "emax": 1,\
+                   "normalization": [10., 5., 3., 2., 1.],\
+                   "gamma": [-2.]*5,\
+                   "LowerCutoffType": 'EnergyPerNucleon',\
+                   "UpperCutoffType": 'EnergyPerParticle',\
+                   "height": 1600,\
+                   "radius": 800}}
+
+    Returns:
+        tuple (generated protons, generated irons)
+    """
+    
+    if isinstance(datasets,dict):
+        pass
+
+    elif not isinstance(datasets,list):
+        datasets = list(datasets)
+
+    generators = []
+    for ds in datasets:
+       
+        if not isinstance(datasets,dict):
+            assert len(ds.values()) == 1, "Too many arguments per dataset"
+
+        if isinstance(ds,int):
+            db_result = from_simprod(ds)
+            if isinstance(db_result, tuple):
+                db_result = db_result[1]
+            generators.append(db_result*datasets[ds])
+
+        elif isinstance(ds.values()[0],int):
+            db_result = from_simprod(int(ds.keys()[0]))
+            if isinstance(db_result,tuple):
+                db_result = db_result[1]
+            generators.append(db_result*ds.values()[0])
+        elif isinstance(ds.values()[0],dict):
+            nfiles = ds.pop("nfiles")
+            generators.append(nfiles*FiveComponent(**ds))
+        else:
+            raise ValueError("Problems understanding dataset properties {}".format(ds.__repr__()))
+
+    gensum = reduce(lambda x, y: x + y, generators)
+    p_gen  = AREA_SUM*gensum(ebinc,2212)
+    fe_gen = AREA_SUM*gensum(ebinc,1000260560)
+
+    return p_gen, fe_gen
+
+##################################################################
 
 class NuFluxes:
     """

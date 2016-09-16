@@ -15,10 +15,11 @@ setup(name='pyevsel',
                         'pandas>=0.17.1',
                         'pyyaml>=3.10.0',
                         #'tqdm>=3.8.0',
+                        'appdirs>=1.4.0',
                         'futures>=3.0.5',
                         'pyprind>=2.9.6'],
       license="GPL",
-      platforms=["Ubuntu 12.04"],
+      platforms=["Ubuntu 14.04","Ubuntu 16.04"],
       classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Development Status :: 3 - Alpha",
@@ -33,6 +34,6 @@ setup(name='pyevsel',
       packages=['pyevsel','pyevsel.icecube_goodies',\
                 'pyevsel.plotting','pyevsel.utils',\
                 'pyevsel.variables'],
-      #scripts=['bin/muonic','bin/which_tty_daq'],
-      package_data={'pyevsel': ['plotting/plotsconfig.yaml','plotting/pyevseldefault.mplstyle','utils/PATTERNS.cfg']}
+      #scripts=[],
+      package_data={'pyevsel': ['plotting/plotsconfig.yaml','plotting/pyevseldefault.mplstyle','pyevselpresent.mplstyle','utils/PATTERNS.cfg']}
       )

@@ -2,7 +2,10 @@
 Provide the usual plots
 """
 import tempfile
-import yaml
+try:
+    import yaml
+except ImportError:
+    import ruamel.yaml as yaml
 import os
 import re
 

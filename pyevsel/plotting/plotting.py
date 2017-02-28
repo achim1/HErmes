@@ -6,7 +6,10 @@ from __future__ import print_function
 
 from builtins import range
 from builtins import object
-import yaml
+try:
+    import yaml
+except ImportError:
+    import ruamel.yaml as yaml
 import os
 import os.path
 

@@ -19,7 +19,10 @@ SLASHES = re.compile(r"(\\+)")
 
 with open(STD_CONF,"r") as configfile:
     configdata = configfile.read()
-    config.write(configdata)
+    try:
+        config.write(configdata)
+    except TypeError:
+        config.write(bytes(configdata.encode()))
     config.close()
 
 #################################

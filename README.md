@@ -5,10 +5,8 @@ An API for event selection as used in HEP analysis.
 
 Requirements
 ---------------------------
-`dashi`
-`pandas`
-`root_numpy` (if root support is needed)
-`yaml`
+
+Should work in python2/3. For a list of requirements, see `requirements.txt`
 
 Rationale
 ----------------------------

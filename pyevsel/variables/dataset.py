@@ -2,6 +2,7 @@
 Provides a container for different
 categories
 """
+from __future__ import division
 
 import pandas as pd
 import numpy as np
@@ -14,7 +15,6 @@ from pyevsel.utils import GetTiming
 from pyevsel.utils.logger import Logger
 from dashi.tinytable import TinyTable
 
-from __future__ import division
 
 from builtins import map
 from builtins import object
@@ -370,7 +370,7 @@ class Dataset(object):
         b,b_err = self.sum_rate(categories=denominator)
         if b == 0:
             return np.nan, np.nan
-        sum_err = np.sqrt((a_err/ b)) ** 2 + ((-a * b_err)/ (b ** 2))) ** 2)
+        sum_err = np.sqrt((a_err/ b) ** 2 + ((-a * b_err)/ (b ** 2)) ** 2)
         return a/b, sum_err
 
     def _setup_table_data(self,signal=None,background=None):

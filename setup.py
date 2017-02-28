@@ -17,7 +17,9 @@ setup(name='pyevsel',
                         #'tqdm>=3.8.0',
                         'appdirs>=1.4.0',
                         'futures>=3.0.5',
+                        'future>=0.16.0',
                         'pyprind>=2.9.6'],
+
       license="GPL",
       platforms=["Ubuntu 14.04","Ubuntu 16.04"],
       classifiers=[

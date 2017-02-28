@@ -2,6 +2,7 @@
 Provides canvases for multi axes plots
 """
 
+from builtins import object
 import os.path
 import pylab as p
 

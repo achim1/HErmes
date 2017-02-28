@@ -1,6 +1,7 @@
 """
 HEP style eventselection with python
 """
+from __future__ import print_function
 
 import atexit
 import os
@@ -9,7 +10,7 @@ import shutil
 
 from matplotlib import get_configdir as mpl_configdir
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 _appdir = os.path.split(__file__)[0]
 _appname = os.path.split(_appdir)[1]
@@ -67,5 +68,5 @@ install_config()
 try:
     atexit.register(_DeleteTmpFile)
 except IOError:
-    print "Can not register tmpfile deletion right now..."
+    print("Can not register tmpfile deletion right now...")
 

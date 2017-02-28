@@ -171,17 +171,17 @@ datasets = {
 10099: 500
 }
 
-ic79ds_id = nue_ds79.keys() +\
-            numu_ds79.keys() +\
-            nutau_ds79.keys() +\
-            mu_ds79.keys() +\
-            mucc_ds79.keys() +\
+ic79ds_id = list(nue_ds79.keys()) +\
+            list(numu_ds79.keys()) +\
+            list(nutau_ds79.keys()) +\
+            list(mu_ds79.keys()) +\
+            list(mucc_ds79.keys()) +\
             [1000,1200]
 
-ic86ds_id = nue_ds86.keys() +\
-            numu_ds86.keys() +\
-            nutau_ds86.keys() +\
-            mu_ds86.keys() +\
+ic86ds_id = list(nue_ds86.keys()) +\
+            list(numu_ds86.keys()) +\
+            list(nutau_ds86.keys()) +\
+            list(mu_ds86.keys()) +\
             [2000,2200]
 
 

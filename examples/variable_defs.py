@@ -1,6 +1,7 @@
 """
 Define all variables here
 """
+from __future__ import division
 
 import numpy as n
 import pandas as pd

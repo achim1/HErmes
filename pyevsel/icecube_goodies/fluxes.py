@@ -2,14 +2,17 @@
 Flux models for atmospheric neutrino and muon fluxes
 as well as power law fluxes
 """
+from __future__ import absolute_import
 
+from builtins import object
 from icecube import icetray,dataclasses,NewNuFlux
 from icecube.weighting.weighting import from_simprod
 
 import icecube.weighting.fluxes as mufluxes
-import conversions as conv
+from . import conversions as conv
 
 import numpy as np
+from functools import reduce
 
 AREA_SUM = 18946832.9035663
 
@@ -149,7 +152,7 @@ def generated_corsika_flux(ebinc,datasets):
     for ds in datasets:
        
         if not isinstance(datasets,dict):
-            assert len(ds.values()) == 1, "Too many arguments per dataset"
+            assert len(list(ds.values())) == 1, "Too many arguments per dataset"
 
         if isinstance(ds,int):
             db_result = from_simprod(ds)
@@ -157,12 +160,12 @@ def generated_corsika_flux(ebinc,datasets):
                 db_result = db_result[1]
             generators.append(db_result*datasets[ds])
 
-        elif isinstance(ds.values()[0],int):
-            db_result = from_simprod(int(ds.keys()[0]))
+        elif isinstance(list(ds.values())[0],int):
+            db_result = from_simprod(int(list(ds.keys())[0]))
             if isinstance(db_result,tuple):
                 db_result = db_result[1]
-            generators.append(db_result*ds.values()[0])
-        elif isinstance(ds.values()[0],dict):
+            generators.append(db_result*list(ds.values())[0])
+        elif isinstance(list(ds.values())[0],dict):
             nfiles = ds.pop("nfiles")
             generators.append(nfiles*FiveComponent(**ds))
         else:
@@ -176,7 +179,7 @@ def generated_corsika_flux(ebinc,datasets):
 
 ##################################################################
 
-class NuFluxes:
+class NuFluxes(object):
     """
     Namespace for neutrino fluxes
     """
@@ -192,7 +195,7 @@ class NuFluxes:
     BARTOL       = staticmethod(AtmoWrap("bartol"))
 
 
-class MuFluxes:
+class MuFluxes(object):
     """
     Namespace for atmospheric muon fluxes
     """

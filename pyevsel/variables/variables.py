@@ -2,6 +2,7 @@
 Container classes for variables
 """
 
+from builtins import object
 import numpy as n
 import os
 import pandas as pd
@@ -10,6 +11,8 @@ import abc
 
 from pyevsel.utils import files as f
 from pyevsel.utils.logger import Logger
+from future.utils import with_metaclass
+from functools import reduce
 
 
 DEFAULT_BINS = 70
@@ -126,7 +129,7 @@ def harvest(filenames,definitions,**kwargs):
 
 ################################################################
 
-class AbstractBaseVariable(object):
+class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
     """
     A 'variable' is a large set of numerical data
     stored in some file or database.
@@ -134,9 +137,6 @@ class AbstractBaseVariable(object):
     and load it into memory so that it cna be
     used with pandas/numpy
     """    
-
-
-    __metaclass__ = abc.ABCMeta
     _is_harvested = False
 
     def __hash__(self):
@@ -389,7 +389,7 @@ class CompoundVariable(AbstractBaseVariable):
 
         if self.is_harvested:
             return
-        harvested = filter(lambda var : var.is_harvested, self.variables)
+        harvested = [var for var in self.variables if var.is_harvested]
         if not len(harvested) == len(self.variables):
             Logger.error("Variables have to be harvested for compound variable {0} first!".format(self.name))
             return
@@ -419,7 +419,7 @@ class VariableList(AbstractBaseVariable):
 
         if self.is_harvested:
             return
-        harvested = filter(lambda var : var.is_harvested, self.variables)
+        harvested = [var for var in self.variables if var.is_harvested]
         if not len(harvested) == len(self.variables):
             Logger.error("Variables have to be harvested for compound variable {} first!".format(self.name))
             return

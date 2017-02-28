@@ -4,6 +4,7 @@ sort them into different categories whcih
 represent experimental data or several
 types of simulation
 """
+from __future__ import absolute_import
 
 import commentjson
 import os
@@ -12,8 +13,8 @@ import inspect
 
 from pyevsel.utils.logger import Logger
 
-import categories as c
-import dataset as ds
+from . import categories as c
+from . import dataset as ds
 import pyevsel.icecube_goodies.weighting as wgt
 import pyevsel.icecube_goodies.fluxes as fluxes
 
@@ -32,7 +33,7 @@ def load_dataset(config,variables=None):
     weightfunctions = dict()
     models = dict()
     files_basepath   = cfg["files_basepath"]
-    for cat in cfg["categories"].keys():
+    for cat in list(cfg["categories"].keys()):
         thiscat = cfg["categories"][cat]
         if thiscat["datatype"] == "simulation":
             categories[cat] = c.Simulation(cat)
@@ -58,7 +59,7 @@ def load_dataset(config,variables=None):
         else:
             raise TypeError("Data type not understood. Has to be either 'simulation', 'reweighted' or 'data'!!")
     # at last we can take care of reweighted categories
-    for cat in cfg["categories"].keys():
+    for cat in list(cfg["categories"].keys()):
         thiscat = cfg["categories"][cat]
         if thiscat["datatype"] == "reweighted":
             categories[cat] = c.ReweightedSimulation(cat,categories[thiscat["parent"]])
@@ -73,13 +74,13 @@ def load_dataset(config,variables=None):
 
     #combined categories
     combined_categories = dict() 
-    for k in combined_categories.keys():
+    for k in list(combined_categories.keys()):
         combined_categories[k] = [categories[l] for l in cfg["combined_categories"]]
 
     # import variable defs
     vardefs = __import__(cfg["variable_definitions"])
 
-    dataset = ds.Dataset(*categories.values(),combined_categories=combined_categories)
+    dataset = ds.Dataset(*list(categories.values()),combined_categories=combined_categories)
     dataset.read_variables(vardefs,names=variables)
     dataset.set_weightfunction(weightfunctions)
     dataset.get_weights(models=models)

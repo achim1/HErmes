@@ -1,8 +1,12 @@
 """
 Tools for managing iterables
 """
+from __future__ import division
 
-from logger import Logger
+from builtins import range
+from past.utils import old_div
+from . import logger
+Logger = logger.Logger
 
 def slicer(list_to_slice,slices):
     """
@@ -22,7 +26,7 @@ def slicer(list_to_slice,slices):
 
     if slices == 0:
         slices = 1 # prevent ZeroDivisionError
-    maxslice = len(list_to_slice)/slices
+    maxslice = old_div(len(list_to_slice),slices)
     if (maxslice*slices) < len(list_to_slice) :
         maxslice += 1
     Logger.info("Sliced list in {} slices with a maximum slice index of {}" .format(slices,maxslice))

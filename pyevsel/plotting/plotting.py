@@ -2,7 +2,10 @@
 Some basic plot routines for plots which occur over and 
 over in eventselections
 """
+from __future__ import print_function
 
+from builtins import range
+from builtins import object
 import yaml
 import os
 import os.path
@@ -339,39 +342,39 @@ class VariableDistributionPlot(object):
 
         self.canvas = c.YStackedCanvas(axeslayout=heights)
         
-        cu_axes = filter(lambda x : x[1] == "c",axes_locator)
-        h_axes = filter(lambda x : x[1] == "h",axes_locator)
-        r_axes = filter(lambda x : x[1] == "r",axes_locator)
+        cu_axes = [x for x in axes_locator if x[1] == "c"]
+        h_axes = [x for x in axes_locator if x[1] == "h"]
+        r_axes = [x for x in axes_locator if x[1] == "r"]
         maxheights = []
         minheights = []
         for ax in cu_axes:
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_cumul:
-                for k in self.cumuls.keys():
+                for k in list(self.cumuls.keys()):
                     self._draw_distribution(cur_ax,k,cumulative=True,log=log)
                 break
             else:
-                k = self.cumuls[self.cumuls.keys()[ax[0]]]
+                k = self.cumuls[list(self.cumuls.keys())[ax[0]]]
                 self._draw_distribution(cur_ax,cumulative=True,log=log)
         for ax in r_axes:
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_ratio:
-                for k in self.histratios.keys():
+                for k in list(self.histratios.keys()):
                     self._draw_histratio(k,cur_ax)
                 break
             else:
-                k = self.histratios[self.histratios.keys()[ax[0]]]
+                k = self.histratios[list(self.histratios.keys())[ax[0]]]
                 self._draw_histratio(k,cur_ax)    
 
         for ax in h_axes:
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_distro:
-                for k in self.histograms.keys():
-                    print "drawing..",k
+                for k in list(self.histograms.keys()):
+                    print("drawing..",k)
                     self._draw_distribution(cur_ax,k,log=log)
                 break
             else:
-                k = self.histograms[self.histograms.keys()[ax[0]]]
+                k = self.histograms[list(self.histograms.keys())[ax[0]]]
                 ymax, ymin = self._draw_distribution(cur_ax,k,log=log)
             cur_ax.set_ylim(ymin=ymin - 0.1*ymin,ymax=1.1*ymax)
         lgax = self.canvas.select_axes(-1)#most upper one
@@ -390,7 +393,7 @@ class VariableDistributionPlot(object):
         rightplotedge = -n.inf
         minplotrange = n.inf
         maxplotrange = -n.inf
-        for h in self.histograms.values():
+        for h in list(self.histograms.values()):
             if not h.bincenters[h.bincontent > 0].sum():
                 continue
             if h.bincenters[h.bincontent > 0][0] < leftplotedge:

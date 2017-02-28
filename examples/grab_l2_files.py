@@ -1,4 +1,5 @@
-import utils.files as f
+from __future__ import print_function
+import pyevsel.utils.files as f
 
 all = f.harvest_files("/data/exp/IceCube/2015/filtered/level2/1127",prefix="",ending=".bz2")
 gcd = f.harvest_files("/data/exp/IceCube/2015/filtered/level2/VerifiedGCD",prefix="",ending=".gz")
@@ -8,9 +9,9 @@ runs = f.group_names_by_regex(all_w_gcd,firstpattern=f.GCD,estimate_first= lambd
 
 #remove runs which have only gcd
 runs_on_1127 = dict()
-for k in runs.keys():
+for k in list(runs.keys()):
     if len(runs[k]) > 1:
         runs_on_1127[k] = runs[k]
 
-print runs_on_1127
+print(runs_on_1127)
 

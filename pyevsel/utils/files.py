@@ -3,8 +3,14 @@ Locate files on the filesystem and
 group them together
 """
 
-from ConfigParser import ConfigParser
-from logger import Logger
+from future import standard_library
+from functools import reduce
+standard_library.install_aliases()
+from builtins import zip
+from builtins import filter
+from builtins import map
+from configparser import ConfigParser
+from . import logger
 from glob import glob
 
 import re
@@ -15,6 +21,8 @@ import os
 PATTERNFILE = os.path.join(os.path.dirname(__file__), 'PATTERNS.cfg')
 config = ConfigParser()
 config.read(PATTERNFILE)
+
+Logger = logger.Logger
 
 def _regex_compiler(cfgsection,cfgname,transform = lambda x : x
 ):
@@ -36,7 +44,7 @@ def _regex_compiler(cfgsection,cfgname,transform = lambda x : x
         cmp = re.compile(config.get(cfgsection,cfgname))
         try:
             grps = cmp.search(filename).groups()
-        except AttributeError,ValueError:
+        except (AttributeError,ValueError):
             return None
         for i in grps:
             res.append(transform(i))
@@ -99,26 +107,26 @@ def harvest_files(path,ending=".bz2",sanitizer=lambda x : x,use_ls=False,prefix=
         files = []
         ls = sub.Popen(["ls","-a",path],stdout=sub.PIPE,stdin=sub.PIPE).communicate()[0].split()
         # remove by-products
-        ls = filter(lambda x : (x != ".") and (x != ".."),ls)
+        ls = [x for x in ls if (x != ".") and (x != "..")]
         for subpath in ls:
             if os.path.isdir(os.path.join(path,subpath)):
                 sub_ls = sub.Popen(["ls","-a",os.path.join(path,subpath)],stdout=sub.PIPE,stdin=sub.PIPE).communicate()[0].split()
-                sub_ls = filter(lambda x : (x != ".") and (x != ".."),sub_ls)
+                sub_ls = [x for x in sub_ls if (x != ".") and (x != "..")]
                 files += [os.path.join(path,os.path.join(subpath,subsubpath)) for subsubpath in sub_ls]
             elif os.path.isfile(os.path.join(path,subpath)):
                 files += [os.path.join(path,subpath)]
                  
             if "*" in ending:
                 ending = ending.replace("*","")
-            files = filter(lambda x: x.endswith(ending),files)
+            files = [x for x in files if x.endswith(ending)]
     else:
         if not ending.startswith("*"):
             ending = "*" + ending
 
         tmpindirs = [item[0] for item in os.walk(path,followlinks=True)]
-        files = reduce(lambda x,y : x+y,map(glob,[os.path.join(direc,ending) for direc in tmpindirs]))
-    files = filter(sanitizer,files)
-    files = map(lambda x : prefix + x,files)
+        files = reduce(lambda x,y : x+y,list(map(glob,[os.path.join(direc,ending) for direc in tmpindirs])))
+    files = list(filter(sanitizer,files))
+    files = [prefix + x for x in files]
     files = sorted(files) # ensure that each call returns exact same list
     return files
 
@@ -140,17 +148,17 @@ def group_names_by_regex(names,regex=EXP_RUN_ID,firstpattern=GCD,estimate_first=
     Returns:
         list: names grouped by reges with first pattern as leading element
     """
-    identifiers        = map(regex,names)
+    identifiers        = list(map(regex,names))
     unique_identifiers = set(identifiers)
-    meta_names         = zip(identifiers,names)
+    meta_names         = list(zip(identifiers,names))
     meta_names         = sorted(meta_names)
     groupdict          = dict()
     for i in unique_identifiers:
         groupdict[i] = [j[1] for j in meta_names if j[0] == i]
 
     if firstpattern is not None:
-        for k in groupdict.keys():
-            first = filter(firstpattern,groupdict[k])
+        for k in list(groupdict.keys()):
+            first = list(filter(firstpattern,groupdict[k]))
             if len(first) > 1: 
                 Logger.info("First entry is not unique! {}".format(first.__repr__()))  
                 for j in first:

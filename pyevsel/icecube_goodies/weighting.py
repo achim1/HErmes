@@ -2,6 +2,10 @@
 An interface to icecube's weighting schmagoigl
 """
 
+from __future__ import division
+
+from builtins import map
+from builtins import object
 from icecube.weighting.weighting import from_simprod, EnergyWeight,ParticleType
 from pyevsel.utils.logger import Logger
 from pyevsel.variables.magic_keywords import  MC_P_EN,\
@@ -15,7 +19,8 @@ from pyevsel.variables.magic_keywords import  MC_P_EN,\
 
 import numpy as np
 import inspect
-import conversions as conv
+from . import conversions as conv
+from functools import reduce
 
 
 NUTYPES = [conv.PDGCode.NuE,conv.PDGCode.NuEBar]
@@ -63,19 +68,19 @@ class Weight(object):
         # FIXME: mapping argument should go away
         if mapping:
             pmap = {14:ParticleType.PPlus, 402:ParticleType.He4Nucleus, 1407:ParticleType.N14Nucleus, 2713:ParticleType.Al27Nucleus, 5626:ParticleType.Fe56Nucleus}
-            ptype = map(lambda x : pmap[x], ptype )
+            ptype = [pmap[x] for x in ptype]
 
         # FIXME: This is too ugly and not general
         can_use_zenith = False
         if hasattr(self.flux,"__call__"):
-            if hasattr(self.flux.__call__,"im_func"):
-                args = inspect.getargs(self.flux.__call__.im_func.func_code)
+            if hasattr(self.flux.__call__,"__func__"):
+                args = inspect.getargs(self.flux.__call__.__func__.__code__)
                 if len(args.args) == 4: # account for self
                     can_use_zenith = True
             else:
                 can_use_zenith = True # method wrapper created by NewNuflux 
         else:
-            args = inspect.getargs(self.flux.func_code) 
+            args = inspect.getargs(self.flux.__code__) 
             if len(args.args) == 3:
                 can_use_zenith = True
         if (zenith is not None) and can_use_zenith:
@@ -100,7 +105,7 @@ def GetGenerator(datasets):
     """
 
     generators = []
-    for k in datasets.keys():
+    for k in list(datasets.keys()):
         nfiles = datasets[k]
         generator = from_simprod(k)
         # depending on the version of the
@@ -148,7 +153,7 @@ def GetModelWeight(model,datasets,\
     # for -> 1e4 is for the conversion of
     factor = 1.
     gen  = GetGenerator(datasets)
-    if map(int,gen.spectra.keys())[0] in NUTYPES:
+    if map(int,list(gen.spectra.keys()))[0] in NUTYPES:
         Logger.debug('Patching weights')
         factor = 5000
     weight = Weight(gen,flux)
@@ -186,14 +191,14 @@ def get_weight_from_weightmap(model,datasets,\
     #timescale    = np.zeros(len(mc_p_ts))
     all_ts = 0
     factors = np.ones(len(mc_p_ts))
-    ts = {ds : mc_p_ts[mc_datasets==ds][0] for ds in datasets.keys()}
-    for ds in datasets.keys():
+    ts = {ds : mc_p_ts[mc_datasets==ds][0] for ds in list(datasets.keys())}
+    for ds in list(datasets.keys()):
         #ts = datasets[ds]*mc_p_ts[mc_datasets==ds][0]
         #timescale[mc_datasets==ds] += datasets[ds]*mc_p_ts[mc_datasets==ds]
         #mc_p_we[mc_datasets==ds]*=(datasets[ds]*mc_p_ts[mc_datasets==ds])
         #all_ts += ts
         factors[mc_datasets == ds] /= (ts[ds]*datasets[ds])
-    all_ts = sum([ts[x]*datasets[x] for x in datasets.keys()])
+    all_ts = sum([ts[x]*datasets[x] for x in list(datasets.keys())])
     #print all_ts
     #print factors[0]
     #print mc_p_we[0]

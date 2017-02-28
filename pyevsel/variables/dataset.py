@@ -14,7 +14,11 @@ from pyevsel.utils import GetTiming
 from pyevsel.utils.logger import Logger
 from dashi.tinytable import TinyTable
 
-import categories
+from __future__ import division
+
+from builtins import map
+from builtins import object
+from . import categories
 
 class CombinedCategory(object):
     """
@@ -88,7 +92,7 @@ class Dataset(object):
             self.categories.append(cat)
         self.categories = self.categories + reweighted_categories
         if 'combined_categories' in kwargs:
-            for name in kwargs['combined_categories'].keys():
+            for name in list(kwargs['combined_categories'].keys()):
                 self.combined_categories.append(CombinedCategory(name,kwargs['combined_categories'][name]))
 
     #@GetTiming
@@ -295,11 +299,11 @@ class Dataset(object):
         sparsest = self.get_sparsest_category()
 
         bins = self.get_category(sparsest).vardict[name].calculate_fd_bins()
-        tratio,tratio_err = self.calc_ratio(nominator=map(self.get_category,ratio[0]),\
-                                          denominator=map(self.get_category,ratio[1]))
+        tratio,tratio_err = self.calc_ratio(nominator=list(map(self.get_category,ratio[0])),\
+                                          denominator=list(map(self.get_category,ratio[1])))
         plot = VariableDistributionPlot(cuts=cuts,bins=bins)
         plotcategories = self.categories + self.combined_categories 
-        for cat in filter(lambda x: x.plot,plotcategories):
+        for cat in [x for x in plotcategories if x.plot]:
             plot.add_variable(cat,name)
             if cumulative:
                 plot.add_cumul(cat.name)
@@ -366,7 +370,7 @@ class Dataset(object):
         b,b_err = self.sum_rate(categories=denominator)
         if b == 0:
             return np.nan, np.nan
-        sum_err = np.sqrt((a_err / b) ** 2 + ((-a * b_err) / (b ** 2)) ** 2)
+        sum_err = np.sqrt((a_err/ b)) ** 2 + ((-a * b_err)/ (b ** 2))) ** 2)
         return a/b, sum_err
 
     def _setup_table_data(self,signal=None,background=None):
@@ -404,7 +408,7 @@ class Dataset(object):
         for cat in datacats:
             rate,error = cat.integrated_rate
             try:
-                fudges[cat.name] = (rate/simrate,error/simerror)
+                fudges[cat.name] = (rate/simrate),(error/simerror)
             except ZeroDivisionError:
                 fudges[cat.name] = np.NaN
         rate_dict = OrderedDict()
@@ -469,7 +473,7 @@ class Dataset(object):
         orates = OrderedDict()
         ofudges = OrderedDict()
         oevents = OrderedDict()
-        for k in rates.keys():
+        for k in list(rates.keys()):
             if k in showcats:
                 orates[k] = rates[k]
                 ofudges[k] = fudges[k]

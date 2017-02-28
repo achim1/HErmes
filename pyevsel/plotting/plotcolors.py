@@ -1,3 +1,5 @@
+from builtins import zip
+from builtins import range
 from pyevsel.utils.logger import Logger
 import os.path
 
@@ -42,7 +44,7 @@ def get_color_palette(name="dark"):
         color_palette['prohibited'] = 'grey'
     else:
         color_palette = ColorDict()
-        color_palette.update(dict(zip(range(6),sb.color_palette(name))))
+        color_palette.update(dict(list(zip(list(range(6)),sb.color_palette(name)))))
         color_palette['prohibited'] = sb.color_palette("deep")[3]
     return color_palette
     

@@ -2,6 +2,7 @@
 Use with pyevsel.categories.Category to perfom cuts
 """
 
+from builtins import object
 from pyevsel.variables.variables import Variable as V
 from pyevsel.utils.logger import Logger
 from collections import defaultdict
@@ -15,7 +16,7 @@ operator_lookup = {\
     "<=" : operator.le\
     }
 
-inv_operator_lookup = {v: k for k, v in operator_lookup.items()}
+inv_operator_lookup = {v: k for k, v in list(operator_lookup.items())}
 
 
 class Cut(object):
@@ -60,7 +61,7 @@ class Cut(object):
         variables
         """
 
-        return self.cutdict.keys()
+        return list(self.cutdict.keys())
 
 
     def __iter__(self):
@@ -68,7 +69,7 @@ class Cut(object):
         Return name, cutfunc pairs
         """
         # flatten out the cutdict
-        for k in self.cutdict.keys():
+        for k in list(self.cutdict.keys()):
             for j in self.cutdict[k]:
                 yield k,j
 

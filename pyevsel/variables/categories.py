@@ -1,13 +1,18 @@
 """
 Categories of data, like "signal" of "background" etc
 """
+from __future__ import absolute_import
 
+from builtins import zip
+from builtins import map
+from builtins import object
+from future.utils import with_metaclass
 MAX_CORES = 6
 
 from pyevsel.utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from pyevsel.utils.logger import Logger
 
-from magic_keywords import  MC_P_EN,\
+from .magic_keywords import  MC_P_EN,\
                             MC_P_TY,\
                             MC_P_ZE,\
                             MC_P_WE,\
@@ -18,7 +23,7 @@ from magic_keywords import  MC_P_EN,\
                             RUN,\
                             EVENT,\
                             DATASETS
-import variables
+from . import variables
 import pandas as pd
 import inspect
 import numpy as n
@@ -31,13 +36,12 @@ import concurrent.futures as fut
 
 from copy import deepcopy
 
-class AbstractBaseCategory(object):
+class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
     """
     Stands for a specific type of data, e.g.
     detector data in a specific configuarion,
     simulated data etc.
     """
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self,name):
         self.name = name
@@ -55,10 +59,10 @@ class AbstractBaseCategory(object):
         return """<{0}: {1}>""".format(self.__class__,self.name)
 
     def __hash__(self):
-        return hash((self.name,"".join(map(str,self.datasets.keys()))))
+        return hash((self.name,"".join(map(str,list(self.datasets.keys())))))
 
     def __eq__(self,other):
-        if (self.name == other.name) and (self.datasets.keys() == other.datasets.keys()):
+        if (self.name == other.name) and (list(self.datasets.keys()) == list(other.datasets.keys())):
             return True
         else:
             return False
@@ -69,7 +73,7 @@ class AbstractBaseCategory(object):
         FIXME: introduce check?
         """
 
-        lengths = np.array([len(self.vardict[v].data) for v in self.vardict.keys()])
+        lengths = np.array([len(self.vardict[v].data) for v in list(self.vardict.keys())])
         lengths = lengths[lengths > 0]
         selflen = list(set(lengths))
         assert len(selflen) == 1, "Different variable lengths!"
@@ -82,7 +86,7 @@ class AbstractBaseCategory(object):
 
     @property
     def variablenames(self):
-        return self.vardict.keys()
+        return list(self.vardict.keys())
 
     @property
     def is_harvested(self):
@@ -144,7 +148,7 @@ class AbstractBaseCategory(object):
                 s = self.get(varname)
                 mask = n.logical_and(mask,op(s,value) )
         if inplace:
-            for k in self.vardict.keys():
+            for k in list(self.vardict.keys()):
                 self.vardict[k].data = self.vardict[k].data[mask]
         else:
             self.cutmask = n.array(mask,dtype=bool)
@@ -236,8 +240,8 @@ class AbstractBaseCategory(object):
             datasets = [self._ds_regexp(x) for x in files]
             assert len(datasets) == len(files)
 
-            ds_files = zip(datasets,files)
-            for k in self.datasets.keys():
+            ds_files = list(zip(datasets,files))
+            for k in list(self.datasets.keys()):
                 filtered_files.extend([x[1] for x in ds_files if x[0] == k])
             files = filtered_files
         else:
@@ -273,7 +277,7 @@ class AbstractBaseCategory(object):
         """
 
         if names is None:
-            names = self.vardict.keys()
+            names = list(self.vardict.keys())
         compound_variables = [] #harvest them later
 
         executor = fut.ProcessPoolExecutor(max_workers=MAX_CORES)
@@ -307,7 +311,7 @@ class AbstractBaseCategory(object):
         progbar = False
         try:
             import pyprind
-            n_it = len(future_to_varname.keys())
+            n_it = len(list(future_to_varname.keys()))
             bar = pyprind.ProgBar(n_it,monitor=False,bar_char='#',title=self.name)
             progbar = True
         except ImportError:
@@ -342,7 +346,7 @@ class AbstractBaseCategory(object):
 
     def get_datacube(self):
         cube = dict()
-        for k in self.vardict.keys():
+        for k in list(self.vardict.keys()):
             cube[k] = self.get(k)
 
         return pd.DataFrame(cube)
@@ -382,7 +386,7 @@ class AbstractBaseCategory(object):
 
         """
 
-        assert self.vardict.keys() == other.vardict.keys(),"Must have the same variables to be combined"
+        assert list(self.vardict.keys()) == list(other.vardict.keys()),"Must have the same variables to be combined"
 
         if isinstance(self,Data):
             self_livetime = self.livetime
@@ -390,7 +394,7 @@ class AbstractBaseCategory(object):
         if isinstance(other,Data):
             other_livetime = other.livetime
 
-        for k in other.datasets.keys():
+        for k in list(other.datasets.keys()):
             self.datasets.update({k : other.datasets[k]})
         self.files.extend(other.files)
         if self.cuts or other.cuts:
@@ -625,7 +629,7 @@ class Data(AbstractBaseCategory):
                 return
         
         if not self._runstartstop_set:
-            if (RUN_STOP in self.vardict.keys()) and (RUN_START in self.vardict.keys()):
+            if (RUN_STOP in list(self.vardict.keys())) and (RUN_START in list(self.vardict.keys())):
                 self._runstartstop_set = True
             else:
                 Logger.warning("Need to set run start and stop times first! use object.set_run_start_stop")

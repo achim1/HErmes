@@ -2,6 +2,7 @@
 Unit conversions and such
 """
 
+from builtins import object
 from numpy import vectorize,int32
 #from icecube import icetray,dataclasses,NewNuFlux
 ####################################################
@@ -253,7 +254,7 @@ def IsPDGEncoded(pid,neutrino=False):
     """
 
     for i in pid.values:
-        if i in pdg_to_ptype.keys():
+        if i in list(pdg_to_ptype.keys()):
             if i == 14 and neutrino:
                 return True
             elif i == 14 and not neutrino:

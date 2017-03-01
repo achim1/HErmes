@@ -1,7 +1,6 @@
 numpy>=1.9.1
 pyparsing>=2.0.3
 python-dateutil>=2.4.0
-pytz>=2014.10
 six>=1.9.0
 pandas>=0.17.1
 matplotlib>=1.5.0
@@ -10,7 +9,7 @@ appdirs>=1.4.0
 futures>=3.0.5
 future>=0.16.0
 pyprind>=2.9.6
-tables>=3.3.0
+tables>=3.0.0
 https://github.com/emiddell/dashi/zipball/master#egg=dashi
 
 

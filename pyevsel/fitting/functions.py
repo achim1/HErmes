@@ -9,6 +9,9 @@ from __future__ import absolute_import
 
 from future import standard_library
 standard_library.install_aliases()
+
+import numpy as np
+
 def poisson(lmbda, k):
     """
     Poisson distribution
@@ -71,4 +74,23 @@ def exponential(x, N, n_noise):
         np.ndarray
     """
     return N * np.exp(-n_noise * x)
+
+def calculate_chi_square(data, model_data):
+    """
+    Very simple estimator for goodness-of-fit. Use with care.
+    Non normalized bin counts are required.
+
+    Args:
+        data (np.ndarray): observed data (bincounts)
+        model_data (np.ndarray): model predictions for each bin
+
+    Returns:
+        np.ndarray
+    """
+
+    chi = ((data - model_data)**2/data)
+    return chi[np.isfinite(chi)].sum()
+
+
+
 

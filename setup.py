@@ -24,6 +24,8 @@ except Exception as e:
                      'future>=0.16.0',
                      'pyprind>=2.9.6']
 
+requirements.append("tables>=3.3.0") # problem with travis CI, removed from requirments.txt
+
 setup(name='pyevsel',
       version=__version__,
       description='Eventselection for HEP analysis',

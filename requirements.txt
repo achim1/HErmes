@@ -9,7 +9,6 @@ appdirs>=1.4.0
 futures>=3.0.5
 future>=0.16.0
 pyprind>=2.9.6
-tables>=3.0.0
 https://github.com/emiddell/dashi/zipball/master#egg=dashi
 
 

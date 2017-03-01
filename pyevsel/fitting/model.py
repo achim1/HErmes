@@ -10,6 +10,20 @@ from __future__ import absolute_import
 
 from future import standard_library
 standard_library.install_aliases()
+
+import numpy as np
+import dashi as d
+import pylab as p
+
+from copy import deepcopy as copy
+
+import scipy.optimize as optimize
+import seaborn.apionly as sb
+
+from . import functions as funcs
+
+PALETTE = sb.color_palette("dark")
+
 class Model(object):
     """
     Model data with a parametrized prediction
@@ -32,13 +46,13 @@ class Model(object):
         if startparams is None:
             startparams = [0]*func.__code__.co_argcount
 
-        def normed_func(*args, **kwargs):
-            return func_norm*func(*args, **kwargs)
+        def normed_func(*args):
+            return func_norm*func(*args)
 
         self._callbacks = [normed_func]
-        self.startparams = [*startparams]
+        self.startparams = list(startparams)
         self.n_params = [len(startparams)]
-        self.best_fit_params = [*startparams]
+        self.best_fit_params = list(startparams)
         self.coupling_variable = []
         self.all_coupled = False
         self.data = None
@@ -86,8 +100,7 @@ class Model(object):
 
         """
 
-        assert self.all_coupled, "Does not work yet if not all variables are coupled"
-        assert func.__code__.co_argcount == len(self.startparams), "first guess algorithm must yield startparams!"
+        assert self.all_coupled or len(self.n_params) == 1, "Does not work yet if not all variables are coupled"
         self.first_guess = func
 
     def eval_first_guess(self, data):
@@ -99,7 +112,9 @@ class Model(object):
         :return:
         """
         assert self.first_guess is not None, "No first guess method provided! Run Model.add_first_guess "
-        self.startparams = self.first_guess(data)
+        newstartparams = list(self.first_guess(data))
+        assert len(newstartparams) == len(self.startparams), "first guess algorithm must yield startparams!"
+        self.startparams = newstartparams
 
     def couple_models(self, coupling_variable):
         """
@@ -130,7 +145,7 @@ class Model(object):
         """
         self.all_coupled = True
         # if self.all_coupled:
-        startparams = self.startparams[0:self.n_params[0]]
+        self.startparams = self.startparams[0:self.n_params[0]]
 
     def __add__(self, other):
         """
@@ -142,21 +157,26 @@ class Model(object):
         Returns:
 
         """
+        newmodel = Model(lambda x :x)
 
-        self._callbacks = self._callbacks + other._callbacks
-        self.startparams = self.startparams + other.startparams
-        self.n_params = self.n_params + other.n_params
-        self.best_fit_params = self.startparams
-        return self
+        # hack the new model to be like self
+        newmodel._callbacks = self._callbacks + other._callbacks
+        newmodel.startparams = self.startparams + other.startparams
+        newmodel.n_params = self.n_params + other.n_params
+        newmodel.best_fit_params = newmodel.startparams
+        # self._callbacks = self._callbacks + other._callbacks
+        # self.startparams = self.startparams + other.startparams
+        # self.n_params = self.n_params + other.n_params
+        # self.best_fit_params = self.startparams
+        return newmodel
 
     @property
     def components(self):
         lastslice = 0
         thecomponents = []
         for i, cmp in enumerate(self._callbacks):
-            thisslice = slice(lastslice,self.n_params[i] + lastslice)
-            tmpcmp = copy(cmp)
-            #thecomponents.append(lambda xs: tmpcmp(xs, ),*self.best_fit_params[thisslice])
+            thisslice = slice(lastslice, self.n_params[i] + lastslice)
+            tmpcmp = copy(cmp) # hack - otherwise it will not work :\
             lastslice += self.n_params[i]
             best_fit = self.best_fit_params[thisslice]
             if self.all_coupled:
@@ -256,21 +276,6 @@ class Model(object):
             return first
 
         startparams = self.startparams
-        ## if self.all_coupled:
-        ##     startparams = self.startparams[0:self.n_params[0]]
-
-        #bins = np.linspace(min(data), max(data), nbins)
-        #self.data = d.factory.hist1d(data, bins)
-        #if normalize:
-        #    self.data = self.data.normalized(density=True)
-        #self.xs = self.data.bincenters
-
-        #h = d.factory.hist1d(data, bins)
-        #h_norm = h.normalized(density=True)
-        #xs = h_norm.bincenters
-        #data = self.data.bincontent
-
-
 
         if not silent: print("Using start params...", startparams)
 
@@ -300,7 +305,7 @@ class Model(object):
         #    norm = norm[np.isfinite(norm)][0]
 
         #self.norm = norm
-        chi2 = (calculate_chi_square(self.data, self.norm * model(self.xs, *parameters)))
+        chi2 = (funcs.calculate_chi_square(self.data, self.norm * model(self.xs, *parameters)))
         self.chi2_ndf = chi2/self.ndf
 
         # FIXME: new feature
@@ -320,7 +325,7 @@ class Model(object):
         Returns:
             None
         """
-        self.__init__(self._callbacks[0], self.startparams[:self.n_params])
+        self.__init__(self._callbacks[0], self.startparams[:self.n_params[0]])
 
     def plot_result(self, ymin=1000, xmax=8, ylabel="normed bincount",\
                     xlabel="Q [C]", fig=None,\
@@ -343,6 +348,8 @@ class Model(object):
         Returns:
             pylab.figure
         """
+
+
         if fig is None:
             fig = p.figure()
         ax = fig.gca()
@@ -351,17 +358,21 @@ class Model(object):
         else:
             ax.plot(self.xs, self.data, color="k")
 
-        ax.plot(self.xs, self.prediction(self.xs), color=PALETTE[2], alpha=model_alpha)
-        for comp in self.components:
-            ax.plot(self.xs, comp(self.xs), linestyle=":", lw=1, color="k")
+        infotext = r"\begin{tabular}{ll}"
+        if self.chi2_ndf is not None:
+            ax.plot(self.xs, self.prediction(self.xs), color=PALETTE[2], alpha=model_alpha)
+            for comp in self.components:
+                ax.plot(self.xs, comp(self.xs), linestyle=":", lw=1, color="k")
+            infotext += r"$\chi^2/ndf$ & {:4.2f}\\".format(self.chi2_ndf)
+        else:
+            print ("Has not been fitted yet, can not plot fit!")
 
-        if log: ax.set_yscale("log")
         ax.set_ylim(ymin=ymin)
         ax.set_xlim(xmax=xmax)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
-        infotext = r"\begin{tabular}{ll}"
-        infotext += r"$\chi^2/ndf$ & {:4.2f}\\".format(self.chi2_ndf)
+
+
         if self._distribution is not None:
             infotext += r"entries& {}\\".format(self._distribution.stats.nentries)
         if add_parameter_text is not None:
@@ -373,6 +384,7 @@ class Model(object):
             horizontalalignment='center',
             verticalalignment='center',
             transform=ax.transAxes)
+        if log: ax.set_yscale("log")
         sb.despine()
         return fig
 

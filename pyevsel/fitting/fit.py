@@ -23,9 +23,6 @@ import scipy.optimize as optimize
 import seaborn.apionly as sb
 import dashi as d
 
-from . import tools
-from . import plotting as plt
-
 d.visual()
 
 try:
@@ -57,78 +54,6 @@ def reject_outliers(data, m=2):
 
 
 
-def calculate_chi_square(data, model_data):
-    """
-    Very simple estimator for goodness-of-fit. Use with care.
-    Non normalized bin counts are required.
-
-    Args:
-        data (np.ndarray): observed data (bincounts)
-        model_data (np.ndarray): model predictions for each bin
-
-    Returns:
-        np.ndarray
-    """
-
-    chi = ((data - model_data)**2/data)
-    return chi[np.isfinite(chi)].sum()
-
-
-
-
-
-
-def pedestal_fit(filename, nbins, fig=None):
-    """
-    Fit a pedestal to measured waveform data
-    One shot function for
-    * integrating the charges
-    * making a histogram
-    * fitting a simple gaussian to the pedestal
-    * calculating mu
-        P(hit) = (N_hit/N_all) = exp(QExCExLY)
-        where P is the probability for a hit, QE is quantum efficiency,
-        CE is the collection efficiency and
-        LY the (unknown) light yield
-
-    Args:
-        filename (str): Name of the file with waveform data
-        nbins (int): number of bins for the underlaying charge histogram
-
-    """
-
-    head, wf = tools.load_waveform(filename)
-    charges = -1e12 * tools.integrate_wf(head, wf)
-    plt.plot_waveform(head, tools.average_wf(wf))
-    p.savefig(filename.replace(".npy", ".wf.pdf"))
-    one_gauss = lambda x, n, y, z: n * fit.gauss(x, y, z, 1)
-    ped_mod = fit.Model(one_gauss, (1000, -.1, 1))
-    ped_mod.add_data(charges, nbins, normalize=False)
-    ped_mod.fit_to_data(silent=True)
-    fig = ped_mod.plot_result(add_parameter_text=((r"$\mu_{{ped}}$& {:4.2e}\\", 1), \
-                                                  (r"$\sigma_{{ped}}$& {:4.2e}\\", 2)), \
-                              xlabel=r"$Q$ [pC]", ymin=1, xmax=8, model_alpha=.2, fig=fig, ylabel="events")
-
-    ax = fig.gca()
-    n_hit = abs(ped_mod.data.bincontent - ped_mod.prediction(ped_mod.xs)).sum()
-    ax.grid(1)
-    bins = np.linspace(min(charges), max(charges), nbins)
-    data = d.factory.hist1d(charges, bins)
-    n_pedestal = ped_mod.data.stats.nentries - n_hit
-
-    mu = -1 * np.log(n_pedestal / ped_mod.data.stats.nentries)
-
-    print("==============")
-    print("All waveforms: {:4.2f}".format(ped_mod.data.stats.nentries))
-    print("HIt waveforms: {:4.2f}".format(n_hit))
-    print("NoHit waveforms: {:4.2f}".format(n_pedestal))
-    print("mu = -ln(N_PED/N_TRIG) = {:4.2e}".format(mu))
-
-    ax.fill_between(ped_mod.xs, 1e-4, ped_mod.prediction(ped_mod.xs),\
-                    facecolor=PALETTE[2], alpha=.2)
-    p.savefig(filename.replace(".npy", ".pdf"))
-
-    return ped_mod
 
 ################################################
 

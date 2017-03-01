@@ -8,7 +8,8 @@ from past.utils import old_div
 from . import logger
 Logger = logger.Logger
 
-def slicer(list_to_slice,slices):
+
+def slicer(list_to_slice, slices):
     """
     *Generator* Slice a list in  individual slices
 

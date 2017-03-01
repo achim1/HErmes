@@ -14,8 +14,6 @@ def parse_requirements(req_file):
 try:
     requirements = parse_requirements("requirements.txt")
 except Exception as e:
-    print (e)
-    raise
     print ("Failed parsing requiremnts, installing dummy requirements...")
     requirements = ['numpy>=1.9.0',
                      'matplotlib>=1.5.0',
@@ -35,6 +33,7 @@ setup(name='pyevsel',
       url='https://github.com/achim1/pyevsel',
       #download_url="pip install pyevsel",
       install_requires=requirements, 
+      setup_requires=['pytest-runner'],
       license="GPL",
       platforms=["Ubuntu 14.04","Ubuntu 16.04"],
       classifiers=[
@@ -49,6 +48,7 @@ setup(name='pyevsel',
       keywords=["event selection", "physics",\
                 "hep", "particle physics"\
                 "astrophysics", "icecube"],
+      tests_require=['pytest'],
       packages=['pyevsel','pyevsel.icecube_goodies',\
                 'pyevsel.plotting','pyevsel.utils',\
                 'pyevsel.variables'],

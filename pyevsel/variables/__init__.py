@@ -15,10 +15,10 @@ from pyevsel.utils.logger import Logger
 
 from . import categories as c
 from . import dataset as ds
-import pyevsel.icecube_goodies.weighting as wgt
-import pyevsel.icecube_goodies.fluxes as fluxes
+from  pyevsel.icecube_goodies import weighting as wgt
+from  pyevsel.icecube_goodies import fluxes as fluxes
 
-def load_dataset(config,variables=None):
+def load_dataset(config, variables=None):
     """
     Loads a dataset according to a 
     configuration file

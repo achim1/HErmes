@@ -6,7 +6,12 @@ from __future__ import division
 
 from builtins import map
 from builtins import object
-from icecube.weighting.weighting import from_simprod, EnergyWeight,ParticleType
+
+try:
+    from icecube.weighting.weighting import from_simprod, EnergyWeight,ParticleType
+except ImportError:
+    print ("WARNING: module icecube not found!")
+
 from pyevsel.utils.logger import Logger
 from pyevsel.variables.magic_keywords import  MC_P_EN,\
                             MC_P_TY,\

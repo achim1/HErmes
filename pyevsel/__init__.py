@@ -10,7 +10,9 @@ import shutil
 
 from matplotlib import get_configdir as mpl_configdir
 
-__version__ = '0.0.5'
+__version__ = '0.0.6'
+__all__ = ["fitting", "icecube_goodies", "utils", "variables", "plotting"]
+
 
 _appdir = os.path.split(__file__)[0]
 _appname = os.path.split(_appdir)[1]

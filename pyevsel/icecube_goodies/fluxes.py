@@ -5,11 +5,23 @@ as well as power law fluxes
 from __future__ import absolute_import
 
 from builtins import object
-from icecube import icetray,dataclasses,NewNuFlux
-from icecube.weighting.weighting import from_simprod
 
-import icecube.weighting.fluxes as mufluxes
+try:
+    from icecube import icetray, dataclasses, NewNuFlux
+    from icecube.weighting.weighting import from_simprod
+    import icecube.weighting.fluxes as ICMuFluxes
+except ImportError:
+    print("WARNING: module icecube not found!")
+
+    # hobo mufluxes
+    class ICMuFluxes(object):
+        GaisserH3a = None
+        GaisserH4a = None
+        Hoerandel  = None
+        Hoerandel5 = None
+
 from . import conversions as conv
+
 
 import numpy as np
 from functools import reduce
@@ -38,8 +50,8 @@ def PowerLawFlux(fluxconst=1e-8,gamma=2):
     def flux(mc_p_energy,mc_p_type,mc_p_zenith):
         # weighting API requires second and third argument even if we
         # don't need it here
-        flux = fluxconst * np.power(mc_p_energy, gamma)
-        return flux
+        return fluxconst * np.power(mc_p_energy, gamma)
+
     return flux
 
 ###############################################
@@ -179,6 +191,7 @@ def generated_corsika_flux(ebinc,datasets):
 
 ##################################################################
 
+
 class NuFluxes(object):
     """
     Namespace for neutrino fluxes
@@ -199,10 +212,10 @@ class MuFluxes(object):
     """
     Namespace for atmospheric muon fluxes
     """
-    GaisserH3a   = staticmethod(mufluxes.GaisserH3a)
-    GaisserH4a   = staticmethod(mufluxes.GaisserH4a)
-    Hoerandel    = staticmethod(mufluxes.Hoerandel)
-    Hoerandel5   = staticmethod(mufluxes.Hoerandel5)
+    GaisserH3a   = staticmethod(ICMuFluxes.GaisserH3a)
+    GaisserH4a   = staticmethod(ICMuFluxes.GaisserH4a)
+    Hoerandel    = staticmethod(ICMuFluxes.Hoerandel)
+    Hoerandel5   = staticmethod(ICMuFluxes.Hoerandel5)
 
     # if these fluxes are available depends on the version
     # of the weighting module

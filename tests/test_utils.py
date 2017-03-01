@@ -3,7 +3,9 @@ import logging
 
 from pyevsel.utils import logger, files, itools
 
+# helper functions generating test data
 # provide a list of input/output
+
 @pytest.fixture(params = [(([],0),[]),\
                           (([],1),[]),\
                           (([1,2],2),([1],[2])),\
@@ -19,7 +21,15 @@ def prepare_test_data_for_slicer(request):
 def prepare_test_data_for_logger(request):
     return request.param
 
-    
+@pytest.fixture(params = [("test.i3.bz2",["test",".i3.bz2"]),\
+                          ("foobar.hdf",["foobar",".hdf"]),
+                          ("foobar.h5",["foobar",".h5"]),
+                          ("file.root", ["file",".root"])])
+def prepare_test_data_for_strip_all_endings(request):
+    return request.param
+
+
+# test itools    
 def test_slicer(prepare_test_data_for_slicer):
     (func_args, desired_result) = prepare_test_data_for_slicer
     result = [r for r in itools.slicer(*func_args)]
@@ -30,8 +40,14 @@ def test_slicer(prepare_test_data_for_slicer):
         
     assert result == desired_result
 
-
+# test logger
 def test_logger(prepare_test_data_for_logger):
     loglevel, __ = prepare_test_data_for_logger
     assert isinstance(logger.get_logger(loglevel), logging.Logger)
     
+# test files
+def test_strip_all_endings(prepare_test_data_for_strip_all_endings):
+    (func_arg, desired_result) = prepare_test_data_for_strip_all_endings
+    assert files.strip_all_endings(func_arg) == desired_result
+
+

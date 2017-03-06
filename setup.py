@@ -53,7 +53,7 @@ setup(name='pyevsel',
       tests_require=['pytest'],
       packages=['pyevsel','pyevsel.icecube_goodies',\
                 'pyevsel.plotting','pyevsel.utils',\
-                'pyevsel.variables'],
+                'pyevsel.variables', 'pyevsel.fitting'],
       #scripts=[],
       package_data={'pyevsel': ['plotting/plotsconfig.yaml','plotting/pyevseldefault.mplstyle','plotting/pyevselpresent.mplstyle','utils/PATTERNS.cfg']}
       )

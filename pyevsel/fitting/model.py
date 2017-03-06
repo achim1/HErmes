@@ -11,6 +11,8 @@ from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
 
+from functools import reduce
+
 import numpy as np
 import dashi as d
 import pylab as p

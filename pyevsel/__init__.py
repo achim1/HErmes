@@ -63,7 +63,11 @@ def _DeleteTmpFile():
     """
 
     from pyevsel.plotting import CONFIGFILE
-    os.remove(CONFIGFILE)
+    try:
+        os.remove(CONFIGFILE)
+    except Exception as e:
+        print (e)
+    
 
 install_config()
 

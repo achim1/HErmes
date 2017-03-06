@@ -12,6 +12,8 @@ standard_library.install_aliases()
 
 import numpy as np
 
+from scipy.misc import factorial
+
 def poisson(lmbda, k):
     """
     Poisson distribution

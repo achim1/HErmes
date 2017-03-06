@@ -3,12 +3,16 @@ HEP style eventselection with python
 """
 from __future__ import print_function
 
-import atexit
-import os
-import appdirs
-import shutil
+try:
+    import atexit
+    import os
+    import appdirs
+    import shutil
 
-from matplotlib import get_configdir as mpl_configdir
+    from matplotlib import get_configdir as mpl_configdir
+except ImportError as e:
+    print ("Warning, import {} failed".format(e))
+
 
 __version__ = '0.0.6'
 __all__ = ["fitting", "icecube_goodies", "utils", "variables", "plotting"]
@@ -62,13 +66,21 @@ def _DeleteTmpFile():
     when interpreter is ended
     """
 
-    from pyevsel.plotting import CONFIGFILE
-    os.remove(CONFIGFILE)
+    import os    
+    try:
+        from pyevsel.plotting import CONFIGFILE
+        os.remove(CONFIGFILE)
 
-install_config()
+    except (IOError, ImportError, TypeError) as e:
+        print("Can not register tmpfile deletion right now...{}".format(e))
 
 try:
-    atexit.register(_DeleteTmpFile)
-except IOError:
-    print("Can not register tmpfile deletion right now...")
+    install_config()
+except Exception as e: 
+    print ("WARNING: installing styles failed. {}".format(e))
+
+#try:
+atexit.register(_DeleteTmpFile)
+#except (IOError, ImportError, ) as e:
+#    print("Can not register tmpfile deletion right now...{}".format(e))
 

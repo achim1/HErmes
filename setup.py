@@ -1,6 +1,27 @@
+import sys
+import re
+import os.path
+
 from setuptools import setup
 
-from pyevsel import __version__
+# get_version and conditional adding of pytest-runner 
+# are taken from 
+# https://github.com/mark-adams/pyjwt/blob/b8cc504ee09b4f6b2ba83a3db95206b305fe136c/setup.py
+
+def get_version(package):
+    """
+    Return package version as listed in `__version__` in `init.py`.
+    """
+    with open(os.path.join(package, '__init__.py'), 'rb') as init_py:
+        src = init_py.read().decode('utf-8')
+        return re.search("__version__ = ['\"]([^'\"]+)['\"]", src).group(1)
+
+
+version = get_version('pyevsel')
+
+with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
+    long_description = readme.read()
+
 
 def parse_requirements(req_file):
     with open(req_file) as f:
@@ -24,18 +45,29 @@ except Exception as e:
                      'future>=0.16.0',
                      'pyprind>=2.9.6']
 
-requirements.append("tables>=3.3.0") # problem with travis CI, removed from requirments.txt
+#requirements.append("tables>=3.3.0") # problem with travis CI, removed from requirments.txt
+
+tests_require = [
+    'pytest==2.7.3',
+    'pytest-cov',
+    'pytest-runner',
+]
+
+needs_pytest = set(('pytest', 'test', 'ptr')).intersection(sys.argv)
+pytest_runner = ['pytest-runner'] if needs_pytest else []
+
 
 setup(name='pyevsel',
-      version=__version__,
+      version=version,
       description='Eventselection for HEP analysis',
-      long_description='Manages bookkeeping for different simulation datasets, developed for the use with IceCube data',
+      #long_description='Manages bookkeeping for different simulation datasets, developed for the use with IceCube data',
+      long_description=long_description,
       author='Achim Stoessl',
       author_email="achim.stoessl@gmail.com",
       url='https://github.com/achim1/pyevsel',
       #download_url="pip install pyevsel",
       install_requires=requirements, 
-      setup_requires=['pytest-runner'],
+      setup_requires=pytest_runner,
       license="GPL",
       platforms=["Ubuntu 14.04","Ubuntu 16.04"],
       classifiers=[
@@ -50,7 +82,7 @@ setup(name='pyevsel',
       keywords=["event selection", "physics",\
                 "hep", "particle physics"\
                 "astrophysics", "icecube"],
-      tests_require=['pytest'],
+      tests_require=tests_require,
       packages=['pyevsel','pyevsel.icecube_goodies',\
                 'pyevsel.plotting','pyevsel.utils',\
                 'pyevsel.variables'],

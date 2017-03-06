@@ -12,6 +12,12 @@ Requirements
 
 Should work in python2/3. For a list of requirements, see `requirements.txt`
 
+### prerequisites
+
+For the installation of matplotlib and pytables, make sure the python headers as well as libfreetype and libhdf5-dev is installe### prerequisites
+
+For the installation of matplotlib and pytables, make sure the python headers as well as libfreetype and libhdf5-dev is installed
+
 Rationale
 ----------------------------
 

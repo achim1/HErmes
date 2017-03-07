@@ -8,15 +8,15 @@ from __future__ import absolute_import
 
 import commentjson
 import os
-import re
+import os.path
 import inspect
 
 from pyevsel.utils.logger import Logger
 
 from . import categories as c
 from . import dataset as ds
-from  pyevsel.icecube_goodies import weighting as wgt
-from  pyevsel.icecube_goodies import fluxes as fluxes
+from pyevsel.icecube_goodies import weighting as wgt
+from pyevsel.icecube_goodies import fluxes as fluxes
 
 def load_dataset(config, variables=None):
     """
@@ -27,7 +27,8 @@ def load_dataset(config, variables=None):
         config (str): json style config file
     """
 
-    #FIXME: os.path exits tests
+    assert os.path.exists(config), "Config file {} does not exist!".format(config)
+
     cfg = commentjson.load(open(config))
     categories = dict()
     weightfunctions = dict()

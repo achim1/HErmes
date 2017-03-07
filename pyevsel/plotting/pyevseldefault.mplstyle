@@ -29,7 +29,7 @@ ytick.minor.size : 5
 #font
 font.family      : serif
 font.sans-serif  : GillSans
-#font.serif       : TeX Gyre Pagella
+#font.serif      : TeX Gyre Pagella
 font.serif       : Palatino
 font.weight      : bold
 font.size        : 12
@@ -41,6 +41,13 @@ legend.numpoints   : 1
 
 #text
 text.usetex : True 
+
+#savefig
+savefig.dpi: 350,
+savefig.facecolor: w
+savefig.edgecolor: w
+savefig.transparent: False
+savefig.bbox: tight
 
 #backends
 pdf.use14corefonts : True

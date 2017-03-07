@@ -5,78 +5,114 @@ Provides canvases for multi axes plots
 from builtins import object
 import os.path
 import pylab as p
+import tempfile
 
-from pyevsel.plotting import get_config_item
+#from pyevsel.plotting import get_config_item
 from pyevsel.utils.logger import Logger
 try:
     from IPython.core.display import Image
 except ImportError:
+    from IPython.display import DisplayObject as Image
+finally:
     Logger.debug("Can not import IPython!")
-    Image = lambda x : x
+    def Image(x): x
 
 # golden cut values
-# CW = current width of my thesis (adjust
+# CW = current width of my thesis (adjust)
 CW = 5.78851
 S  = 1.681
 
 ##########################################
+
 
 class YStackedCanvas(object):
     """
     A canvas for plotting multiple axes
     """
 
-    def __init__(self,axeslayout=(.2,.2,.5),figsize=(CW,CW*S)):
+    def __init__(self, subplot_yheights=(.2,.2,.5),\
+                       padding=(0.15, 0.05, 0.0, 0.1 ),\
+                       figsize=(CW, CW*S)):
         """
-        Axes indices go from bottom to top
-        """
+        Create a new canvas with multiple axes on top of each other.
+        The height of the individual axes can be specified.
+        In most cases, the defaults should be reasonable.
 
+        Keyword Args:
+            subplot_yheights (iterable): The normalized heights of the individual
+                                         subplots. Sorted from bottom to top
+            padding (left, right, top, bottom): The padding around the figure
+            figsize (width, height): The size of the figure (in inches).
+        """
+        assert sum(subplot_yheights) <= 1., "subplot_yheights must be in relative heights"
+        assert len(padding) == 4, "Needs 4 values for padding (left, right, top, bottom)"
+
+        self.axes = None
         self.figure = p.figure(figsize=figsize)
-        self.create_top_stacked_axes(heights=axeslayout)
-        self.png_filename = None
-        for subplot in self.axes:
-            self.figure.add_axes(subplot)
-            
-        self.figure.subplots_adjust(hspace=0)
-        self.savekwargs = dict()
-
-    def create_top_stacked_axes(self,heights=(1.)):
-        """
-        Create several axes for subplot on top of each other
-
-        Args:
-            heights (iterable):  relative height e.g.
-                                 heights = [.2,.1,.6] will give axes using this amount of
-                                 space
-        """
-        assert sum(heights) <= 1., "heights must be in relative heights"
-    
-        cfg = get_config_item("canvas")
-        left = cfg["leftpadding"]
-        right = cfg["rightpadding"]
-        bot  = cfg["bottompadding"]
-        top  = cfg["toppadding"]
+        # self.create_top_stacked_axes(heights=axeslayout)
+        left, right, top, bot = padding
         width = 1. - left - right
         height = 1. - top - bot
-        
-        heights = [height*h for h in heights]
+
+        # calculate absolute heights and stack the axes
+        # from bottom to top
+        heights = [height * h for h in subplot_yheights]
         heights.reverse()
         Logger.debug("Using heights {0}".format(heights.__repr__()))
-        abs_bot = 0 +bot     
-        axes = [p.axes([left,abs_bot,width,heights[0]])]
-        restheights = heights[1:]
+        abs_bot = 0 + bot
+        axes = [p.axes([left, abs_bot, width, heights[0]])]
         abs_bot = bot + heights[0]
-        for h in restheights:
-            theaxes = p.axes([left,abs_bot,width,h])
+        for h in heights[1:]:
+            theaxes = p.axes([left, abs_bot, width, h])
             p.setp(theaxes.get_xticklabels(), visible=False)
             axes.append(theaxes)
             abs_bot += h
-    
-        self.axes = axes
 
-    def limit_yrange(self,ymin=None,ymax=None):
+        self.axes = axes
+        self.png_filename = None
+        for subplot in self.axes:
+            self.figure.add_axes(subplot)
+
+        self.figure.subplots_adjust(hspace=0)
+        self.savekwargs = dict()
+
+
+    # def create_top_stacked_axes(self, heights=(1.)):
+    #     """
+    #     Create several axes for subplot on top of each other
+    #
+    #     Args:
+    #         heights (iterable):  relative height e.g.
+    #                              heights = [.2,.1,.6] will give axes using this amount of
+    #                              space
+    #     """
+    #
+    #     cfg = get_config_item("canvas")
+    #     left = cfg["leftpadding"]
+    #     right = cfg["rightpadding"]
+    #     bot  = cfg["bottompadding"]
+    #     top  = cfg["toppadding"]
+    #     width = 1. - left - right
+    #     height = 1. - top - bot
+    #
+    #     heights = [height*h for h in heights]
+    #     heights.reverse()
+    #     Logger.debug("Using heights {0}".format(heights.__repr__()))
+    #     abs_bot = 0 + bot
+    #     axes = [p.axes([left, abs_bot,width,heights[0]])]
+    #     restheights = heights[1:]
+    #     abs_bot = bot + heights[0]
+    #     for h in restheights:
+    #         theaxes = p.axes([left,abs_bot,width,h])
+    #         p.setp(theaxes.get_xticklabels(), visible=False)
+    #         axes.append(theaxes)
+    #         abs_bot += h
+    #
+    #     self.axes = axes
+
+    def limit_yrange(self, ymin=None, ymax=None):
         """
-        Walk through all axes and adjust ymin
+        Walk through all axes and adjust ymin and ymax
 
         Keyword Args:
             ymin (float): min ymin value
@@ -87,8 +123,8 @@ class YStackedCanvas(object):
             if ymax is not None:
                 ax.set_ylim(ymax=ymax)
 
-    def limit_xrange(self,xmin=None,xmax=None):
-        '''
+    def limit_xrange(self, xmin=None, xmax=None):
+        """
         Walk through all axes and set xlims
 
         Keyword Args:
@@ -97,7 +133,7 @@ class YStackedCanvas(object):
 
         Returns:
             None
-        '''
+        """
         for ax in self.axes:
             if xmin is not None:
                 ax.set_xlim(xmin=xmin)
@@ -105,14 +141,12 @@ class YStackedCanvas(object):
             if xmax is not None:
                 ax.set_xlim(xmax=xmax)
 
-
     def eliminate_lower_yticks(self):
         """
-        Eliminate the lowest y tick on each axes 
-        which is not the lowest
+        Eliminate the lowest y tick on each axes.
+        The bottom axes keeps its lowest y-tick.
         """    
         for ax in self.axes[1:]:
-            #p.sca(ax)
             ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
             ax.yaxis.get_major_ticks()[-1].label1.set_visible(False)
 
@@ -154,14 +188,14 @@ class YStackedCanvas(object):
             #        loc="lower left",
             #        **kwargs)
 
-    def save(self,path,name,endings=("pdf","png"),**kwargs):
+    def save(self, path, name, formats=("pdf", "png"), **kwargs):
         """
         Calls pylab.savefig for all endings
 
         Args:
             path (str): path to savefile
             name (str): filename to save
-            endings (tuple): for each name in endings, a file is save
+            formats (tuple): for each name in endings, a file is save
 
         Keyword Args:
             all keyword args will be passed to pylab.savefig
@@ -169,15 +203,14 @@ class YStackedCanvas(object):
         Returns:
             str: The full path to the the saved file
         """
-        if not kwargs:
-            kwargs = get_config_item("savefig")
 
-        self.savekwargs = kwargs
-        self.savekwargs.update({'path' : path,'name' : name, 'endings' : endings})
-        for ending in endings:
-            filename = os.path.join(path,name + '.' + ending)
-            self.figure.savefig(filename,format=ending,**kwargs)
-            if ending == "png":
+        ending = name.split(".")[-1]
+        if ending in formats:
+            name = name.replace("." + ending, "")
+        for theformat in formats:
+            filename = os.path.join(path, name + '.' + theformat)
+            self.figure.savefig(filename, format=theformat, **kwargs)
+            if theformat == "png":
                 self.png_filename = filename
         return self.png_filename
 
@@ -188,9 +221,8 @@ class YStackedCanvas(object):
         Returns:
             IPython.core.Image: the plot
         """
-        path = self.savekwargs.pop('path')
-        name = self.savekwargs.pop('name')
-        self.save(path,name,**self.savekwargs)
-        return Image(self.png_filename)
+        with tempfile.NamedTemporaryFile(suffix="png", delete=False) as f:
+            self.figure.savefig(f, format="png")
+            return Image(f.name)
 
 

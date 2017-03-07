@@ -9,7 +9,10 @@
   "combined_categories": {"astro_nu": ["astro_nue","astro_numu","astro_nutau"],
                           "conv_nu": ["conv_nue","conv_numu"],
                           "prompt_nu": ["prompt_nue","prompt_numu"],
-                          "mu": ["atmos_mu","atmos_cc_mu"]},  
+                          "mu": ["atmos_mu","atmos_cc_mu"]},
+  "plotting": {
+
+  },
   "categories": {"astro_nue": {
                         "subpath": "nue",
                         "file_prefix": "",
@@ -20,7 +23,7 @@
                          //            "9250": 10000},
                         "model_method": "GetModelWeight",
                         "model": "NuFluxes.E2",
-                        "plotting": {"label": "'$\nu_{astr}$'",
+                        "plotting": {"label": "$\\nu_{astr}$",
                                      "dashistyle": {"color": 2,
                                                     "linewidth": 3,
                                                     "alpha": 1,

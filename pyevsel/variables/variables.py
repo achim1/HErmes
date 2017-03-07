@@ -16,68 +16,39 @@ from functools import reduce
 
 
 DEFAULT_BINS = 70
-REGISTERED_FILEEXTENSIONS = [".h5",".root"]
+
+# FIXME: add root support!
+# REGISTERED_FILEEXTENSIONS = [".h5", ".root"]
+REGISTERED_FILEEXTENSIONS = [".h5"]
 
 try:
     import root_numpy as rn
 except ImportError:
     Logger.warning("No root_numpy found, root support is limited!")
-    REGISTERED_FILEEXTENSIONS.remove(".root")
+    if ".root" in REGISTERED_FILEEXTENSIONS:
+        REGISTERED_FILEEXTENSIONS.remove(".root")
 
 ################################################################
 # define a non-member function so that it can be used in a
 # multiprocessing approach
 
-#def harvest_single_file(filename, filetype, definitions):
-#    """
-#    Get the variable data from a fileobject
-#    Optimized for hdf files
-#
-#    Args:
-#        filename (str):
-#        filetype (str): the extension of the filename, eg "h5"
-#
-#    Returns:
-#        pd.Series
-#    """
-#    if filetype == ".h5" and not isinstance(filename, tables.table.Table):
-#        # store = pd.HDFStore(filename)
-#        hdftable = tables.openFile(filename)
-#
-#    else:
-#        hdftable = filename
-#
-#    data = pd.Series()
-#    for definition in definitions:
-#        if filetype == ".h5":
-#            try:
-#                # data = store.select_column(*definition)
-#                data = hdftable.getNode("/" + definition[0]).col(definition[1])
-#                data = pd.Series(data, dtype=n.float64)
-#                break
-#            except tables.NoSuchNodeError:
-#                Logger.debug("Can not find definition {0} in {1}! ".format(definition, filename))
-#                continue
-#
-#        elif filetype == ".root":
-#            data = rn.root2rec(filename, *definition)
-#            data = pd.Series(data)
-#    if filetype == ".h5":
-#        hdftable.close()
-#
-#    return data
-
-
-def harvest(filenames,definitions,**kwargs):
+def harvest(filenames, definitions, **kwargs):
     """
     Extract the variable data from the provided files
 
     Args:
-        filenames (list): the files to extract from
+        filenames (list): the files to extract the variables from.
                           currently supported: {0}
-
+        definitions (list): where to find the data in the files. They usually
+                            have some tree-like structure, so this a list
+                            of leaf-value pairs. If there is more than one
+                            all of them will be tried. (As it might be that
+                            in some files a different naming scheme was used)
+                            Example: [("hello_reoncstruction", "x"), ("helo_reoncstruction", "x")] ]
     Keyword Args:
-        transformation (func): will be applied to the read out data
+        transformation (func): After the data is read out from the files,
+                               transformation will be applied, e.g. the log
+                               to the energy.
 
     Returns:
         pd.Series or pd.DataFrame
@@ -86,6 +57,7 @@ def harvest(filenames,definitions,**kwargs):
     data = pd.Series()
     for filename in filenames:
         filetype = f.strip_all_endings(filename)[1]
+
         assert filetype in REGISTERED_FILEEXTENSIONS, "Filetype {} not known!".format(filetype)
         assert os.path.exists(filename), "File {} does not exist!".format(filetype)
         Logger.debug("Attempting to harvest {1} file {0}".format(filename,filetype))
@@ -194,6 +166,7 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
         """
         return
 
+
 class Variable(AbstractBaseVariable):
     """
     Container class holding variable
@@ -232,7 +205,7 @@ class Variable(AbstractBaseVariable):
         if self.defsize  == 2:
             self.data    = pd.Series()    
 
-    def harvest_from_rootfile(self,rootfile,definition):
+    def harvest_from_rootfile(self, rootfile, definition):
         """
         Get data from a root file
 

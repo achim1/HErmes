@@ -10,13 +10,6 @@ canvas: {
         bottompadding: 0.1,
         }
 
-savefig: {
-        dpi: 350,
-        facecolor: 'w',
-        edgecolor: 'w',
-        transparent: False,
-        bbox_inches: 'tight'       
-}
 
 legend: {
         bbox_to_anchor: [0., 1.0, 1., .102],

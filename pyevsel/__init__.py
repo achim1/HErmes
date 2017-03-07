@@ -71,7 +71,7 @@ def _DeleteTmpFile():
         from pyevsel.plotting import CONFIGFILE
         os.remove(CONFIGFILE)
 
-    except (IOError, ImportError, TypeError) as e:
+    except (IOError, ImportError, TypeError, OSError) as e:
         print("Can not register tmpfile deletion right now...{}".format(e))
 
 try:

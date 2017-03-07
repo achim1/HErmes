@@ -16,7 +16,6 @@ def get_version(package):
         src = init_py.read().decode('utf-8')
         return re.search("__version__ = ['\"]([^'\"]+)['\"]", src).group(1)
 
-
 version = get_version('pyevsel')
 
 with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
@@ -48,14 +47,14 @@ except Exception as e:
 #requirements.append("tables>=3.3.0") # problem with travis CI, removed from requirments.txt
 
 tests_require = [
-    'pytest==2.7.3',
+    'pytest>=2.7.3',
     'pytest-cov',
     'pytest-runner',
 ]
 
 needs_pytest = set(('pytest', 'test', 'ptr')).intersection(sys.argv)
-pytest_runner = ['pytest-runner'] if needs_pytest else []
-
+setup_requires = ['pytest-runner'] if needs_pytest else []
+setup_requires += ["matplotlib>=1.5"]
 
 setup(name='pyevsel',
       version=version,
@@ -67,9 +66,9 @@ setup(name='pyevsel',
       url='https://github.com/achim1/pyevsel',
       #download_url="pip install pyevsel",
       install_requires=requirements, 
-      setup_requires=pytest_runner,
+      setup_requires=setup_requires,
       license="GPL",
-      platforms=["Ubuntu 14.04","Ubuntu 16.04"],
+      platforms=["Ubuntu 14.04","Ubuntu 16.04", "Ubuntu 16.10", "SL6.1"],
       classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Development Status :: 3 - Alpha",

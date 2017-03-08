@@ -40,7 +40,7 @@ legend.markerscale : 1
 legend.numpoints   : 1
 
 #savefig
-savefig.dpi: 350,
+savefig.dpi: 350
 savefig.facecolor: w
 savefig.edgecolor: w
 savefig.transparent: False

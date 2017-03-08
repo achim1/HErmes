@@ -47,7 +47,7 @@ except Exception as e:
 #requirements.append("tables>=3.3.0") # problem with travis CI, removed from requirments.txt
 
 tests_require = [
-    'pytest>=2.7.3',
+    'pytest>=3.0.6',
     'pytest-cov',
     'pytest-runner',
 ]

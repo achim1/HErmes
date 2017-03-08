@@ -10,6 +10,8 @@ futures>=3.0.5
 future>=0.16.0
 pyprind>=2.9.6
 configparser>=3.5.0
+seaborn>=0.7.1
+hjson>=2.0.2
 https://github.com/emiddell/dashi/zipball/master#egg=dashi
 
 

@@ -6,6 +6,7 @@ from __future__ import print_function
 
 from builtins import range
 from builtins import object
+
 try:
     import yaml
 except ImportError:
@@ -17,10 +18,11 @@ import numpy as n
 import dashi as d
 d.visual()
 
-from pyevsel.plotting.plotcolors import get_color_palette
-import pyevsel.plotting.canvases as c
+from .plotcolors import get_color_palette
+from .canvases import YStackedCanvas
 from pyevsel.utils.logger import Logger
 from pyevsel.plotting import GetCategoryConfig,LoadConfig
+
 import pylab as p
 
 STD_CONF=os.path.join(os.path.split(__file__)[0],"plotsconfig.yaml")
@@ -30,26 +32,37 @@ p.style.use(STYLE)
 
 ###############################################
 
-def create_arrow(ax,x_0,y_0,dx,dy,length,\
-                width = .1,shape="right",\
-                fc="k",ec="k",\
-                alpha=1.,log=False):
+
+def create_arrow(ax, x_0, y_0, dx, dy, length,\
+                 width = .1, shape="right",\
+                 fc="k", ec="k",\
+                 alpha=1., log=False):
     """
-    Create an arrow object for plots
+    Create an arrow object for plots. This is typically a large
+    arrow, which can used to indicate a region in the plot which
+    is excluded by a cut.
 
     Args:
-        x_0 (float): x-origin
-        y_0 (float): y-origin
-        dx (float): x length
-        dy (float): y length
-        lenght (float): scale natural length 
+        ax (matplotlib.axes._subplots.AxesSubplot): The axes where the arrow
+                                                    will be attached to
+        x_0 (float): x-origin of the arrow
+        y_0 (float): y-origin of the arrow
+        dx (float): x length of the arrow
+        dy (float): y length of the arrow
+        length (float): additional scaling parameter to scale
+                        the length of the arrow
+
     Keyword Args:
         width (float): thickness of arrow
-        shape (str): either full, left or right
+        shape (str): either "full", "left" or "right"
         fc (str): facecolor
         ec (str): edgecolor
-        alpha (float): 0 -1 
-        log (bool): If log, take care of proportions
+        alpha (float): 0 -1 alpha value of the arrow
+        log (bool): Ifor logscale, the proportion can be
+                     automatically adjust
+
+    Returns:
+        matplotlib.axes._subplots.AxesSubplot
     """
     head_starts_at_zero = False
     head_width = width*5
@@ -58,23 +71,31 @@ def create_arrow(ax,x_0,y_0,dx,dy,length,\
         head_width = width*6
         head_length = length*0.2
 
-    arrow_params={'length_includes_head':False, 'shape':shape, 'head_starts_at_zero':head_starts_at_zero}
-    arr = ax.arrow(x_0, y_0, dx*length, dy*length, fc=fc, ec=ec, alpha=alpha, width=width, head_width=head_width,head_length=head_length, **arrow_params)
-    return ax#arr
+    arrow_params={'length_includes_head':False,\
+                  'shape':shape,\
+                  'head_starts_at_zero':head_starts_at_zero}
+    arr = ax.arrow(x_0, y_0, dx*length,\
+                   dy*length, fc=fc, ec=ec,\
+                   alpha=alpha, width=width,\
+                   head_width=head_width,\
+                   head_length=head_length,\
+                   **arrow_params)
+    return ax
 
 ###########################
 
-def PlotVariableDistribution(categories,name,ratio=([],[])):
+
+def PlotVariableDistribution(categories, name, ratio = ([],[])):
     """
     One shot short-cut for one of the most used
-    plots in eventselections
+    plots in eventselections.
 
     Args:
         categories (list): A list of categories which should be plotted
         name (string): The name of the variable to plot
 
     Keyword Args:
-        ratio (list): A ratio plot of these categories will be crated
+        ratio (tuple): A ratio plot of these categories will be crated
     """
     plot = VariableDistributionPlot()
     for cat in categories:
@@ -82,11 +103,10 @@ def PlotVariableDistribution(categories,name,ratio=([],[])):
         plot.add_cumul(cat.name)
     plot.add_ratio(ratio[0],ratio[1])
     plot.plot(heights=[.4,.2,.2])
-    #plot.add_legend()
-    plot.canvas.save("","deletemenow",dpi=350)
     return plot
 
 ###############################################
+
 
 class VariableDistributionPlot(object):
     """
@@ -94,16 +114,19 @@ class VariableDistributionPlot(object):
     and ratio plots for variables
     """
 
-    def __init__(self,cuts=None,color_palette="dark",bins=None):
-        '''
-
+    def __init__(self, cuts=None,\
+                 color_palette="dark",\
+                 bins=None):
+        """
+        A plot which shows the distribution of a certain variable.
+        Cuts can be indicated with lines and arrows. This class defines
+        (and somehow enforces) a certain style.
 
         Keyword Args:
             bins (array-like): desired binning, if None use default
-            cuts :
-            color_palette:
-            bins:
-        '''
+            cuts (pyevsel.variables.cut.Cut):
+            color_palette (str): use this palette for the plotting
+        """
         self.histograms = {}
         self.histratios = {}
         self.cumuls     = {}
@@ -118,8 +141,9 @@ class VariableDistributionPlot(object):
         self.cuts       = cuts
         self.color_palette = get_color_palette(color_palette)
 
-
-    def _add_data(self,dataname,variable_data,bins,weights=None,label=''):
+    def add_data(self, dataname,\
+                  variable_data, bins,\
+                  weights=None,label=''):
         """
         Histogram the added data and store internally
         
@@ -137,7 +161,7 @@ class VariableDistributionPlot(object):
         self.label = label
         self.name = dataname
 
-    def add_variable(self,category,variable_name):
+    def add_variable(self, category, variable_name):
         """
         Convenience interface if data is sorted in categories already
 
@@ -145,17 +169,15 @@ class VariableDistributionPlot(object):
            category (pyevsel.variables.category.Category): Get variable from this category
            variable_name (string): The name of the variable
 
-
-
         """
         if self.bins is None:
             self.bins = category.vardict[variable_name].bins
         self.dataname = variable_name
-        self._add_data(category.name,category.get(variable_name),\
-                       self.bins,weights=category.weights,\
+        self.add_data(category.name, category.get(variable_name),\
+                       self.bins, weights=category.weights,\
                        label=category.vardict[variable_name].label)
 
-    def indicate_cut(self,ax,arrow=True):
+    def indicate_cut(self, ax, arrow=True):
         """
         If cuts are given, indicate them by lines
 
@@ -163,70 +185,96 @@ class VariableDistributionPlot(object):
             ax (pylab.axes): axes to draw on
 
         """
-        vmin,vmax = ax.get_ylim()
-        hmin,hmax = ax.get_xlim()
+        vmin, vmax = ax.get_ylim()
+        hmin, hmax = ax.get_xlim()
         for cut in self.cuts:
-            for name,(operator,value) in cut:
+            for name, (operator, value) in cut:
+
+                # there might be more than one
+                # cut which should be
+                # drawn on this plot
+                # so go through ALL of them.
                 if name != self.dataname:
                     continue
+
                 Logger.debug('Found cut! {0} on {1}'.format(name,value))
                 width = vmax/50.
-                ax.vlines(value,ymin=vmin,ymax=vmax,linestyle=':')
+
+                # create a line a cut position
+                ax.vlines(value, ymin=vmin, ymax=vmax, linestyle=':')
                 length = (hmax - hmin)*0.1
-                shape = 'left'
-                inversed = False
+
+                # mark part of the plot as "forbidden"
+                # and create arrow if desired
                 if operator in ('>','>='):
                     shape = 'right'
-                    inversed = True
+                    ax.axvspan(value, hmax,\
+                               facecolor=self.color_palette["prohibited"],\
+                               alpha=0.5)
+                else:
+                    shape = 'left'
+                    ax.axvspan(hmin, value,\
+                               facecolor=self.color_palette["prohibited"],\
+                               alpha=0.5)
 
                 if arrow:
-                    ax = create_arrow(ax,value,vmax*0.1, -1., 0, length, width= width,shape=shape,log=True)
-                #ax.add_patch(arr)
-                if not inversed:
-                    ax.axvspan(value, hmax, facecolor=self.color_palette["prohibited"], alpha=0.5)
-                else:
-                    ax.axvspan(hmin, value, facecolor=self.color_palette["prohibited"], alpha=0.5)
+                    ax = create_arrow(ax, value, vmax*0.1,\
+                                      -1., 0, length, width=width,\
+                                      shape=shape, log=True)
 
-
-    def add_ratio(self,names_upper,names_under,\
-                  total_ratio=None,total_ratio_errors=None,\
-                  log=False,label="data/$\Sigma$ bg"):
+    def add_ratio(self, nominator, denominator,\
+                  total_ratio=None, total_ratio_errors=None, \
+                  log=False, label="data/$\Sigma$ bg"):
         """
         Add a ratio plot to the canvas
 
-        """
-        if not isinstance(names_upper,list):
-            names_upper = [names_upper]
-        if not isinstance(names_under,list):
-            names_under = [names_under]
+        Args:
+            nominator (list or str): name(s) of the categorie(s) which
+                                     will be the nominator in the ratio
+            denominator (list or str): name(s) of the categorie(s) which
+                                     will be the nominator in the ratio
 
-        name = "".join(names_upper) + "_" + "".join(names_under)
-        first_upper = names_upper.pop()
-        upper_hist = self.histograms[first_upper]
-        upper_ws   = self.histograms[first_upper].stats.weightsum
-        for name in names_upper:
-            upper_hist += self.histograms[name] 
-            upper_ws   += self.histograms[name].stats.weightsum
-        first_under = names_under.pop()
-        under_hist = self.histograms[first_under]
-        under_ws = self.histograms[first_under].stats.weightsum
-        for name in names_under:
-            under_hist += self.histograms[name]
-            under_ws   += self.histograms[name].stats.weightsum
+        Keyword Args:
+            total_ratio (bool): Indicate the total ratio with a line in the plot
+            total_ratio_errors (bool): Draw error region around total ratio
+            log (bool): draw ratio plot in log-scale
+            label (str): y-label for the ratio plot
+
+        """
+        if not isinstance(nominator, list):
+            nominator = [nominator]
+        if not isinstance(denominator, list):
+            denominator = [denominator]
+
+        name = "".join(nominator) + "_" + "".join(denominator)
+        first_nominator = nominator.pop()
+        nominator_hist = self.histograms[first_nominator]
+        nominator_ws   = self.histograms[first_nominator].stats.weightsum
+        for name in nominator:
+            nominator_hist += self.histograms[name]
+            nominator_ws   += self.histograms[name].stats.weightsum
+
+        first_denominator = denominator.pop()
+        denominator_hist = self.histograms[first_denominator]
+        denominator_ws = self.histograms[first_denominator].stats.weightsum
+        for name in denominator:
+            denominator_hist += self.histograms[name]
+            denominator_ws   += self.histograms[name].stats.weightsum
     
-        upper_hist.normalized()
-        under_hist.normalized()
-        ratio = d.histfuncs.histratio(upper_hist,under_hist,\
-                                      log=False,ylabel=label)
+        nominator_hist.normalized()
+        denominator_hist.normalized()
+        ratio = d.histfuncs.histratio(nominator_hist, denominator_hist,\
+                                      log=False, ylabel=label)
         if total_ratio is None:
-            total_ratio = upper_ws/under_ws
+            total_ratio = nominator_ws/denominator_ws
             Logger.info("Calculated scalar ratio of {:4.2f} from histos".format(total_ratio))
 
         #ratio.y[ratio.y > 0] = ratio.y[ratio.y > 0] + total_ratio -1
-        self.histratios[name] = (ratio,total_ratio,total_ratio_errors,label)
+        self.histratios[name] = (ratio, total_ratio, total_ratio_errors,\
+                                 label)
         return name
 
-    def add_cumul(self,name):
+    def add_cumul(self, name):
         """
         Add a cumulative distribution to the plto
 
@@ -234,9 +282,10 @@ class VariableDistributionPlot(object):
             name (str): the name of the category
         """
         self.cumuls[name] = self.histograms[name].normalized()
-        
 
-    def _draw_distribution(self,ax,name,log=True,cumulative=False,configfilename=STD_CONF):
+    def _draw_distribution(self, ax, name, log=True,\
+                           cumulative=False,\
+                           configfilename=STD_CONF):
         """
         Paint the histograms!
         """
@@ -267,8 +316,7 @@ class VariableDistributionPlot(object):
         else:
             ax.set_ylabel('rate/bin [1/s]')
 
-
-    def _draw_histratio(self,name,axes,ylim=(0.1,2.5)):
+    def _draw_histratio(self, name, axes, ylim=(0.1,2.5)):
         """
         Plot on of the ratios
         """
@@ -313,13 +361,13 @@ class VariableDistributionPlot(object):
                     axes_locator +=[(x+ len(axes_locator),"h") for x  in range(len(self.histograms))]
         return axes_locator
 
-    def plot(self,heights=(.5,.2,.2),\
-             axes_locator=((0,"c"),(1,"r"),(2,"h")),\
+    def plot(self,heights=(.5, .2, .2),\
+             axes_locator=((0, "c"), (1, "r"), (2, "h")),\
              combined_distro=True,\
              combined_ratio=True,\
              combined_cumul=True,
              log=True):
-        '''
+        """
         Create the plot
 
         Args:
@@ -332,7 +380,7 @@ class VariableDistributionPlot(object):
 
         Returns:
 
-        '''
+        """
 
         Logger.info("Found {} distributions".format(len(self.histograms)))
         Logger.info("Found {} ratios".format(len(self.histratios)))
@@ -343,7 +391,7 @@ class VariableDistributionPlot(object):
         # calculate the amount of needed axes
         assert len(axes_locator) == len(heights), "Need to specify exactly as many heights as plots you want to have"
 
-        self.canvas = c.YStackedCanvas(axeslayout=heights)
+        self.canvas = YStackedCanvas(subplot_yheights=heights)
         
         cu_axes = [x for x in axes_locator if x[1] == "c"]
         h_axes = [x for x in axes_locator if x[1] == "h"]

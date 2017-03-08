@@ -6,7 +6,7 @@ types of simulation
 """
 from __future__ import absolute_import
 
-import commentjson
+import hjson
 import os
 import os.path
 import inspect
@@ -29,7 +29,7 @@ def load_dataset(config, variables=None):
 
     assert os.path.exists(config), "Config file {} does not exist!".format(config)
 
-    cfg = commentjson.load(open(config))
+    cfg = hjson.load(open(config))
     categories = dict()
     weightfunctions = dict()
     models = dict()

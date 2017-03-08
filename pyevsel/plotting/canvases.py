@@ -7,15 +7,15 @@ import os.path
 import pylab as p
 import tempfile
 
-#from pyevsel.plotting import get_config_item
 from pyevsel.utils.logger import Logger
 try:
     from IPython.core.display import Image
 except ImportError:
-    from IPython.display import DisplayObject as Image
-finally:
-    Logger.debug("Can not import IPython!")
-    def Image(x): x
+    try:
+        from IPython.display import DisplayObject as Image
+    except ImportError:
+        Logger.debug("Can not import IPython!")
+        def Image(x): x
 
 # golden cut values
 # CW = current width of my thesis (adjust)
@@ -178,7 +178,7 @@ class YStackedCanvas(object):
         handles, labels = self.select_axes(-1).get_legend_handles_labels()
         if args:
             args = [i[1] for i in args]
-        self.legend = p.legend(*args,**kwargs)
+        self.legend = p.legend(*args, **kwargs)
         #else:
         #    self.legend = p.legend([i[0] for i in legitems],
         #             [i[1] for i in legitems],**kwargs)

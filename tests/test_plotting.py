@@ -5,9 +5,12 @@ import os
 import os.path
 
 import pyevsel.plotting as plt
+import pyevsel.plotting.plotting as pltplt
+
 from pyevsel.plotting import plotcolors as pc
 from pyevsel.plotting import canvases as cv
 
+import matplotlib
 
 
 @pytest.fixture(scope='session')
@@ -71,5 +74,19 @@ def test_YStackedCanvas(png_file):
     canvas.save(path, pngfilename)
     assert os.path.exists(canvas.png_filename)
     canvas.show()
+
+
+def test_create_arrow():
+    fig = p.figure()
+    ax = fig.gca()
+    ax = pltplt.create_arrow(ax, 1, 1, .2, .2, 5,\
+                 width = .1, shape="right",\
+                 fc="k", ec="k",\
+                 alpha=1., log=False)
+    assert len(ax.artists) == 1
+    assert isinstance(ax.artists[0], matplotlib.patches.FancyArrow)
+
+def test_VariableDistributionPlot():
+    pltplt.VariableDistributionPlot()
 
 

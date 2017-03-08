@@ -43,7 +43,7 @@ legend.numpoints   : 1
 text.usetex : True 
 
 #savefig
-savefig.dpi: 350,
+savefig.dpi: 350
 savefig.facecolor: w
 savefig.edgecolor: w
 savefig.transparent: False

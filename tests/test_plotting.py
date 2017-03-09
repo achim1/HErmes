@@ -1,23 +1,10 @@
 import pytest
 
-import pylab as p
-import os
-import os.path
-
 import pyevsel.plotting as plt
 import pyevsel.plotting.plotting as pltplt
 
 from pyevsel.plotting import plotcolors as pc
 from pyevsel.plotting import canvases as cv
-
-import matplotlib
-
-
-@pytest.fixture(scope='session')
-def config_file(tmpdir_factory):
-    config = tmpdir_factory.mktemp('data').join(os.path.split(plt.CONFIGFILE)[1])
-    config.write(open(plt.CONFIGFILE).read())
-    return config
 
 @pytest.fixture(scope='session')
 def png_file(tmpdir_factory):
@@ -44,6 +31,9 @@ def test_plotcolors_get_color_palette():
 
 
 def test_YStackedCanvas(png_file):
+    import pylab as p
+    import os.path
+
     canvas = cv.YStackedCanvas()
     assert isinstance(canvas.figure, p.Figure)
     xlim = (1, 10)
@@ -61,6 +51,9 @@ def test_YStackedCanvas(png_file):
 
 
 def test_create_arrow():
+    import pylab as p
+    import matplotlib
+
     fig = p.figure()
     ax = fig.gca()
     ax = pltplt.create_arrow(ax, 1, 1, .2, .2, 5,\

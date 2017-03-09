@@ -54,5 +54,5 @@ def install_config(style_default=STYLE_BASEFILE_STD, \
         shutil.copy(f,mpl_styledir)
 
     assert os.path.exists(patternfile), "PATTERNFILE {} missing... indicates a problem with some paths or corrupt packege. Check source code location".format(f)
-    shutil.copy(patternfile,cfgdir)
+    shutil.copy(patternfile, cfgdir)
 

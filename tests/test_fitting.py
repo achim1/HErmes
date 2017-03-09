@@ -1,6 +1,4 @@
 import pytest
-import numpy as np
-import pylab as p
 
 from pyevsel.fitting import fit, model, functions
 
@@ -18,9 +16,13 @@ def modelfactory():
     return model.Model(funcfactory(), startparams=(1,2))
 
 def datafactory():
+    import numpy as np
+
     return np.linspace(0,1000,10000)
 
 def test_model_create_distribution():
+    import numpy as np
+
     model = modelfactory()
     data = datafactory()
     model._create_distribution(data, 100, normalize=True)
@@ -104,6 +106,8 @@ def test_model_fit_to_data_distribution():
     assert list(model.fit_to_data()) == list(model.best_fit_params)
 
 def test_model_plot_result():
+    import pylab as p
+
     model = modelfactory()
     data = datafactory()
     model.add_data(data, xs = data)
@@ -111,6 +115,8 @@ def test_model_plot_result():
     assert isinstance(model.plot_result(), p.Figure)
 
 def test_model_plot_result_distribution():
+    import pylab as p
+
     model = modelfactory()
     data = datafactory()
     model.add_data(data,  create_distribution = True)

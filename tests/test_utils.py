@@ -1,5 +1,4 @@
 import pytest
-import logging
 
 from pyevsel.utils import logger, files, itools
 
@@ -42,6 +41,8 @@ def test_slicer(prepare_test_data_for_slicer):
 
 # test logger
 def test_logger(prepare_test_data_for_logger):
+    import logging
+
     loglevel, __ = prepare_test_data_for_logger
     assert isinstance(logger.get_logger(loglevel), logging.Logger)
     

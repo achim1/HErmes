@@ -19,7 +19,7 @@ before_install:
 # Install packages
 install:
 #  - pip install -r requirements.txt
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib pandas tables 
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib pandas pytables 
   - python setup.py install
   - pip install coveralls
 script:

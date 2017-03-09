@@ -1,6 +1,6 @@
 [![Code Issues](https://www.quantifiedcode.com/api/v1/project/d563ba797fe649cab31d9750733c5fad/badge.svg)](https://www.quantifiedcode.com/app/project/d563ba797fe649cab31d9750733c5fad)
-[![Build Status](https://travis-ci.org/achim1/pyevsel.svg?branch=master)](https://travis-ci.org/achim1/pyevsel)
 [![Coverage Status](https://coveralls.io/repos/github/achim1/pyevsel/badge.svg?branch=master)](https://coveralls.io/github/achim1/pyevsel?branch=master)
+
 
 
 # pyevsel

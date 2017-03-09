@@ -81,7 +81,9 @@ def strip_all_endings(filename):
 
 #############################################
 
-def harvest_files(path,ending=".bz2",sanitizer=lambda x : x,use_ls=False,prefix="dcap://"):
+
+def harvest_files(path, ending=".bz2", sanitizer=lambda x : x,\
+                  use_ls=False, prefix="dcap://"):
     """
     Get all the files with a specific ending
     from a certain path

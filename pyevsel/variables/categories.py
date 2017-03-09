@@ -12,7 +12,7 @@ MAX_CORES = 6
 from pyevsel.utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from pyevsel.utils.logger import Logger
 
-from .magic_keywords import  MC_P_EN,\
+from .magic_keywords import MC_P_EN,\
                             MC_P_TY,\
                             MC_P_ZE,\
                             MC_P_WE,\
@@ -29,9 +29,6 @@ import inspect
 import numpy as n
 import numpy as np
 import abc
-#import tqdm
-import multiprocessing as mp
-import threading as thr
 import concurrent.futures as fut
 
 from copy import deepcopy
@@ -43,10 +40,12 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
     simulated data etc.
     """
 
-    def __init__(self,name):
+    def __init__(self, name):
         self.name = name
+        self.files = None
         self.datasets = dict()
         self.vardict = dict()
+        self.plot_options = dict()
         self._weightfunction = lambda x : x
         self.cuts = []
         self.cutmask = np.array([])
@@ -306,7 +305,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             # FIXME: Make it an option to not use
             # multi cpu readout!
             #self.vardict[varname].data = variables.harvest(self.files,self.vardict[varname].definitions)
-            future_to_varname[executor.submit(variables.harvest,self.files,self.vardict[varname].definitions)] = varname
+            future_to_varname[executor.submit(variables.harvest, self.files,self.vardict[varname].definitions)] = varname
         #for future in tqdm.tqdm(fut.as_completed(future_to_varname),desc="Reading {0} variables".format(self.name), leave=True):
         progbar = False
         try:
@@ -412,6 +411,16 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         if isinstance(self,Data):
             self.set_livetime(self.livetime + other.livetime)
 
+    def add_plotoptions(self, options):
+        """
+        Add options on how to plot this category. If available,
+        they will be used.
+
+        Args:
+            options (dict): For the names which are currently supported,
+                            please see the example file
+        """
+        self.plot_options = options
 
 class Simulation(AbstractBaseCategory):
     """
@@ -669,3 +678,54 @@ class Data(AbstractBaseCategory):
             self.estimate_livetime()
         self._weights = pd.Series(n.ones(self.raw_count,dtype=n.float64)/self.livetime)
 
+
+class CombinedCategory(object):
+    """
+    Create a combined category out of several others
+    This is mainly useful for plotting
+    FIXME: should this inherit from category as well?
+    The difference compared to the dataset is that
+    this is flat
+    """
+
+    def __init__(self, name, categories):
+        self.name = name
+        self.categories = categories
+        self.plot = True
+        self.plot_options = dict()
+        self.show_in_table = True
+
+    @property
+    def weights(self):
+        return pd.concat([cat.weights for cat in self.categories])
+
+    @property
+    def vardict(self):
+        return self.categories[0].vardict
+
+    def get(self, varname):
+        return pd.concat([cat.get(varname) for cat in self.categories])
+
+    @property
+    def integrated_rate(self):
+        """
+        Calculate the total eventrate of this category
+        (requires weights)
+
+        Returns (tuple): rate and quadratic error
+        """
+
+        rate = self.weights.sum()
+        error = np.sqrt((self.weights ** 2).sum())
+        return (rate, error)
+
+    def add_plotoptions(self, options):
+        """
+        Add options on how to plot this category. If available,
+        they will be used.
+
+        Args:
+            options (dict): For the names which are currently supported,
+                            please see the example file
+        """
+        self.plot_options = options

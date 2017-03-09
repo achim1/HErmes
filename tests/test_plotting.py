@@ -24,22 +24,6 @@ def png_file(tmpdir_factory):
     png = tmpdir_factory.mktemp('data').join("testplot.png")
     return png
 
-def test_plotting_config_schmagoigle(config_file):
-    # initialize config, search and destroy
-    # FIXME
-    plt.SetDefaultConfig()
-    #cfgfile = config_file()
-    plt.SetConfigFile(str(config_file.realpath()))
-    config = plt.LoadConfig()
-    assert config is not None
-    plt.SetConfig(config)
-    assert isinstance(plt.PrintConfig(), str)
-    for key in config.keys():
-        plt.get_config_item(key)
-    catconf = plt.GetCategoryConfig("atmos_mu")
-    assert catconf is not None
-
-
 def colordictfactory():
     testdict = {1 : "red", 2: "blue"}
     return testdict
@@ -88,5 +72,7 @@ def test_create_arrow():
 
 def test_VariableDistributionPlot():
     pltplt.VariableDistributionPlot()
+
+
 
 

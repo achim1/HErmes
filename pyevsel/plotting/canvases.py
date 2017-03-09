@@ -221,7 +221,7 @@ class YStackedCanvas(object):
         Returns:
             IPython.core.Image: the plot
         """
-        with tempfile.NamedTemporaryFile(suffix="png", delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
             self.figure.savefig(f, format="png")
             return Image(f.name)
 

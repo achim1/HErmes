@@ -64,7 +64,7 @@ def harvest(filenames, definitions, **kwargs):
         
         if filetype == ".h5" and not isinstance(filename, tables.table.Table):
             # store = pd.HDFStore(filename)
-            hdftable = tables.openFile(filename)
+            hdftable = tables.open_file(filename)
 
         else:
             hdftable = filename
@@ -74,7 +74,7 @@ def harvest(filenames, definitions, **kwargs):
             if filetype == ".h5":
                 try:
                     # data = store.select_column(*definition)
-                    tmpdata = hdftable.getNode("/" + definition[0]).col(definition[1])
+                    tmpdata = hdftable.get_node("/" + definition[0]).col(definition[1])
                     tmpdata = pd.Series(tmpdata, dtype=n.float64)
                     Logger.debug("Found {} entries in table for {}{}".format(len(tmpdata),definition[0],definition[1]))
                     break
@@ -241,13 +241,13 @@ class Variable(AbstractBaseVariable):
         if self.defsize == 2:
             try:
                 #data = store.select_column(*definition)
-                data = hdftable.getNode("/" + definition[0]).col(definition[1])
+                data = hdftable.get_node("/" + definition[0]).col(definition[1])
                 data = pd.Series(data,dtype=n.float64)
             except tables.NoSuchNodeError:
                 return None
         elif self.defsize == 1: #FIXME what happens if it isn't found?
             #data = store.select(self.definitions[defindex][0])
-            data = hdftable.getNode("/" + definition[0].read())
+            data = hdftable.get_node("/" + definition[0].read())
             data = pd.DataFrame(data)
         return data
 
@@ -265,7 +265,7 @@ class Variable(AbstractBaseVariable):
         """
         if filetype == ".h5" and not isinstance(fileobject,tables.table.Table):
             #store = pd.HDFStore(filename)
-            store = tables.openFile(fileobject)
+            store = tables.open_file(fileobject)
 
         for definition in self.definitions:
             if filetype == ".h5":

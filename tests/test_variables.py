@@ -1,5 +1,7 @@
 import pytest
 
+# test the magic keywords ..
+from pyevsel.variables import magic_keywords
 
 from pyevsel.variables import cut
 

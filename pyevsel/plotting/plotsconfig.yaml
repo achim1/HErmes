@@ -3,13 +3,6 @@
 # for a couple of cases
 # use single quotes ('') for latex so it won't escape
 
-canvas: {
-        leftpadding: 0.15,
-        rightpadding: 0.05,
-        toppadding:  0.0,
-        bottompadding: 0.1,
-        }
-
 
 legend: {
         bbox_to_anchor: [0., 1.0, 1., .102],

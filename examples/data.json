@@ -11,7 +11,6 @@
                           "prompt_nu": ["prompt_nue","prompt_numu"],
                           "mu": ["atmos_mu","atmos_cc_mu"]},
   "plotting": {
-
   },
   "categories": {"astro_nue": {
                         "subpath": "nue",
@@ -23,13 +22,13 @@
                          //            "9250": 10000},
                         "model_method": "GetModelWeight",
                         "model": "NuFluxes.E2",
-                        "plotting": {"label": "$\\nu_{astr}$",
-                                     "dashistyle": {"color": 2,
+                        "plotting": {"label": "$\\nu_{e_{astr}}$",
+                                     "linestyle": {"color": 2,
                                                     "linewidth": 3,
                                                     "alpha": 1,
                                                     "filled": 0,
                                                     "linestyle": "solid"},
-                                    "histscatter": "line"}       
+                                    "histotype": "line"}       
                      },
                    "astro_numu": {
                         "subpath": "numu",
@@ -40,7 +39,14 @@
                                      "6726": 10000,
                                      "6454": 500},
                         "model_method": "GetModelWeight",
-                        "model": "NuFluxes.E2"
+                        "model": "NuFluxes.E2",
+                        "plotting": {"label": "$\\nu_{\\mu_{astr}}$",
+                                     "linestyle": {"color": 0,
+                                                    "linewidth": 3,
+                                                    "alpha": 1,
+                                                    "filled": 0,
+                                                    "linestyle": "solid"},
+                                    "histotype": "line"}
                                 },
                     "astro_nutau": {
                         "subpath": "nutau",
@@ -50,7 +56,14 @@
                         "datasets": {"8962": 500,
                                      "10099": 500},
                         "model_method": "GetModelWeight",
-                        "model": "NuFluxes.E2"
+                        "model": "NuFluxes.E2",
+                        "plotting": {"label": "$\\nu_{\tau_{astr}}$",
+                                     "linestyle": {"color": 2,
+                                                    "linewidth": 3,
+                                                    "alpha": 1,
+                                                    "filled": 0,
+                                                    "linestyle": "solid"},
+                                    "histotype": "line"}
                                 },
                     "atmos_mu": {
                         "subpath": "mu",
@@ -73,7 +86,18 @@
                                      "10899": 19882,
                                      "10475": 19435},
                         "model_method": "GetModelWeight",
-                        "model": "MuFluxes.GaisserH3a"
+                        "model": "MuFluxes.GaisserH3a",
+                        "plotting": {"label": "$\\mu_{atm}$",
+                                     "linestyle": {"color": 3,
+                                                    "linewidth": 3,
+                                                    "alpha": 0.6,
+                                                    "filled": 1,
+                                                    "linestyle": "solid",
+                                                    "hatch": 0},
+                                     "scatterstyle": {
+                                       "marker": "None",
+                                       "color": 0 },
+                                    "histotype": "overlay"}
                                 },
                     "atmos_cc_mu": {
                         "subpath": "mu-cc",
@@ -84,7 +108,15 @@
                                      "6939": 10000,
                                      "7260": 30000},
                         "model_method": "get_weight_from_weightmap",
-                        "model": ""
+                        "model": "",
+                        "plotting": {"label": "cc $\\mu_{atm}$",
+                                     "linestyle": {"color": 5,
+                                                    "linewidth": 3,
+                                                    "alpha": 0.8,
+                                                    "filled": 1,
+                                                    "linestyle": "solid",
+                                                    "hatch": "//"},
+                                    "histotype": "line"}
                                 },
                     "exp": {
                         "subpath": "exp",
@@ -92,31 +124,72 @@
                         "file_type": ".h5",
                         "datatype": "data",
                         "model_method": "GetModelWeight", //FIXME just here for compatibilty
-                        "livetime": 58335794.3807 //seconds
+                        "livetime": 58335794.3807, //seconds
+                        "plotting": {"label": "exp",
+                                     "linestyle": {"color": "k",
+                                                    "linewidth": 3,
+                                                    "alpha": 1,
+                                                    "filled": 0,
+                                                    "linestyle": "solid",
+                                                    "hatch": "//"},
+                                     "scatterstyle": {"color": "k",
+                                                    "linewidth": 3,
+                                                    "alpha": 1,
+                                                    "marker": "o",
+                                                    "markersize": 4},
+                                    "histotype": "scatter"}
                                 },
                     "conv_nue": {
                         "datatype": "reweighted",
                         "parent": "astro_nue",
                         "model_method": "GetModelWeight",
-                        "model": "NuFluxes.Honda2006H3a"
+                        "model": "NuFluxes.Honda2006H3a",
+                        "plotting": {"label": "HKKMS06 $\\nu_e$",
+                                     "linestyle": {"color": 1,
+                                                    "linewidth": 3,
+                                                    "alpha": 1,
+                                                    "filled": 0,
+                                                    "linestyle": "solid"},
+                                    "histotype": "line"}
                                 },
                     "conv_numu": {
                         "datatype": "reweighted",
                         "parent": "astro_numu",
                         "model_method": "GetModelWeight",
-                        "model": "NuFluxes.Honda2006H3a"
+                        "model": "NuFluxes.Honda2006H3a",
+                        "plotting": {"label": "HKKMS06 $\\nu_\\mu$",
+                                     "linestyle": {"color": 1,
+                                                    "linewidth": 3,
+                                                    "alpha": 1,
+                                                    "filled": 0,
+                                                    "linestyle": "solid"},
+                                    "histotype": "line"}
                                 },
                     "prompt_nue": {
                         "datatype": "reweighted",
                         "parent": "astro_nue",
                         "model_method": "GetModelWeight",
-                        "model": "NuFluxes.ERSH3a"
-                                },
+                        "model": "NuFluxes.ERSH3a",
+                        "plotting": {"label": "ERS $\\nu_e$",
+                                     "linestyle": {"color": 3,
+                                                    "linewidth": 3,
+                                                    "alpha": 1,
+                                                    "filled": 0,
+                                                    "linestyle": "solid"},
+                                    "histotype": "line"}
+                        },
                     "prompt_numu": {
                         "datatype": "reweighted",
                         "parent": "astro_numu",
                         "model_method": "GetModelWeight",
-                        "model": "NuFluxes.ERSH3a"
-                                }
+                        "model": "NuFluxes.ERSH3a",
+                        "plotting": {"label": "ERS $\\nu_\\mu$",
+                                     "linestyle": {"color": 3,
+                                                    "linewidth": 3,
+                                                    "alpha": 1,
+                                                    "filled": 0,
+                                                    "linestyle": "solid"},
+                                    "histotype": "line"}
+                        }
             }
 }

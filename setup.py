@@ -38,7 +38,6 @@ except Exception as e:
     requirements = ['numpy>=1.9.0',
                      'matplotlib>=1.5.0',
                      'pandas>=0.17.1',
-                     'ruamel.yaml>=0.13.14',
                      'appdirs>=1.4.0',
                      'futures>=3.0.5',
                      'future>=0.16.0',
@@ -47,14 +46,14 @@ except Exception as e:
 #requirements.append("tables>=3.3.0") # problem with travis CI, removed from requirments.txt
 
 tests_require = [
-    'pytest>=3.0.6',
+    'pytest>=3.0.5',
     'pytest-cov',
     'pytest-runner',
 ]
 
 needs_pytest = set(('pytest', 'test', 'ptr')).intersection(sys.argv)
 setup_requires = ['pytest-runner'] if needs_pytest else []
-setup_requires += ["matplotlib>=1.5"]
+#setup_requires += ["matplotlib>=1.5.0"]
 
 setup(name='pyevsel',
       version=version,

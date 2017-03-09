@@ -23,7 +23,6 @@ _appname = os.path.split(_appdir)[1]
 # the config files
 STYLE_BASEFILE_STD = os.path.join(_appdir,os.path.join("plotting","pyevselpresent.mplstyle"))
 STYLE_BASEFILE_PRS = os.path.join(_appdir,os.path.join("plotting","pyevseldefault.mplstyle"))
-PLOTSCFG_BASEFILE = os.path.join(_appdir,os.path.join("plotting","plotsconfig.yaml"))
 PATTERNFILE = os.path.join(_appdir,os.path.join("utils","PATTERNS.cfg"))
 
 def get_configdir():
@@ -37,7 +36,6 @@ def get_configdir():
 
 def install_config(style_default=STYLE_BASEFILE_STD, \
                    style_present=STYLE_BASEFILE_PRS, \
-                   plots_config=PLOTSCFG_BASEFILE, \
                    patternfile=PATTERNFILE):
     """
     Sets up configuration and style files
@@ -45,7 +43,6 @@ def install_config(style_default=STYLE_BASEFILE_STD, \
     Keyword Args:
         style_default (str): location of style file to use by defautl
         style_present (str): location of style file used for presentations
-        plots_config (str): configureation file for plots
         patternfile (str): location of patternfile with file patterns to search and read
     """
 
@@ -56,31 +53,6 @@ def install_config(style_default=STYLE_BASEFILE_STD, \
         assert os.path.exists(f), "STYLEFILE {} missing... indicates a problem with some paths or corrupt packege. Check source code location".format(f)
         shutil.copy(f,mpl_styledir)
 
-    for f in plots_config, patternfile:
-        assert os.path.exists(f), "STYLEFILE {} missing... indicates a problem with some paths or corrupt packege. Check source code location".format(f)
-        shutil.copy(f,cfgdir)
-
-def _DeleteTmpFile():
-    """
-    Remove the created tmp files
-    when interpreter is ended
-    """
-
-    import os    
-    try:
-        from pyevsel.plotting import CONFIGFILE
-        os.remove(CONFIGFILE)
-
-    except (IOError, ImportError, TypeError, OSError) as e:
-        print("Can not register tmpfile deletion right now...{}".format(e))
-
-try:
-    install_config()
-except Exception as e: 
-    print ("WARNING: installing styles failed. {}".format(e))
-
-#try:
-atexit.register(_DeleteTmpFile)
-#except (IOError, ImportError, ) as e:
-#    print("Can not register tmpfile deletion right now...{}".format(e))
+    assert os.path.exists(patternfile), "PATTERNFILE {} missing... indicates a problem with some paths or corrupt packege. Check source code location".format(f)
+    shutil.copy(patternfile,cfgdir)
 

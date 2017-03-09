@@ -9,55 +9,21 @@ import numpy as np
 
 from collections import OrderedDict
 
-from pyevsel.plotting.plotting import VariableDistributionPlot
-from pyevsel.plotting import GetCategoryConfig
-from pyevsel.utils import GetTiming
+from pyevsel.plotting import VariableDistributionPlot
 from pyevsel.utils.logger import Logger
 from dashi.tinytable import TinyTable
-
 
 from builtins import map
 from builtins import object
 from . import categories
 
-class CombinedCategory(object):
-    """
-    Create a combined category out of serveral others
-    This is mainly useful for plotting
-    FIXME: should this inherit from category as well?
-    The difference compared to the dataset is that
-    this is flat
-    """
 
-    def __init__(self,name,categories):
-        self.name = name
-        self.categories = categories
-        self.plot = True
-        self.show_in_table = True
-       
-    @property
-    def weights(self):
-        return pd.concat([cat.weights for cat in self.categories])
+def get_label(category):
+    if category.plot_options:
+        return category.plot_options["label"]
+    else:
+        return category.name
 
-    @property
-    def vardict(self):
-        return self.categories[0].vardict
-
-    def get(self,varname):
-        return pd.concat([cat.get(varname) for cat in self.categories])
-
-    @property
-    def integrated_rate(self):
-        """
-        Calculate the total eventrate of this category
-        (requires weights)
-
-        Returns (tuple): rate and quadratic error
-        """
-
-        rate = self.weights.sum()
-        error = np.sqrt((self.weights ** 2).sum())
-        return (rate, error)
 
 class Dataset(object):
     """
@@ -65,7 +31,7 @@ class Dataset(object):
     of them
     """
 
-    def __init__(self,*args,**kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Iniitalize with the categories
 
@@ -93,10 +59,10 @@ class Dataset(object):
         self.categories = self.categories + reweighted_categories
         if 'combined_categories' in kwargs:
             for name in list(kwargs['combined_categories'].keys()):
-                self.combined_categories.append(CombinedCategory(name,kwargs['combined_categories'][name]))
+                self.combined_categories.append(categories.CombinedCategory(name,kwargs['combined_categories'][name]))
 
     #@GetTiming
-    def read_variables(self,variable_defs,names=None):
+    def read_variables(self,variable_defs, names=None):
         """
         Read out the variable for all categories
 
@@ -113,7 +79,7 @@ class Dataset(object):
             cat.load_vardefs(variable_defs)
             cat.read_variables(names=names)
 
-    def set_weightfunction(self,weightfunction=lambda x:x):
+    def set_weightfunction(self, weightfunction=lambda x:x):
         """
         Defines a function which is used for weighting
 
@@ -186,8 +152,8 @@ class Dataset(object):
         for cat in self.categories:
             var[cat.name] = cat.get(varname)
 
-        df = pd.DataFrame.from_dict(var,orient="index")
-        return df
+        return pd.DataFrame.from_dict(var,orient="index")
+
 
     @property
     def weights(self):
@@ -197,8 +163,8 @@ class Dataset(object):
         w = dict()
         for cat in self.categories:
             w[cat.name] = cat.weights
-        df = pd.DataFrame.from_dict(w,orient='index')
-        return df
+        return pd.DataFrame.from_dict(w,orient='index')
+
 
     def __repr__(self):
         """
@@ -300,7 +266,7 @@ class Dataset(object):
 
         bins = self.get_category(sparsest).vardict[name].calculate_fd_bins()
         tratio,tratio_err = self.calc_ratio(nominator=list(map(self.get_category,ratio[0])),\
-                                          denominator=list(map(self.get_category,ratio[1])))
+                                            denominator=list(map(self.get_category,ratio[1])))
         plot = VariableDistributionPlot(cuts=cuts,bins=bins)
         plotcategories = self.categories + self.combined_categories 
         for cat in [x for x in plotcategories if x.plot]:
@@ -356,7 +322,7 @@ class Dataset(object):
         return (rate,np.sqrt(error))
 
     def calc_ratio(self,nominator=None,denominator=None):
-        '''
+        """
         Calculate a ratio of the given categories
 
         Args:
@@ -365,7 +331,7 @@ class Dataset(object):
 
         Returns:
             tuple
-        '''
+        """
         a,a_err = self.sum_rate(categories=nominator)
         b,b_err = self.sum_rate(categories=denominator)
         if b == 0:
@@ -413,12 +379,14 @@ class Dataset(object):
                 fudges[cat.name] = np.NaN
         rate_dict = OrderedDict()
         all_fudge_dict = OrderedDict()
-        for catname in sorted(self.categorynames) + sorted(self.combined_categorynames):
-            cfg = GetCategoryConfig(catname)
-            label = cfg["label"]
-            rate_dict[label] = (rates[catname],errors[catname])
-            if catname in fudges:
-                all_fudge_dict[label] = fudges[catname]
+        #for catname in sorted(self.categorynames) + sorted(self.combined_categorynames):
+        for cat in datacats:
+            label = get_label(cat)
+            #cfg = GetCategoryConfig(cat.name)
+            #label = cfg["label"]
+            rate_dict[label] = (rates[cat.name], errors[cat.name])
+            if cat.name in fudges:
+                all_fudge_dict[label] = fudges[cat.name]
             else:
                 all_fudge_dict[label] = None
 
@@ -463,12 +431,8 @@ class Dataset(object):
         for k in rates:
             events[k] = rates[k][0] * livetime, rates[k][1] * livetime
 
-        def get_label(catname):
-            cfg = GetCategoryConfig(catname)
-            return cfg['label']
-
-        showcats =  [get_label(cat.name) for cat in self.categories if cat.show_in_table]
-        showcats += [get_label(cat.name) for cat in self.combined_categories if cat.show_in_table]
+        showcats =  [get_label(cat) for cat in self.categories if cat.show_in_table]
+        showcats += [get_label(cat) for cat in self.combined_categories if cat.show_in_table]
         showcats.extend(['Sig.',"Bg.","Gr. Tot."])
         orates = OrderedDict()
         ofudges = OrderedDict()
@@ -490,7 +454,9 @@ class Dataset(object):
         #tt.add("Rate (1/s)", **rates)
         #tt.add("Ratio",**fudges)
         #tt.add("Events",**events)
-        return tt.render(layout=layout,format=format,format_cell=cellformatter,order_by=order_by)
+        return tt.render(layout=layout,format=format,\
+                         format_cell=cellformatter,\
+                         order_by=order_by)
 
 
 

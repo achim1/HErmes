@@ -80,8 +80,14 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
     @property
     def raw_count(self):
+        """
+        Gives a number of "how many events are actually there"
+
+        Returns:
+            int
+        """
         assert self.is_harvested,"Please read out variables first"
-        return len(self.get(RUN,uncut=True))
+        return len(self)
 
     @property
     def variablenames(self):
@@ -179,7 +185,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         """
         return DS_ID(filename)
 
-    def load_vardefs(self,module):
+    def load_vardefs(self, module):
         """
         Load the variable definitions from a module
 
@@ -188,7 +194,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         """
 
         all_vars = inspect.getmembers(module)
-        all_vars = [x[1] for x in all_vars if isinstance(x[1],variables.AbstractBaseVariable)]
+        all_vars = [x[1] for x in all_vars if isinstance(x[1], variables.AbstractBaseVariable)]
         for v in all_vars:
             if v.name in self.vardict:
                 Logger.debug("Variable {} already defined,skipping!".format(v.name))
@@ -248,7 +254,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
         self.files = files
 
-    def get(self,varkey,uncut=False):
+    def get(self,varkey, uncut=False):
         """
         Retrieve the data of a variable
 
@@ -340,7 +346,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         self._is_harvested = True
 
     @abc.abstractmethod
-    def get_weights(self,model,model_kwargs=None):
+    def get_weights(self, model, model_kwargs=None):
         return
 
     def get_datacube(self):
@@ -434,12 +440,17 @@ class Simulation(AbstractBaseCategory):
 
     @property
     def mc_p_readout(self):
-        return self._mc_p_readout
+        mc_readout = []
+        for k in self.vardict.keys():
+            if k in [MC_P_EN, MC_P_TY, MC_P_ZE, MC_P_WE]:
+                mc_readout.append(k)
+        Logger.debug("Read out mc information for {}".format(mc_readout))
+        return bool(len(mc_readout))
 
     def read_mc_primary(self,energy_var=MC_P_EN,\
-                       type_var=MC_P_TY,\
-                       zenith_var=MC_P_ZE,\
-                       weight_var=MC_P_WE):
+                        type_var=MC_P_TY,\
+                        zenith_var=MC_P_ZE,\
+                        weight_var=MC_P_WE):
         """
         Trigger the readout of MC Primary information
         Rename variables to magic keywords if necessary
@@ -452,10 +463,10 @@ class Simulation(AbstractBaseCategory):
         """
 
         self.read_variables([energy_var,type_var,zenith_var,weight_var])
-        for varname,defaultname in [(energy_var,MC_P_EN),\
-                                    (type_var,MC_P_TY),\
-                                    (zenith_var,MC_P_ZE),
-                                    (weight_var,MC_P_WE)]:
+        for varname,defaultname in [(energy_var, MC_P_EN),\
+                                    (type_var, MC_P_TY),\
+                                    (zenith_var, MC_P_ZE),
+                                    (weight_var, MC_P_WE)]:
             if varname != defaultname:
                 Logger.warning("..renaming {} to {}..".format(varname,defaultname))
                 self.vardict[varname].name = defaultname
@@ -472,6 +483,8 @@ class Simulation(AbstractBaseCategory):
         Keyword Args:
             model_kwargs (dict): Will be passed to model
         """
+
+
         if not self.mc_p_readout:
             self.read_mc_primary()
 
@@ -492,12 +505,16 @@ class Simulation(AbstractBaseCategory):
 
         func_kwargs.update(model_kwargs)
         Logger.info("Getting weights for datasets {}".format(self.datasets.__repr__()))
-        self._weights = pd.Series(self._weightfunction(model,self.datasets,\
-                                 **func_kwargs))
+        self._weights = pd.Series(self._weightfunction(model, self.datasets,\
+                                  **func_kwargs))
 
     @property
     def livetime(self):
-        return self.weights.sum() / n.power(self.weights, 2).sum()
+        if self.weights.sum() == 0:
+            Logger.warn("Weightsum is zero!")
+            return np.nan
+        else:
+            return self.weights.sum() / n.power(self.weights, 2).sum()
 
 class ReweightedSimulation(Simulation):
     """
@@ -541,8 +558,8 @@ class ReweightedSimulation(Simulation):
     def add_livetime_weighted(self,other):
         raise ValueError('ReweightedSimulation datasets can not be combined! Instanciate after adding mothers instead!')
 
-    def get(self,varkey,uncut=False):
-        data = self.mother.get(varkey,uncut=True)
+    def get(self,varname, uncut=False):
+        data = self.mother.get(varname, uncut=True)
 
         if len(self.cutmask) and not uncut:
             return data[self.cutmask]
@@ -622,14 +639,14 @@ class Data(AbstractBaseCategory):
 
         self._runstartstop_set = True
 
-    def estimate_livetime(self,force=False):
+    def estimate_livetime(self, force=False):
         """
         Calculate the livetime from run start/stop times, account for gaps
         
         Keyword Args:
             force (bool): overide existing livetime
         """
-        if self.livetime and (not self.livetime=="guess"):
+        if self.livetime and (not self.livetime == "guess"):
             Logger.warning("There is already a livetime of {:4.2f} ".format(self.livetime))
             if force:
                 Logger.warning("Applying force...")
@@ -666,7 +683,7 @@ class Data(AbstractBaseCategory):
         self.set_livetime(est_ltime)
         return 
 
-    def get_weights(self,livetime):
+    def get_weights(self, livetime):
         """
         Calculate weights as rate, that is number of
         events per livetime
@@ -676,7 +693,7 @@ class Data(AbstractBaseCategory):
         self.set_livetime(livetime)
         if self.livetime == "guess":
             self.estimate_livetime()
-        self._weights = pd.Series(n.ones(self.raw_count,dtype=n.float64)/self.livetime)
+        self._weights = pd.Series(n.ones(self.raw_count, dtype=n.float64)/self.livetime)
 
 
 class CombinedCategory(object):

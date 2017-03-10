@@ -90,7 +90,7 @@ class Dataset(object):
         Returns:
             None
         """
-        if isinstance(weightfunction,dict):
+        if isinstance(weightfunction, dict):
             for cat in self.categories:
                 cat.set_weightfunction(weightfunction[cat.name])
 
@@ -99,7 +99,7 @@ class Dataset(object):
                 cat.set_weightfunction(weightfunction)
 
 
-    def get_weights(self,models):
+    def get_weights(self, models):
         """
         Calculate the weights for all categories
 
@@ -137,7 +137,7 @@ class Dataset(object):
 
         raise KeyError("Can not find category {}".format(categoryname))
 
-    def get_variable(self,varname):
+    def get_variable(self, varname):
         """
         Get a pandas dataframe for all categories
 
@@ -164,7 +164,6 @@ class Dataset(object):
         for cat in self.categories:
             w[cat.name] = cat.weights
         return pd.DataFrame.from_dict(w,orient='index')
-
 
     def __repr__(self):
         """

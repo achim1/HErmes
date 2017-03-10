@@ -130,12 +130,12 @@ event = V(EVENT,definitions=[("I3EventHeader","Run")])
 
 # mc primary
 # the variable names are magic!
-mc_p_en     = V("mc_p_en",definitions=[("MCPrimary","energy"),("mostEnergeticPrimary","energy")])
-mc_p_ty     = V("mc_p_ty",definitions=[("MCPrimary","type"),("mostEnergeticPrimary","type")],transform=conv.ConvertPrimaryToPDG)
-mc_p_ze     = V("mc_p_ze",definitions=[("MCPrimary","zenith"),("mostEnergeticPrimary","zenith")],transform=n.cos)
-mc_p_we     = V("mc_p_we",definitions=[("I3MCWeightDict","TotalInteractionProbabilityWeight"),("CorsikaWeightMap","DiplopiaWeight")])
-mc_p_gw     = V('mc_p_gw',definitions=[('CorsikaWeightMap','Weight')])
-mc_p_ts     = V('mc_p_ts',definitions=[('CorsikaWeightMap','TimeScale')])
+mc_p_en     = V("mc_p_en", definitions=[("MCPrimary","energy"),("mostEnergeticPrimary","energy")])
+mc_p_ty     = V("mc_p_ty", definitions=[("MCPrimary","type"),("mostEnergeticPrimary","type")],transform=conv.ConvertPrimaryToPDG)
+mc_p_ze     = V("mc_p_ze", definitions=[("MCPrimary","zenith"),("mostEnergeticPrimary","zenith")],transform=n.cos)
+mc_p_we     = V("mc_p_we", definitions=[("I3MCWeightDict","TotalInteractionProbabilityWeight"),("CorsikaWeightMap","DiplopiaWeight")])
+mc_p_gw     = V('mc_p_gw', definitions=[('CorsikaWeightMap','Weight')])
+mc_p_ts     = V('mc_p_ts', definitions=[('CorsikaWeightMap','TimeScale')])
 
 # more MC related things
 mc_nevents  = V("mc_nevents", definitions=[("I3MCWeightDict","NEvents")])

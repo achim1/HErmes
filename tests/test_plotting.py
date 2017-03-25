@@ -1,10 +1,11 @@
 import pytest
-
 import pyevsel.plotting as plt
 import pyevsel.plotting.plotting as pltplt
 
 from pyevsel.plotting import plotcolors as pc
 from pyevsel.plotting import canvases as cv
+
+import numpy as np
 
 @pytest.fixture(scope='session')
 def png_file(tmpdir_factory):
@@ -63,9 +64,27 @@ def test_create_arrow():
     assert len(ax.artists) == 1
     assert isinstance(ax.artists[0], matplotlib.patches.FancyArrow)
 
-def test_VariableDistributionPlot():
-    pltplt.VariableDistributionPlot()
+    fig = p.figure()
+    ax = fig.gca()
+    ax = pltplt.create_arrow(ax, 1, 1, .2, .2, 5,\
+                 width = .1, shape="left",\
+                 fc="k", ec="k",\
+                 alpha=1., log=True)
+    assert len(ax.artists) == 1
+    assert isinstance(ax.artists[0], matplotlib.patches.FancyArrow)
 
+def test_VariableDistributionPlot():
+    vplot = pltplt.VariableDistributionPlot()
+    vplot.add_data(np.ones(1000), "test1", 100)
+    vplot.add_cumul("test1")
+    assert vplot.name == "test1"
+    assert "test1" in vplot.histograms
+    assert "test1" in vplot.cumuls
+    vplot.add_data(np.ones(1000), "test2", 100, weights=np.ones(1000))
+    vplot.add_cumul("test2")
+    assert vplot.name == "test2"
+    assert "test2" in vplot.histograms
+    assert "test2" in vplot.cumuls
 
 
 

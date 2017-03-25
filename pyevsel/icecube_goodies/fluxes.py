@@ -5,11 +5,16 @@ as well as power law fluxes
 from __future__ import absolute_import
 
 from builtins import object
+import numpy as np
+from functools import reduce
+from . import conversions as conv
 
+icecube_found = False
 try:
     from icecube import icetray, dataclasses, NewNuFlux
     from icecube.weighting.weighting import from_simprod
     import icecube.weighting.fluxes as ICMuFluxes
+    icecube_found = True
 except ImportError:
     print("WARNING: module icecube not found!")
 
@@ -20,11 +25,9 @@ except ImportError:
         Hoerandel  = None
         Hoerandel5 = None
 
-from . import conversions as conv
-
-
-import numpy as np
-from functools import reduce
+    def AtmosphericNuFlux(*args, **kwargs):
+        hobo =  lambda x: x
+        return hobo
 
 AREA_SUM = 18946832.9035663
 
@@ -46,8 +49,7 @@ def PowerLawFlux(fluxconst=1e-8,gamma=2):
     if gamma > 0:
         gamma *= -1
 
-    # closure:)
-    def flux(mc_p_energy,mc_p_type,mc_p_zenith):
+    def flux(mc_p_energy,mc_p_type,mc_p_zenith, fluxconst=fluxconst, gamma=gamma):
         # weighting API requires second and third argument even if we
         # don't need it here
         return fluxconst * np.power(mc_p_energy, gamma)
@@ -56,38 +58,39 @@ def PowerLawFlux(fluxconst=1e-8,gamma=2):
 
 ###############################################
 
+if icecube_found:
 
-def AtmosphericNuFlux(modelname='honda2006',knee=False,fluxconst=1.):
-    """
-    Create an Atmospheric neutrino flux
+    def AtmosphericNuFlux(modelname='honda2006',knee=False, fluxconst=1.):
+        """
+        Create an Atmospheric neutrino flux
 
-    Args:
-        modelname (str): a atmospheric model
-        knee (bool): ad a knee model
-        fluxconst (float): scale flux by this const
+        Args:
+            modelname (str): a atmospheric model
+            knee (bool): ad a knee model
+            fluxconst (float): scale flux by this const
 
-    Returns (func): the requested flux. Takes energy, type and maybe cos(zenith) as parameters
+        Returns (func): the requested flux. Takes energy, type and maybe cos(zenith) as parameters
 
-    """
-    nuflux = NewNuFlux.makeFlux(modelname)
-    if knee:
-        nuflux.knee_reweighting_model = knee
+        """
+        nuflux = NewNuFlux.makeFlux(modelname)
+        if knee:
+            nuflux.knee_reweighting_model = knee
 
-    def flux(mc_p_energy,mc_p_type,mc_p_zenith):
-        mc_p_type = np.int32(mc_p_type)
-        mc_p_type = conv.ConvertPrimaryFromPDG(mc_p_type)
-        try:
-            return fluxconst*nuflux.getFlux(mc_p_type,mc_p_energy,mc_p_zenith)
-        except RuntimeError:
-            if conv.IsPDGEncoded(mc_p_type,neutrino=True):
-                mc_p_type = conv.ConvertPrimaryFromPDG(mc_p_type)
-            else:
-                mc_p_type = conv.ConvertPrimaryToPDG(mc_p_type)
-            # FIXME: is this still the case?
-            # the fluxes given by newnuflux are only for anti/neutrinos
-            # so to calculate the total flux, there is a number of 2 necessary
-            return 2*fluxconst*nuflux.getFlux(mc_p_type,mc_p_energy,mc_p_zenith)
-    return flux
+        def flux(mc_p_energy,mc_p_type,mc_p_zenith):
+            mc_p_type = np.int32(mc_p_type)
+            mc_p_type = conv.ConvertPrimaryFromPDG(mc_p_type)
+            try:
+                return fluxconst*nuflux.getFlux(mc_p_type,mc_p_energy,mc_p_zenith)
+            except RuntimeError:
+                if conv.IsPDGEncoded(mc_p_type,neutrino=True):
+                    mc_p_type = conv.ConvertPrimaryFromPDG(mc_p_type)
+                else:
+                    mc_p_type = conv.ConvertPrimaryToPDG(mc_p_type)
+                # FIXME: is this still the case?
+                # the fluxes given by newnuflux are only for anti/neutrinos
+                # so to calculate the total flux, there is a number of 2 necessary
+                return 2*fluxconst*nuflux.getFlux(mc_p_type,mc_p_energy,mc_p_zenith)
+        return flux
 
 ##############################################
 
@@ -196,16 +199,16 @@ class NuFluxes(object):
     """
     Namespace for neutrino fluxes
     """
-    Honda2006    = staticmethod(AtmoWrap("honda2006"))
-    Honda2006H3a = staticmethod(AtmoWrap("honda2006",knee="gaisserH3a_elbert")) 
-    Honda2006H4a = staticmethod(AtmoWrap("honda2006",knee="gaisserH4a_elbert"))
-    ERS          = staticmethod(AtmoWrap("sarcevic_std"))
-    ERSH3a       = staticmethod(AtmoWrap("sarcevic_std",knee="gaisserH3a_elbert"))
-    ERSH4a       = staticmethod(AtmoWrap("sarcevic_std",knee="gaisserH4a_elbert"))
-    BERSSH3a     = staticmethod(AtmoWrap("BERSS_H3a_central"))
-    BERSSH4a     = staticmethod(AtmoWrap("BERSS_H3p_central"))
-    E2           = staticmethod(PowerWrap())
-    BARTOL       = staticmethod(AtmoWrap("bartol"))
+    Honda2006    = staticmethod(AtmosphericNuFlux("honda2006"))
+    Honda2006H3a = staticmethod(AtmosphericNuFlux("honda2006",knee="gaisserH3a_elbert")) 
+    Honda2006H4a = staticmethod(AtmosphericNuFlux("honda2006",knee="gaisserH4a_elbert"))
+    ERS          = staticmethod(AtmosphericNuFlux("sarcevic_std"))
+    ERSH3a       = staticmethod(AtmosphericNuFlux("sarcevic_std",knee="gaisserH3a_elbert"))
+    ERSH4a       = staticmethod(AtmosphericNuFlux("sarcevic_std",knee="gaisserH4a_elbert"))
+    BERSSH3a     = staticmethod(AtmosphericNuFlux("BERSS_H3a_central"))
+    BERSSH4a     = staticmethod(AtmosphericNuFlux("BERSS_H3p_central"))
+    E2           = staticmethod(PowerLawFlux())
+    BARTOL       = staticmethod(AtmosphericNuFlux("bartol"))
 
 
 class MuFluxes(object):

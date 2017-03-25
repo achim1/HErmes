@@ -137,6 +137,18 @@ class VariableDistributionPlot(object):
         self.color_palette = get_color_palette(color_palette)
         self.plot_options = dict()
 
+    def add_cuts(self, cut):
+        """
+        Add a cut to the the plot which can be indicated by an arrow
+
+        Args:
+            cuts ():
+
+        Returns:
+            None
+        """
+        self.cuts.append(cut)
+
     def add_data(self, variable_data,\
                       name, bins,\
                       weights=None, label=''):
@@ -156,9 +168,9 @@ class VariableDistributionPlot(object):
         if weights is None:
             self.histograms[name] = d.factory.hist1d(variable_data, bins)
         else:
-            self.histograms[name] = d.factory.hist1d(variable_data,bins,weights=weights)
-            self.label = label
-            self.name = name
+            self.histograms[name] = d.factory.hist1d(variable_data, bins, weights=weights)
+        self.label = label
+        self.name = name
 
     def add_variable(self, category, variable_name):
         """

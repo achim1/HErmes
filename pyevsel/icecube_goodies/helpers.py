@@ -15,6 +15,8 @@ class IceCubeGeometry(object):
     """
 
     def __init__(self):
+        self.geofile = None
+        self.geo = None
         self.load_geo()
 
     def load_geo(self):
@@ -23,18 +25,25 @@ class IceCubeGeometry(object):
         """
 
         #FIXME absolute path
-        self.geo = tables.openFile(GEOMETRY)
-        self.geo = self.geo.root.geometry.read()
+        self.geofile = tables.open_file(GEOMETRY)
+        self.geo = self.geofile.root.geometry.read()
 
-    def coordinates(self,string,dom):
+    def coordinates(self, string, dom):
         """
         Calculate the xy position of a given string
         """
+        #string -= 1
+
+        assert string in range(1, 86), "String {} must be a number from 1 - 86".format(string)
+        assert dom in range(1, 61), "Dom {} must be a number from 1 - 60".format(dom)
 
         mask = (self.geo['om'] == dom) & (self.geo['string'] == string)
         position = self.geo[mask]
         pos      = np.array([np.float(position['x']),np.float(position['y']),np.float(position['z'])])
         return pos
+
+    def __del__(self):
+        self.geofile.close()
 
 
 

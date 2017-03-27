@@ -16,6 +16,9 @@ from dashi.tinytable import TinyTable
 from builtins import map
 from builtins import object
 from . import categories
+from . import variables
+
+from copy import deepcopy as copy
 
 
 def get_label(category):
@@ -61,14 +64,32 @@ class Dataset(object):
             for name in list(kwargs['combined_categories'].keys()):
                 self.combined_categories.append(categories.CombinedCategory(name,kwargs['combined_categories'][name]))
 
+    def add_variable(self, variable):
+        """
+        Add a variable to this category
+
+        Args:
+            variable (pyevsel.variables.variables.Variable): A Variable instalce
+        """
+
+        for cat in self.categories:
+            cat.add_variable(variable)
+
+    def load_vardefs(self, module):
+        """
+        Load the variable definitions from a module
+
+        Args:
+            module (python module): Needs to contain variable definitions
+        """
+        for cat in self.categories:
+            cat.load_vardefs( module)
+
     #@GetTiming
-    def read_variables(self,variable_defs, names=None):
+    def read_variables(self, names=None):
         """
         Read out the variable for all categories
 
-        Args:
-            variable_defs: A python module containing variable definitions
-        
         Keyword Args:
             names (str): Readout only these variables if given
         Returns:
@@ -76,7 +97,6 @@ class Dataset(object):
         """
         for cat in self.categories:
             Logger.debug("Reading variables for {}".format(cat))
-            cat.load_vardefs(variable_defs)
             cat.read_variables(names=names)
 
     def set_weightfunction(self, weightfunction=lambda x:x):
@@ -219,14 +239,14 @@ class Dataset(object):
         return [cat.name for cat in self.combined_categories]
 
     def get_sparsest_category(self,omit_zeros=True):
-        '''
+        """
         Find out which category of the dataset has the least statiscal power
 
         Keyword Args:
             omit_zeros (bool): if a category has no entries at all, omit
         Returns:
             str: category name
-        '''
+        """
 
         name  = self.categories[0].name
         count = self.categories[0].raw_count
@@ -458,8 +478,6 @@ class Dataset(object):
                          order_by=order_by)
 
 
-
-
     #def cut_progression_table(self,cuts,\
     #                signal=None,\
     #                background=None,\
@@ -474,11 +492,6 @@ class Dataset(object):
     #        self.add_cut(cut)
     #        self.apply_cuts()
 
-
-
-
-
-
     def __len__(self):
         #FIXME: to be implemented
-        return None
+        raise NotImplementedError

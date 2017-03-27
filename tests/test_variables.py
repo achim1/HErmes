@@ -141,7 +141,7 @@ def test_simcat(prepare_testtable):
     filename = str(prepare_testtable.realpath())
     sim.get_files(os.path.split(filename)[0], ending=".h5", prefix="", sanitizer=lambda x : "test" in x)
     sim.get_files(os.path.split(filename)[0], use_ls = True, ending=".h5", prefix="", sanitizer=lambda x : "test" in x)
-    assert isinstance(sim.explore_files(), str)
+    assert isinstance(sim.explore_files(), list)
     assert len(sim.files) > 0
 
     energy = v.Variable("energy",bins=np.linspace(0,10,20),\
@@ -226,26 +226,33 @@ def test_dataset(prepare_testtable):
 
     exp = cat.Data("exp")
     sim = cat.Simulation("nu")
-    data = ds.Dataset(exp, sim)
-    assert isinstance(data.__repr__(), str)
-    assert len(data.categorynames) == 2
     filename = str(prepare_testtable.realpath())
-    exp.get_files(os.path.split(filename)[0], ending=".h5", prefix="", sanitizer=lambda x : "test" in x)
+
+    exp.get_files(os.path.split(filename)[0], ending=".h5", prefix="", sanitizer=lambda x: "test" in x)
+    sim.get_files(os.path.split(filename)[0], ending=".h5", prefix="", sanitizer=lambda x: "test" in x)
+
+    sim2 = cat.ReweightedSimulation("conv_nu", sim)
+    data = ds.Dataset(exp, sim)
+    assert len(data.categorynames) == 2
+    assert len(data.categories) == 2
+
+
+    data.add_category(sim2)
+    assert isinstance(data.__repr__(), str)
+    assert len(data.categorynames) == 3
+    assert len(data.categories) == 3
     assert len(exp.files) > 0
     energy = v.Variable("energy",bins=np.linspace(0,10,20),\
                          label=r"$\log(E_{rec}/$GeV$)$",\
                          definitions=[("readout","energy")])
-    #print (energy)
-    exp.add_variable(energy)
-    exp.read_variables()
 
-    sim = cat.Simulation("neutrino")
-    filename = str(prepare_testtable.realpath())
-    sim.get_files(os.path.split(filename)[0], ending=".h5", prefix="", sanitizer=lambda x : "test" in x)
-    assert len(sim.files) > 0
-    for var in [mc_p_en, mc_p_ty, mc_p_ze, mc_p_we, mc_p_gw, mc_p_ts]:
-        sim.add_variable(var)
-    sim.read_mc_primary()
-    assert sim.mc_p_readout
-    assert len(sim) > 0
+    data.add_variable(energy)
+    data.read_variables()
+    assert len(data.get_category("exp").vardict["energy"].data) > 0
+    assert len(data.get_category("nu").vardict["energy"].data) > 0
+
+    assert len(data.get_category("nu")) > 0
+    assert data.get_category("exp") == exp
+    sparsest = data.get_sparsest_category()
+    sparsest = data.get_sparsest_category(omit_zeros=False)
 

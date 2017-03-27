@@ -76,7 +76,10 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         lengths = np.array([len(self.vardict[v].data) for v in list(self.vardict.keys())])
         lengths = lengths[lengths > 0]
         selflen = list(set(lengths))
-        assert len(selflen) == 1, "Different variable lengths!"
+        if not selflen: # empty category should have len 0
+            return 0
+
+        assert len(selflen) == 1, "Different variable lengths! {}".format(selflen)
         return selflen[0]
 
     @property
@@ -301,13 +304,15 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         else:
             return self.vardict[varkey].data
 
-    def read_variables(self,names=None):
+    def read_variables(self, names=None):
         """
         Harvest the variables in self.vardict
 
         Keyword Args:
             names (list): havest only these variables
         """
+
+        assert self.files, "Need to assign some files before reading out variables"
 
         if names is None:
             names = list(self.vardict.keys())

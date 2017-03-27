@@ -47,7 +47,7 @@ class Model(object):
         # and initialize with 0es.
         # FIXME: better estimate?
         if startparams is None:
-            startparams = [0]*func.__code__.co_argcount - 1 # first argument is not a free parameter.
+            startparams = [0]*(func.__code__.co_argcount - 1) # first argument is not a free parameter.
 
         def normed_func(*args):
             return func_norm*func(*args)

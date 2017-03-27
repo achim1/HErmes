@@ -30,6 +30,7 @@ import numpy as n
 import numpy as np
 import abc
 import concurrent.futures as fut
+import tables
 
 from copy import deepcopy
 
@@ -211,7 +212,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         tmpvar = deepcopy(variable)
         self.vardict[tmpvar.name] = tmpvar
 
-    def get_files(self,*args,**kwargs):
+    def get_files(self, *args, **kwargs):
         """
         Load files for this category
         uses pyevsel.utils.files.harvest_files
@@ -224,7 +225,9 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             force (bool): forcibly reload filelist (pre-readout vars will be lost)
             all other kwargs will be passed to
             utils.files.harvest_files
+
         """
+
         force = False
         if "force" in kwargs:
             force = kwargs.pop("force")
@@ -253,6 +256,31 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             files = harvest_files(*args,**kwargs)
 
         self.files = files
+
+    def explore_files(self):
+        """
+        Get a sneak preview of what variables are avaukabke
+        for readout
+
+        Returns:
+            list
+        """
+        tablenames = []
+        if self.files is None:
+            return
+
+        for f in self.files:
+            if tables.is_hdf5_file(f):
+                with tables.open_file(f) as t:
+                    for n in t.iter_nodes("/"):
+                        thisname = "/"
+                        if isinstance(n, tables.Table):
+                            tablenames.append(thisname + n.name)
+                        if isinstance(n, tables.Group):
+                            tablenames.append("Group (unknown name): {}".format(n.__members__))
+                    t.close()
+        return tablenames
+
 
     def get(self,varkey, uncut=False):
         """

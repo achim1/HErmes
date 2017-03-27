@@ -33,6 +33,7 @@ mc_nevents  = V("mc_nevents", definitions=[("I3MCWeightDict","NEvents")])
 TESTDATALEN = 10000
 
 
+
 def generate_test_cuts():
     return [("mc_p_en", ">=", 5), ("charge","<=", 10),\
             ("energy",">", 10), ("velocity", "<", 42 )]
@@ -90,6 +91,34 @@ def prepare_testtable(tmpdir_factory):
     testfile.close()
     return testdatafile
 
+def test_Variable(prepare_testtable):
+    testvar = mc_p_en
+    testvar.declare_harvested()
+    assert testvar.is_harvested
+    testvar.undeclare_harvested()
+    assert (not testvar.is_harvested)
+    assert (testvar == testvar)
+    testvar.data = v.harvest([str(prepare_testtable.realpath())], testvar.definitions)
+    testvar.declare_harvested()
+    testvar.calculate_fd_bins()
+    assert (len(testvar.bins) > 0)
+    assert isinstance(hash(testvar), int)
+
+    comp_var = v.CompoundVariable("comb_energy", variables=[testvar, testvar])
+    assert (comp_var < testvar)
+    assert isinstance(hash(comp_var), int)
+    assert isinstance(comp_var.__repr__(), str)
+    comp_var.harvest(prepare_testtable.realpath())
+    assert comp_var.is_harvested
+
+    list_var = v.VariableList("list_energy", variables=[testvar, testvar])
+    assert isinstance(hash(list_var), int)
+    assert isinstance(list_var.__repr__(), str)
+    list_var.harvest(prepare_testtable.realpath())
+    assert list_var.is_harvested
+    assert len(list_var.data) == 2
+
+
 def test_Cut():
     testcut = cut.Cut(*generate_test_cuts())
     assert sorted(testcut.variablenames) == sorted(generate_test_cut_variablenames())
@@ -111,8 +140,9 @@ def test_simcat(prepare_testtable):
     sim = cat.Simulation("neutrino")
     filename = str(prepare_testtable.realpath())
     sim.get_files(os.path.split(filename)[0], ending=".h5", prefix="", sanitizer=lambda x : "test" in x)
+    sim.get_files(os.path.split(filename)[0], use_ls = True, ending=".h5", prefix="", sanitizer=lambda x : "test" in x)
+    assert isinstance(sim.explore_files(), str)
     assert len(sim.files) > 0
-
 
     energy = v.Variable("energy",bins=np.linspace(0,10,20),\
                          label=r"$\log(E_{rec}/$GeV$)$",\
@@ -155,6 +185,8 @@ def tset_reweighted_simcat(prepare_testtable):
     rsim = cat.ReweightedSimulation("conv_nue", sim)
     assert rsim.raw_count == sim.raw_count
     assert (rsim.get("energy") == sim.get("energy")).all()
+    rsim.rewire_variables()
+
 
 def test_simcat_mcreadout(prepare_testtable):
     import numpy as np
@@ -195,7 +227,7 @@ def test_dataset(prepare_testtable):
     exp = cat.Data("exp")
     sim = cat.Simulation("nu")
     data = ds.Dataset(exp, sim)
-    assert isinstance(str, data.__repr__())
+    assert isinstance(data.__repr__(), str)
     assert len(data.categorynames) == 2
     filename = str(prepare_testtable.realpath())
     exp.get_files(os.path.split(filename)[0], ending=".h5", prefix="", sanitizer=lambda x : "test" in x)

@@ -26,6 +26,7 @@ from . import functions as funcs
 
 PALETTE = sb.color_palette("dark")
 
+
 class Model(object):
     """
     Model data with a parametrized prediction
@@ -46,7 +47,7 @@ class Model(object):
         # and initialize with 0es.
         # FIXME: better estimate?
         if startparams is None:
-            startparams = [0]*func.__code__.co_argcount
+            startparams = [0]*func.__code__.co_argcount - 1 # first argument is not a free parameter.
 
         def normed_func(*args):
             return func_norm*func(*args)
@@ -68,6 +69,32 @@ class Model(object):
         self.first_guess = None
         self._distribution = None
 
+    @property
+    def distribution(self):
+        return self._distribution
+
+    def set_distribution(self, distr):
+        """
+        Assing a distribution to the model
+
+        Args:
+            distr:
+
+        Returns:
+
+        """
+        self._distribution = distr
+
+    @property
+    def n_free_params(self):
+        """
+        The number of free parameters of this model
+
+        Returns:
+            int
+        """
+        return sum(self.n_free_params)
+
     def _create_distribution(self,data, nbins, normalize=False):
         """
         Create a distribution
@@ -78,7 +105,7 @@ class Model(object):
         bins = np.linspace(min(data), max(data), nbins)
 
         h = d.factory.hist1d(data, bins)
-        self._distribution = h
+        self.set_distribution(h)
 
         self.norm = 1
         if normalize:
@@ -86,10 +113,10 @@ class Model(object):
             norm = h.bincontent / h_norm.bincontent
             norm = norm[np.isfinite(norm)][0]
             self.norm = norm
-            self._distribution = h_norm
+            self.set_distribution(h_norm)
 
-        self.data = self._distribution.bincontent
-        self.xs = self._distribution.bincenters
+        self.data = self.distribution.bincontent
+        self.xs = self.distribution.bincenters
 
     def add_first_guess(self, func):
         """
@@ -333,7 +360,10 @@ class Model(object):
                     xlabel="Q [C]", fig=None,\
                     log=True,\
                     model_alpha=.3,\
-                    add_parameter_text=((r"$\mu_{{SPE}}$& {:4.2e}\\",0),)):
+                    add_parameter_text=((r"$\mu_{{SPE}}$& {:4.2e}\\",0),),
+                    histostyle="scatter",
+                    datacolor="k",
+                    modelcolor=PALETTE[2]):
         """
         Show the fit result
 
@@ -347,6 +377,10 @@ class Model(object):
             fig (pylab.figure): A figure instance
             add_parameter_text (tuple): Display a parameter in the table on the plot
                                         ((text, parameter_number), (text, parameter_number),...)
+            datacolor (matplotlib color compatible)
+            modelcolor (matplotlib color compatible)
+
+
         Returns:
             pylab.figure
         """
@@ -355,16 +389,17 @@ class Model(object):
         if fig is None:
             fig = p.figure()
         ax = fig.gca()
-        if self._distribution is not None:
-            self._distribution.scatter(color="k")
+        if self.distribution is not None:
+            self.distribution.__getattribute__(histostyle)(color=datacolor)
         else:
-            ax.plot(self.xs, self.data, color="k")
+            ax.plot(self.xs, self.data, color=datacolor)
 
         infotext = r"\begin{tabular}{ll}"
         if self.chi2_ndf is not None:
-            ax.plot(self.xs, self.prediction(self.xs), color=PALETTE[2], alpha=model_alpha)
-            for comp in self.components:
-                ax.plot(self.xs, comp(self.xs), linestyle=":", lw=1, color="k")
+            ax.plot(self.xs, self.prediction(self.xs), color=modelcolor, alpha=model_alpha)
+            if len(self.n_params) > 1:
+                for comp in self.components:
+                    ax.plot(self.xs, comp(self.xs), linestyle=":", lw=1, color="k")
             infotext += r"$\chi^2/ndf$ & {:4.2f}\\".format(self.chi2_ndf)
         else:
             print ("Has not been fitted yet, can not plot fit!")
@@ -374,9 +409,8 @@ class Model(object):
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
 
-
-        if self._distribution is not None:
-            infotext += r"entries& {}\\".format(self._distribution.stats.nentries)
+        if self.distribution is not None:
+            infotext += r"entries& {}\\".format(self.distribution.stats.nentries)
         if add_parameter_text is not None:
             for partext in add_parameter_text:
                 infotext += partext[0].format(self.best_fit_params[partext[1]])

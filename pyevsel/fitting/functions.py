@@ -6,13 +6,11 @@ from __future__ import unicode_literals
 from __future__ import print_function
 from __future__ import absolute_import
 
-
+import numpy as np
+from scipy.misc import factorial
 from future import standard_library
 standard_library.install_aliases()
 
-import numpy as np
-
-from scipy.misc import factorial
 
 def poisson(lmbda, k):
     """
@@ -28,6 +26,7 @@ def poisson(lmbda, k):
 
     return np.power(lmbda, k) * np.exp(-1 * lmbda) / factorial(k)
 
+################################################
 
 def gauss(x, mu, sigma, n):
     """

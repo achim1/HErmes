@@ -528,3 +528,105 @@ class VariableDistributionPlot(object):
                       "numpoints": 1}
         self.canvas.global_legend(**kwargs)
  
+#######################################################
+
+def error_distribution_plot(h,
+                            xlabel = r"$\log(E_{rec}/E_{ref})$",
+                            name = "E",
+                            median = False):
+    """
+
+
+    Args:
+        h:
+        xlabel:
+        name:
+        median:
+
+    Returns:
+
+    """
+    par = HistoFitter(h, Gauss)
+    fig  = p.figure(figsize=(6,4),dpi=350)
+    ax   = fig.gca()
+    if not median: ax.plot(h.bincenters, Gauss(par,h.bincenters),color="k",lw=2)
+    h.line(filled=True,color="k",lw=2,fc="grey",alpha=.5)#hatch="//")
+    h.line(color="k",lw=2)
+    ax.grid(1)
+    ax.set_ylim(ymax=1.1*max(h.bincontent))
+    ax.set_xlim(xmin=h.bincenters[0],xmax=h.bincenters[-1])
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Normalized bincount")
+    if median: ax.vlines(h.stats.median,0,1.1*max(h.bincontent),linestyles="dashed")
+    textstr ="Gaussian fit:\n"
+    textstr += "$\mu$ = " + "%4.3f" %par[1] + "\n" + "$\sigma$ = " + "%4.2f" %par[2]
+    if median:
+        textstr = "Median:\n %4.3f" %h.stats.median
+    CreateTextbox(ax,textstr,boxstyle="square",xcoord=.65,fontsize=16,alpha=.9)
+    #Thesisize(ax)
+    #print h.bincontent[h.bincenters > -.1][h.bincenters < .1].cumsum()[-1]
+
+    #ChisquareTest(h,Gauss(par,h.bincenters),xmin=-.001,xmax=.001)
+    #savename = Multisavefig(plotdir_stat,"parameter-reso-" + name,3,orientation="portrait",pad_inches=.3,bbox_inches="tight")[0]#pad_inches=.5,bbox_inche     s="tight")[0]
+    return fig
+
+####################################################
+
+def HistoFitter(histo,func,startmean=0,startsigma=.2):
+
+    def error(p,x,y):
+        return n.sqrt((func(p,x) - y)**2)
+
+    #print histo.bincontent.std()
+    histo.stats.mean
+    p0 = [max(histo.bincontent),histo.stats.mean,histo.stats.var]
+    output = optimize.leastsq(error,p0,args=(histo.bincenters,histo.bincontent),full_output=1)
+    par = output[0]
+    covar = output[1]
+    rchisquare = scipy.stats.chisquare(1*histo.bincontent,f_exp=(1*func(par,histo.bincenters)))[0]/(1*(len(histo.bincenters) -len(par)))
+    #print par,covar
+    #print "chisquare/ndof",rchisquare
+    #print histo.bincontent[:10], func(par,histo.bincenters)[:10]
+    #print "ks2_samp", scipy.stats.ks_2samp(histo.bincontent,func(par,histo.bincenters))
+    return par
+
+#####################################################
+
+def create_textbox(ax, textstr, boxstyle="round",\
+                   facecolor="white", alpha=.7,\
+                   xcoord=0.05, ycoord=0.95, fontsize=14):
+    """
+    Create a textbox on a given axis
+
+    Args:
+        ax:
+        textstr:
+        boxstyle:
+        facecolor:
+        alpha:
+        xcoord:
+        ycoord:
+        fontsize:
+
+    Returns:
+        the given ax object
+    """
+    props = dict(boxstyle=boxstyle, facecolor=facecolor, alpha=alpha)
+    # place a text box in upper left in axes coords
+    ax.text(xcoord, ycoord, textstr,\
+            transform=ax.transAxes,\
+            fontsize=fontsize,\
+            verticalalignment='top', bbox=props)
+    return ax
+
+######################################################
+
+def ChisquareTest(histo, fit, xmin=-.2, xmax=.2, ndof=3):
+    data = histo.bincontent[histo.bincenters > xmin][histo.bincenters < xmax]
+    fit  = fit[histo.bincenters > xmin][histo.bincenters < xmax]
+    #print data,fit
+    print (scipy.stats.chisquare(data,f_exp=fit)[0]/(len(fit) - ndof))
+    print (scipy.stats.ks_2samp(data,fit))
+    print (scipy.stats.anderson(data))
+
+

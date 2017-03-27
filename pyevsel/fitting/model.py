@@ -384,7 +384,7 @@ class Model(object):
         Returns:
             pylab.figure
         """
-
+        assert self.chi2_ndf is not None, "Needs to be fitted first before plotting!"
 
         if fig is None:
             fig = p.figure()
@@ -395,14 +395,12 @@ class Model(object):
             ax.plot(self.xs, self.data, color=datacolor)
 
         infotext = r"\begin{tabular}{ll}"
-        if self.chi2_ndf is not None:
-            ax.plot(self.xs, self.prediction(self.xs), color=modelcolor, alpha=model_alpha)
-            if len(self.n_params) > 1:
-                for comp in self.components:
-                    ax.plot(self.xs, comp(self.xs), linestyle=":", lw=1, color="k")
-            infotext += r"$\chi^2/ndf$ & {:4.2f}\\".format(self.chi2_ndf)
-        else:
-            print ("Has not been fitted yet, can not plot fit!")
+
+        ax.plot(self.xs, self.prediction(self.xs), color=PALETTE[2], alpha=model_alpha)
+        for comp in self.components:
+            ax.plot(self.xs, comp(self.xs), linestyle=":", lw=1, color="k")
+
+        infotext += r"$\chi^2/ndf$ & {:4.2f}\\".format(self.chi2_ndf)
 
         ax.set_ylim(ymin=ymin)
         ax.set_xlim(xmax=xmax)

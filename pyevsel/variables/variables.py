@@ -199,11 +199,12 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
     def harvest(self, *files):
         """
         Hook to the harvest method. Don't use in case of multiprocessing!
+        Args:
+            *files: walk through these files and readout
         """
 
         self.data = harvest(files, self.definitions)
         self.declare_harvested()
-
 
 ############################################
 
@@ -244,7 +245,6 @@ class Variable(AbstractBaseVariable):
             self.data    = pd.DataFrame()
         if self.defsize  == 2:
             self.data    = pd.Series()    
-
 
 ##########################################################
 

@@ -3,6 +3,13 @@
 // and names for the different
 // data 
 //
+//# livetime of some datasets
+//IC79GS_LIVETIME = 26723588.380711164
+//IC79BS_LIVETIME = 2899974
+//IC86BS_LIVETIME = 739.59*3600
+//IC86GS_LIVETIME = 7236.03*3600
+//ic79ltime = IC79BS_LIVETIME + IC79GS_LIVETIME
+//ic86ltime = IC86BS_LIVETIME + IC86GS_LIVETIME
 // datatype can be either "simulation","reweighted", or 'data'
   "files_basepath": "/lustre/fs15/group/icecube/stoessl/analysis_data/",
   "variable_definitions": "variable_defs",
@@ -48,7 +55,7 @@
                                                     "linestyle": "solid"},
                                     "histotype": "line"}
                                 },
-                    "astro_nutau": {
+                   "astro_nutau": {
                         "subpath": "nutau",
                         "file_prefix": "",
                         "file_type": ".h5",

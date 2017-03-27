@@ -1,4 +1,6 @@
 import pytest
+
+import pyevsel.variables.cut as cut
 import pyevsel.plotting as plt
 import pyevsel.plotting.plotting as pltplt
 
@@ -73,6 +75,7 @@ def test_create_arrow():
     assert len(ax.artists) == 1
     assert isinstance(ax.artists[0], matplotlib.patches.FancyArrow)
 
+
 def test_VariableDistributionPlot():
     vplot = pltplt.VariableDistributionPlot()
     vplot.add_data(np.ones(1000), "test1", 100)
@@ -85,6 +88,13 @@ def test_VariableDistributionPlot():
     assert vplot.name == "test2"
     assert "test2" in vplot.histograms
     assert "test2" in vplot.cumuls
+    rationame = vplot.add_ratio("test1", "test2")
+    assert isinstance(rationame, str)
+    testcut = cut.Cut(("test1", ">", .2))
+    vplot.add_cuts(testcut)
+
+    
+    
 
 
 

@@ -26,7 +26,6 @@ from .magic_keywords import MC_P_EN,\
 from . import variables
 import pandas as pd
 import inspect
-import numpy as n
 import numpy as np
 import abc
 import concurrent.futures as fut
@@ -284,8 +283,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                     t.close()
         return tablenames
 
-
-    def get(self,varkey, uncut=False):
+    def get(self, varkey, uncut=False):
         """
         Retrieve the data of a variable
 
@@ -345,7 +343,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             # multi cpu readout!
             #self.vardict[varname].data = variables.harvest(self.files,self.vardict[varname].definitions)
             future_to_varname[executor.submit(variables.harvest, self.files,self.vardict[varname].definitions)] = varname
-        #for future in tqdm.tqdm(fut.as_completed(future_to_varname),desc="Reading {0} variables".format(self.name), leave=True):
+
         progbar = False
         try:
             import pyprind
@@ -461,6 +459,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         """
         self.plot_options = options
 
+
 class Simulation(AbstractBaseCategory):
     """
     An interface to variables from simulated data
@@ -534,7 +533,7 @@ class Simulation(AbstractBaseCategory):
             try:
                 func_kwargs[reg] = self.get(key)
             except KeyError:
-                Logger.warning("No MCPrimary {0} informatiion! Trying to omit..".format(key))
+                Logger.warning("No MCPrimary {0} information! Trying to omit..".format(key))
 
         func_kwargs.update(model_kwargs)
         Logger.info("Getting weights for datasets {}".format(self.datasets.__repr__()))
@@ -721,12 +720,11 @@ class Data(AbstractBaseCategory):
         Calculate weights as rate, that is number of
         events per livetime
         """
-        #FIXME: Move lifetime to arguments? It would make sense...
 
         self.set_livetime(livetime)
         if self.livetime == "guess":
             self.estimate_livetime()
-        self._weights = pd.Series(n.ones(self.raw_count, dtype=n.float64)/self.livetime)
+        self._weights = pd.Series(np.ones(self.raw_count, dtype=np.float64)/self.livetime)
 
 
 class CombinedCategory(object):

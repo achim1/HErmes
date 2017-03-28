@@ -32,7 +32,8 @@ mc_nevents  = V("mc_nevents", definitions=[("I3MCWeightDict","NEvents")])
 
 TESTDATALEN = 10000
 
-
+def hobo_weightfunc(*args, **kwargs):
+    return np.ones(TESTDATALEN)
 
 def generate_test_cuts():
     return [("mc_p_en", ">=", 5), ("charge","<=", 10),\
@@ -221,6 +222,7 @@ def test_datcat(prepare_testtable):
     assert (exp.weights == (np.ones(exp.raw_count)/100.)).all()
 
 
+
 def test_dataset(prepare_testtable):
     import os.path
 
@@ -256,3 +258,11 @@ def test_dataset(prepare_testtable):
     sparsest = data.get_sparsest_category()
     sparsest = data.get_sparsest_category(omit_zeros=False)
 
+    # continue here
+    def model(*args, **kwargs):
+        return None
+    models = {"nu" : model}
+    data.set_livetime(1000.)
+    data.set_weightfunction(hobo_weightfunc)
+    data.get_weights(models)
+    assert len(data.weights) > 0

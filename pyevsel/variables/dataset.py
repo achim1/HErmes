@@ -124,11 +124,14 @@ class Dataset(object):
         Calculate the weights for all categories
 
         Args:
-            weightfunction (func): set func used for medel weight calculation
-            models (dict): A dictionary of categoryname -> model
+            models (dict or callable): A dictionary of categoryname -> model or a single clbl
         """
-        for catname in models:
-            self.get_category(catname).get_weights(models[catname])
+        if isinstance(models, dict):
+            for catname in models:
+                self.get_category(catname).get_weights(models[catname])
+        if callable(models):
+            for cat in self.categories:
+                cat.get_weights(models)
 
     def add_category(self,category):
         """
@@ -174,6 +177,19 @@ class Dataset(object):
 
         return pd.DataFrame.from_dict(var,orient="index")
 
+    def set_livetime(self, livetime):
+        """
+        Define a livetime for this dataset.
+
+        Args:
+            livetime (float): Time interval the data was taken in. (Used for rate calculation)
+
+        Returns:
+            None
+        """
+        for cat in self.categories:
+            if hasattr(cat, "set_livetime"):
+                cat.set_livetime(livetime)
 
     @property
     def weights(self):
@@ -304,7 +320,8 @@ class Dataset(object):
         """
         Integrated rate for each category
 
-        Returns (pandas.Panel): rate with error
+        Returns (pandas.Panel):
+            rate with error
         """
 
         rdata,edata,index = [],[],[]

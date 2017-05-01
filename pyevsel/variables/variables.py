@@ -291,7 +291,8 @@ class CompoundVariable(AbstractBaseVariable):
             Logger.error("Variables have to be harvested for compound variable {0} first!".format(self.variables))
             Logger.error("Only {} is harvested".format(harvested))
             return
-        self.data = reduce(self.operation,[var.data for var in self.variables])
+        #self.data = reduce(self.operation,[var.data for var in self.variables])
+        self.data = self.operation(*[var.data for var in self.variables])
         self.declare_harvested()
 
 ##########################################################

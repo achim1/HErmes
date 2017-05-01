@@ -129,44 +129,44 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                            (Can not be undone except variable is reloaded)
         """
         self.undo_cuts()
-        mask = n.ones(self.raw_count)
+        mask = np.ones(self.raw_count)
         
         # only apply the condition to the mask
         # created for the cut with the condition
         # not the others
         cond_masks = []
         for cut in self.cuts:
-            cond_mask = n.ones(self.raw_count)
+            cond_mask = np.ones(self.raw_count)
             if cut.condition is None:
                 continue
             for varname,(op,value) in cut:
                 s = self.get(varname)
-                cond_mask = n.logical_and(cond_mask,op(s,value) )
-            cond_mask = n.logical_or(cond_mask,n.logical_not(cut.condition[self.name]))
+                cond_mask = np.logical_and(cond_mask,op(s,value) )
+            cond_mask = np.logical_or(cond_mask, np.logical_not(cut.condition[self.name]))
             cond_masks.append(cond_mask)
 
         # finish the conditional part
         for m in cond_masks:
-            mask = n.logical_and(mask,m)
+            mask = np.logical_and(mask,m)
 
         for cut in self.cuts:
             if cut.condition is not None:
                 continue
             for varname,(op,value) in cut:
                 s = self.get(varname)
-                mask = n.logical_and(mask,op(s,value) )
+                mask = np.logical_and(mask,op(s,value) )
         if inplace:
             for k in list(self.vardict.keys()):
                 self.vardict[k].data = self.vardict[k].data[mask]
         else:
-            self.cutmask = n.array(mask,dtype=bool)
+            self.cutmask = np.array(mask,dtype=bool)
 
     def undo_cuts(self):
         """
         Conveniently undo a previous "apply_cuts"
         """
 
-        self.cutmask = n.array([])
+        self.cutmask = np.array([])
 
     def delete_cuts(self):
         """
@@ -404,7 +404,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         """
 
         rate  = self.weights.sum()
-        error = n.sqrt((self.weights**2).sum())
+        error = np.sqrt((self.weights**2).sum())
         return (rate,error)
 
     def add_livetime_weighted(self,other,self_livetime=None,other_livetime=None):
@@ -436,7 +436,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         if self.cuts or other.cuts:
             self.cuts.extend(other.cuts)
         if len(self.cutmask) or len(other.cutmask):
-            self.cutmask = n.hstack((self.cutmask,other.cutmask))
+            self.cutmask = np.hstack((self.cutmask,other.cutmask))
 
         for name in self.variablenames:
             self.vardict[name].data = pd.concat([self.vardict[name].data,other.vardict[name].data])
@@ -546,7 +546,7 @@ class Simulation(AbstractBaseCategory):
             Logger.warn("Weightsum is zero!")
             return np.nan
         else:
-            return self.weights.sum() / n.power(self.weights, 2).sum()
+            return self.weights.sum() / np.power(self.weights, 2).sum()
 
 class ReweightedSimulation(Simulation):
     """

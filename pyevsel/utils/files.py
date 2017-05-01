@@ -133,6 +133,9 @@ def harvest_files(path, ending=".bz2", sanitizer=lambda x : x,\
     files = list(filter(sanitizer,files))
     files = [prefix + x for x in files]
     files = sorted(files) # ensure that each call returns exact same list
+    if "h5" in ending:
+        files, __ = check_hdf_integrity(files) 
+
     return files
 
 ##############################################################
@@ -177,4 +180,55 @@ def group_names_by_regex(names,regex=EXP_RUN_ID,firstpattern=GCD,estimate_first=
             groupdict[k] = [first] + groupdict[k]
     
     return groupdict
+
+###############################################################
+
+
+def check_hdf_integrity(infiles,checkfor = None ):
+    """
+    Checks if hdfiles can be openend and returns 
+    a tuple integer_files,corrupt_files
+    
+    Arguments:
+        infiles (list)
+
+    Keyword arguments:
+        checkfor (str)
+
+
+
+    """
+
+    integer_files = []
+    corrupt_files = []
+    allfiles = len(infiles)
+    
+    for file_to_check in infiles:
+    
+        test = sub.Popen(['h5ls','-g',file_to_check],stdout=sub.PIPE,stderr=sub.PIPE)
+        __,error = test.communicate()
+
+        if error:
+            Logger.warning(error)
+            corrupt_files.append(file_to_check)
+
+        else:
+            if checkfor != None:
+                f = tables.openFile(file_to_check)
+                try:
+                    f.getNode(checkfor)
+                except tables.NoSuchNodeError:
+                    Logger.info("File %s has no Node %s" %(file_to_check,checkfor))
+                    corrupt_files.append(file_to_check)
+                    continue
+                finally:
+                    f.close() 
+
+            integer_files.append(file_to_check)
+
+    Logger.debug("These files are corrupt! %s",corrupt_files.__repr__())
+    Logger.info('%i of %i files corrupt!' %(len(corrupt_files),allfiles))
+    return integer_files,corrupt_files
+
+
 

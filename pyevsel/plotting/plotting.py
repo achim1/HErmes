@@ -150,7 +150,7 @@ class VariableDistributionPlot(object):
         self.cuts.append(cut)
 
     def add_data(self, variable_data,\
-                      name, bins,\
+                      name, bins=None,\
                       weights=None, label=''):
         """
         Histogram the added data and store internally
@@ -158,13 +158,15 @@ class VariableDistributionPlot(object):
         Args:
             name (string): the name of a category
             variable_data (array): the actual data
-            bins (array): histogram binning
         
         Keyword Args:
+            bins (array): histogram binning
             weights (array): weights for the histogram
             label (str): A label for the data when plotted
 
         """
+        if bins is None:
+            bins = self.bins
         if weights is None:
             self.histograms[name] = d.factory.hist1d(variable_data, bins)
         else:
@@ -305,7 +307,7 @@ class VariableDistributionPlot(object):
         Paint the histograms!
         """
         try:
-            cfg = self.plot_options[name]
+            cfg = copy(self.plot_options[name])
         except KeyError:
             Logger.warn("No plot configuration available for {}".format(name))
             cfg = {"histotype": "line",
@@ -315,15 +317,16 @@ class VariableDistributionPlot(object):
                                   }
                    }
 
-        color = cfg["linestyle"].pop('color')
+        if "linestyle" in cfg: 
+            color = cfg["linestyle"].pop('color')
+            if isinstance(color,int):
+                color = self.color_palette[color]
         if 'scatterstyle' in cfg:
             scattercolor = cfg["scatterstyle"].pop('color')
 
             if isinstance(scattercolor,int):
                 scattercolor = self.color_palette[scattercolor]
 
-        if isinstance(color,int):
-            color = self.color_palette[color]
 
         if cumulative:
             histograms = self.cumuls
@@ -476,7 +479,7 @@ class VariableDistributionPlot(object):
                          "mode": "expand",
                          "handlelength": 2,
                          "numpoints": 1}
-        lg = lgax.legend(legend_kwargs)
+        lg = lgax.legend(**legend_kwargs)
         #legendwidth = LoadConfig()
         #legendwidth = legendwidth['legendwidth']
         lg.get_frame().set_linewidth(legendwidth)

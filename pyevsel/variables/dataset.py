@@ -280,6 +280,7 @@ class Dataset(object):
                           axes_locator=((0,"c"),(1,"r"),(2,"h")),
                           heights=(.4,.2,.2),
                           color_palette='dark',
+                          styles = dict(),
                           savepath="",savename="vdistplot"):
         """
         One shot short-cut for one of the most used
@@ -292,7 +293,7 @@ class Dataset(object):
             path (str): The path under which the plot will be saved.
             ratio (list): A ratio plot of these categories will be crated
             color_palette (str): A predifined color palette (from seaborn or plotcolors.py
-
+            styles (dict): plot styling options
         Returns:
             pyevsel.variables.VariableDistributonPlot
         """
@@ -303,6 +304,7 @@ class Dataset(object):
         tratio,tratio_err = self.calc_ratio(nominator=list(map(self.get_category,ratio[0])),\
                                             denominator=list(map(self.get_category,ratio[1])))
         plot = VariableDistributionPlot(cuts=cuts,bins=bins)
+        plot.plot_options = styles
         plotcategories = self.categories + self.combined_categories 
         for cat in [x for x in plotcategories if x.plot]:
             plot.add_variable(cat,name)

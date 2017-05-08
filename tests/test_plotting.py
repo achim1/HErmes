@@ -92,6 +92,7 @@ def test_VariableDistributionPlot():
     assert isinstance(rationame, str)
     testcut = cut.Cut(("test1", ">", .2))
     vplot.add_cuts(testcut)
+    vplot.plot()
 
     
     

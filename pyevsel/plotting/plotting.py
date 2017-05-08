@@ -77,29 +77,6 @@ def create_arrow(ax, x_0, y_0, dx, dy, length,\
                    **arrow_params)
     return ax
 
-###########################
-
-
-def create_variable_distribution_plot(categories, name, ratio = ([],[])):
-    """
-    One shot short-cut for one of the most used
-    plots in eventselections.
-
-    Args:
-        categories (list): A list of categories which should be plotted
-        name (string): The name of the variable to plot
-
-    Keyword Args:
-        ratio (tuple): A ratio plot of these categories will be crated
-    """
-    plot = VariableDistributionPlot()
-    for cat in categories:
-        plot.add_variable(cat,name)
-        plot.add_cumul(cat.name)
-    plot.add_ratio(ratio[0],ratio[1])
-    plot.plot(heights=[.4,.2,.2])
-    return plot
-
 ###############################################
 
 
@@ -486,9 +463,11 @@ class VariableDistributionPlot(object):
         # plot the cuts
         if self.cuts:
             for ax in h_axes:
-                self.indicate_cut(ax, arrow=True)
+                cur_ax = self.canvas.select_axes(ax[0])
+                self.indicate_cut(cur_ax, arrow=True)
             for ax in r_axes + cu_axes:
-                self.indicate_cut(ax, arrow=False)
+                cur_ax = self.canvas.select_axes(ax[0])
+                self.indicate_cut(cur_ax, arrow=False)
         # cleanup
         leftplotedge = n.inf
         rightplotedge = -n.inf

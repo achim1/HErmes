@@ -249,6 +249,11 @@ def test_dataset(prepare_testtable):
                          definitions=[("readout","energy")])
 
     data.add_variable(energy)
+    data.add_variable(mc_p_en)
+    data.add_variable(mc_p_ze)
+    data.add_variable(mc_p_we)
+    data.add_variable(mc_p_ty)
+
     data.read_variables()
     assert len(data.get_category("exp").vardict["energy"].data) > 0
     assert len(data.get_category("nu").vardict["energy"].data) > 0

@@ -109,10 +109,14 @@ def harvest_files(path, ending=".bz2", sanitizer=lambda x : x,\
         files = []
         ls = sub.Popen(["ls","-a",path],stdout=sub.PIPE,stdin=sub.PIPE).communicate()[0].split()
         # remove by-products
+
+        ls = [x.decode() if isinstance(x,bytes) else x for x in ls]
         ls = [x for x in ls if (x != ".") and (x != "..")]
+
         if isinstance(path, bytes):
             path = str(path)
         for subpath in ls:
+
             subpath = str(subpath) # path and subpath both have to be of same type
             if os.path.isdir(os.path.join(path, subpath)):
                 sub_ls = sub.Popen(["ls","-a",os.path.join(path,subpath)],stdout=sub.PIPE,stdin=sub.PIPE).communicate()[0].split()
@@ -120,17 +124,18 @@ def harvest_files(path, ending=".bz2", sanitizer=lambda x : x,\
                 files += [os.path.join(path,os.path.join(subpath,subsubpath)) for subsubpath in sub_ls]
             elif os.path.isfile(os.path.join(path,subpath)):
                 files += [os.path.join(path,subpath)]
-                 
+
             if "*" in ending:
                 ending = ending.replace("*","")
-            files = [x for x in files if x.endswith(ending)]
+            files = [x for x in files if str(x).endswith(ending)]
+
     else:
         if not ending.startswith("*"):
             ending = "*" + ending
 
         tmpindirs = [item[0] for item in os.walk(path,followlinks=True)]
         files = reduce(lambda x,y : x+y,list(map(glob,[os.path.join(direc,ending) for direc in tmpindirs])))
-    files = list(filter(sanitizer,files))
+    files = list(filter(sanitizer, files))
     files = [prefix + x for x in files]
     files = sorted(files) # ensure that each call returns exact same list
     if "h5" in ending:

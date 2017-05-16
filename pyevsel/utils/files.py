@@ -44,7 +44,7 @@ def _regex_compiler(cfgsection,cfgname,transform = lambda x : x
         cmp = re.compile(config.get(cfgsection,cfgname))
         try:
             grps = cmp.search(filename).groups()
-        except (AttributeError,ValueError):
+        except (AttributeError,ValueError, TypeError):
             return None
         for i in grps:
             res.append(transform(i))
@@ -170,7 +170,11 @@ def group_names_by_regex(names,regex=EXP_RUN_ID,firstpattern=GCD,estimate_first=
         groupdict[i] = [j[1] for j in meta_names if j[0] == i]
 
     if firstpattern is not None:
+        #print groupdict
         for k in list(groupdict.keys()):
+            #print firstpattern
+            #print k
+            #print firstpattern(groupdict[k])
             first = list(filter(firstpattern,groupdict[k]))
             if len(first) > 1: 
                 Logger.info("First entry is not unique! {}".format(first.__repr__()))  
@@ -178,7 +182,8 @@ def group_names_by_regex(names,regex=EXP_RUN_ID,firstpattern=GCD,estimate_first=
                     groupdict[k].remove(j)
                 first = estimate_first(first)
                 Logger.info("Picked {} by given estimate_first fct!".format(first[0]))
-        
+            elif len(first) == 0:
+                continue         
             else:
                 first = first[0]
                 groupdict[k].remove(first)

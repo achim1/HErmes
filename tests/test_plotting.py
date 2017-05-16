@@ -6,6 +6,7 @@ import pyevsel.plotting.plotting as pltplt
 
 from pyevsel.plotting import plotcolors as pc
 from pyevsel.plotting import canvases as cv
+from pyevsel.plotting import layout
 
 import numpy as np
 
@@ -31,12 +32,16 @@ def test_plotcolors_ColorDict():
 def test_plotcolors_get_color_palette():
     cd = pc.get_color_palette()
     assert isinstance(cd, pc.ColorDict)
-
+    pc.seaborn_loaded = False
+    cd = pc.get_color_palette()
+    assert isinstance(cd, pc.ColorDict)
 
 def test_YStackedCanvas(png_file):
     import pylab as p
     import os.path
 
+    canvas = cv.YStackedCanvas(figsize=layout.FIGSIZE_A4_LANDSCAPE)
+    assert isinstance(canvas.figure, p.Figure)
     canvas = cv.YStackedCanvas()
     assert isinstance(canvas.figure, p.Figure)
     xlim = (1, 10)

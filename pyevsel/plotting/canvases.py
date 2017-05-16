@@ -18,9 +18,7 @@ except ImportError:
         def Image(x): x
 
 # golden cut values
-# CW = current width of my thesis (adjust)
-CW = 5.78851
-S  = 1.681
+from .layout import FIGSIZE_A4_SQUARE, FIGSIZE_A4, FIGSIZE_A4_LANDSCAPE
 
 ##########################################
 
@@ -32,7 +30,7 @@ class YStackedCanvas(object):
 
     def __init__(self, subplot_yheights=(.2,.2,.5),\
                        padding=(0.15, 0.05, 0.0, 0.1 ),\
-                       figsize=(CW, CW*S)):
+                       figsize="auto"):
         """
         Create a new canvas with multiple axes on top of each other.
         The height of the individual axes can be specified.
@@ -42,13 +40,18 @@ class YStackedCanvas(object):
             subplot_yheights (iterable): The normalized heights of the individual
                                          subplots. Sorted from bottom to top
             padding (left, right, top, bottom): The padding around the figure
-            figsize (width, height): The size of the figure (in inches).
+            figsize (width, height) or str: The size of the figure (in inches). Keyword "auto" 
+                                            means the plot figures it out by itself.
         """
         assert sum(subplot_yheights) <= 1., "subplot_yheights must be in relative heights"
         assert len(padding) == 4, "Needs 4 values for padding (left, right, top, bottom)"
 
         self.axes = None
-        self.figure = p.figure(figsize=figsize)
+        if figsize == "auto": # FIXME: something more clever should happen here
+            self.figure = p.figure(figsize=FIGSIZE_A4_SQUARE)
+        else:
+            self.figure = p.figure(figsize=figsize)
+
         # self.create_top_stacked_axes(heights=axeslayout)
         left, right, top, bot = padding
         width = 1. - left - right

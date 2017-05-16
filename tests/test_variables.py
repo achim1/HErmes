@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-
+import pandas as pd
 import pyevsel.variables.categories as cat
 import pyevsel.variables.dataset as ds
 import pyevsel.variables.variables as v
@@ -31,6 +31,7 @@ mc_p_ts     = V('mc_p_ts', definitions=[('CorsikaWeightMap','TimeScale')])
 mc_nevents  = V("mc_nevents", definitions=[("I3MCWeightDict","NEvents")])
 
 TESTDATALEN = 10000
+SPARSETESTDATALEN = 7000
 
 def hobo_weightfunc(*args, **kwargs):
     return np.ones(TESTDATALEN)
@@ -61,6 +62,9 @@ def prepare_testtable(tmpdir_factory):
         Weight = Float64Col()
         TimeScale = Float64Col()
 
+    class FailedReco(IsDescription):
+        energy = Float64Col()
+        
 
     data = np.random.normal(5,10, TESTDATALEN)
     testdatafile = tmpdir_factory.mktemp('data').join("testdata.h5")
@@ -81,9 +85,72 @@ def prepare_testtable(tmpdir_factory):
         particle['zenith'] = float(100. * data[i] ** 2)
         particle.append()
     table.flush()
+    table = testfile.create_table("/", 'FailedReco', FailedReco, "reco with different length")
+    particle = table.row
+    for i in range(TESTDATALEN -10):
+        particle['energy'] = float(100. * data[i] ** 2)
+    table.flush()
     table = testfile.create_table("/", 'CorsikaWeightMap', CorsikaWeightMap, "cwm example")
     particle = table.row
     for i in range(TESTDATALEN):
+        particle['DiplopiaWeight'] = float(data[i])
+        particle['Weight'] = float(data[i])
+        particle['TimeScale'] = float(100. * data[i] ** 2)
+        particle.append()
+    table.flush()
+    testfile.close()
+    return testdatafile
+
+@pytest.fixture(scope='session')
+def prepare_sparser_testtable(tmpdir_factory):
+    from tables import IsDescription, Float64Col, open_file
+    import numpy as np
+
+    class TestParticle(IsDescription):
+        energy = Float64Col()  # double (double-precision)
+        x = Float64Col()
+
+    class MCPrimary(IsDescription):
+        energy = Float64Col()
+        type = Float64Col()
+        zenith = Float64Col()
+
+    class CorsikaWeightMap(IsDescription):
+        DiplopiaWeight = Float64Col()
+        Weight = Float64Col()
+        TimeScale = Float64Col()
+
+    class FailedReco(IsDescription):
+        energy = Float64Col()
+        
+
+    data = np.random.normal(5,10, SPARSETESTDATALEN)
+    testdatafile = tmpdir_factory.mktemp('data').join("testdata.h5")
+    testfile = open_file(str(testdatafile.realpath()), mode="w")
+    #group = testfile.create_group("/", 'detector', 'Detector information')
+    table = testfile.create_table("/", 'readout', TestParticle, "Readout example")
+    particle = table.row
+    for i in range(SPARSETESTDATALEN):
+        particle['x'] = float(data[i])
+        particle['energy'] = float(100.*data[i]**2)
+        particle.append()
+    table.flush()
+    table = testfile.create_table("/", 'MCPrimary', MCPrimary, "mc primary example")
+    particle = table.row
+    for i in range(SPARSETESTDATALEN):
+        particle['type'] = float(data[i])
+        particle['energy'] = float(100. * data[i] ** 2)
+        particle['zenith'] = float(100. * data[i] ** 2)
+        particle.append()
+    table.flush()
+    table = testfile.create_table("/", 'FailedReco', FailedReco, "reco with different length")
+    particle = table.row
+    for i in range(SPARSETESTDATALEN -10):
+        particle['energy'] = float(100. * data[i] ** 2)
+    table.flush()
+    table = testfile.create_table("/", 'CorsikaWeightMap', CorsikaWeightMap, "cwm example")
+    particle = table.row
+    for i in range(SPARSETESTDATALEN):
         particle['DiplopiaWeight'] = float(data[i])
         particle['Weight'] = float(data[i])
         particle['TimeScale'] = float(100. * data[i] ** 2)
@@ -139,9 +206,14 @@ def test_simcat(prepare_testtable):
     import os.path
 
     sim = cat.Simulation("neutrino")
+    assert sim.explore_files() is None
+    assert hash(sim) == hash((sim.name,""))
+    assert sim == sim
+    assert len(sim) == 0
+
     filename = str(prepare_testtable.realpath())
     sim.get_files(os.path.split(filename)[0], ending=".h5", prefix="", sanitizer=lambda x : "test" in x)
-    sim.get_files(os.path.split(filename)[0], use_ls = True, ending=".h5", prefix="", sanitizer=lambda x : "test" in x)
+    sim.get_files(os.path.split(filename)[0], use_ls = True, ending=".h5", prefix="", sanitizer=lambda x : "test" in x, force=True)
     assert isinstance(sim.explore_files(), list)
     assert len(sim.files) > 0
 
@@ -154,11 +226,21 @@ def test_simcat(prepare_testtable):
         sim.add_variable(var)
 
     sim.read_variables()
+    lengths = sim.show() 
+    assert isinstance(lengths, dict)
     assert sim.is_harvested
     assert sim.mc_p_readout
+    sim.get_files(os.path.split(filename)[0], use_ls = True, ending=".h5", prefix="", sanitizer=lambda x : "test" in x, force=True)
+    sim.add_variable(energy)
+    for var in [mc_p_en, mc_p_ty, mc_p_ze, mc_p_we, mc_p_gw, mc_p_ts]:
+        sim.add_variable(var)
+
+    sim.read_variables()
+    
 
     assert len(sim.get("energy")) > 0
     assert len(sim) > 0
+    simlenuncut = len(sim)
     assert "energy" in sim.variablenames
     def wf(x,y,**kwargs):
         return np.ones(TESTDATALEN)
@@ -166,6 +248,15 @@ def test_simcat(prepare_testtable):
     sim.get_weights(lambda x: x)
     #assert np.isfinite(sim.livetime)
     assert sim.livetime == 1.
+
+    energycut = cut.Cut(("energy", ">", 1))
+    sim.add_cut(energycut)
+    sim.apply_cuts()
+    sim.undo_cuts()
+    sim.delete_cuts()
+    assert len(sim) == simlenuncut
+    
+
 
 def tset_reweighted_simcat(prepare_testtable):
     import numpy as np
@@ -223,30 +314,45 @@ def test_datcat(prepare_testtable):
 
 
 
-def test_dataset(prepare_testtable):
+def test_dataset(prepare_testtable, prepare_sparser_testtable):
     import os.path
 
     exp = cat.Data("exp")
     sim = cat.Simulation("nu")
     filename = str(prepare_testtable.realpath())
-
+    sparser_filename = str(prepare_sparser_testtable.realpath())
     exp.get_files(os.path.split(filename)[0], ending=".h5", prefix="", sanitizer=lambda x: "test" in x)
-    sim.get_files(os.path.split(filename)[0], ending=".h5", prefix="", sanitizer=lambda x: "test" in x)
+    sim.get_files(os.path.split(sparser_filename)[0], ending=".h5", prefix="", sanitizer=lambda x: "test" in x)
 
     sim2 = cat.ReweightedSimulation("conv_nu", sim)
     data = ds.Dataset(exp, sim)
     assert len(data.categorynames) == 2
     assert len(data.categories) == 2
 
+    # test helpers
+    assert ds.get_label(exp) == "exp"
+    exp.plot_options = {"label" : "foo"}
+    assert ds.get_label(exp) == "foo" 
 
     data.add_category(sim2)
     assert isinstance(data.__repr__(), str)
     assert len(data.categorynames) == 3
     assert len(data.categories) == 3
     assert len(exp.files) > 0
+    with pytest.raises(KeyError) as e_info:
+        data.get_category("blubb")
+
+    del data
+    data = ds.Dataset(exp, sim, sim2)
+
     energy = v.Variable("energy",bins=np.linspace(0,10,20),\
                          label=r"$\log(E_{rec}/$GeV$)$",\
                          definitions=[("readout","energy")])
+    sparse_energy = v.Variable("sparseenergy",bins=np.linspace(0,10,20),\
+                         label=r"$\log(E_{rec}/$GeV$)$",\
+                         definitions=[("FailedReco","energy")])
+    
+    
 
     data.add_variable(energy)
     data.add_variable(mc_p_en)
@@ -261,8 +367,11 @@ def test_dataset(prepare_testtable):
     assert len(data.get_category("nu")) > 0
     assert data.get_category("exp") == exp
     sparsest = data.get_sparsest_category()
+    assert sparsest == "nu" 
     sparsest = data.get_sparsest_category(omit_zeros=False)
-
+    assert sparsest == "nu" 
+    allenergy = data.get_variable("energy")
+    assert isinstance(allenergy, pd.DataFrame) 
     # continue here
     def model(*args, **kwargs):
         return None
@@ -271,3 +380,7 @@ def test_dataset(prepare_testtable):
     data.set_weightfunction(hobo_weightfunc)
     data.get_weights(models)
     assert len(data.weights) > 0
+    data.integrated_rate
+    data.sum_rate(categories=["exp", "nu"])
+    data.calc_ratio(nominator=["exp"], denominator=["nu"])
+    #data.plot_distribution("energy")

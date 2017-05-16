@@ -175,7 +175,7 @@ class Dataset(object):
         for cat in self.categories:
             var[cat.name] = cat.get(varname)
 
-        return pd.DataFrame.from_dict(var,orient="index")
+        return pd.DataFrame.from_dict(var, orient="index")
 
     def set_livetime(self, livetime):
         """
@@ -301,8 +301,6 @@ class Dataset(object):
         sparsest = self.get_sparsest_category()
 
         bins = self.get_category(sparsest).vardict[name].calculate_fd_bins()
-        tratio,tratio_err = self.calc_ratio(nominator=list(map(self.get_category,ratio[0])),\
-                                            denominator=list(map(self.get_category,ratio[1])))
         plot = VariableDistributionPlot(cuts=cuts,bins=bins)
         plot.plot_options = styles
         plotcategories = self.categories + self.combined_categories 
@@ -311,6 +309,9 @@ class Dataset(object):
             if cumulative:
                 plot.add_cumul(cat.name)
         if len(ratio[0]) and len(ratio[1]):
+            tratio,tratio_err = self.calc_ratio(nominator=ratio[0],\
+                                            denominator=ratio[1])
+
             plot.add_ratio(ratio[0],ratio[1],total_ratio=tratio,total_ratio_errors=tratio_err)
         plot.plot(axes_locator=axes_locator,heights=heights)
         #plot.add_legend()
@@ -351,6 +352,8 @@ class Dataset(object):
         """
         if categories is None:
             return 0,0
+
+        categories = [self.get_category(i) if isinstance(i, str) else i for i in categories]
         rate,error = categories[0].integrated_rate
         error = error**2
         for cat in categories[1:]:
@@ -370,6 +373,9 @@ class Dataset(object):
         Returns:
             tuple
         """
+        nominator = [self.get_category(i) if isinstance(i, str) else i for i in nominator]
+        denominator = [self.get_category(i) if isinstance(i, str) else i for i in denominator]
+
         a,a_err = self.sum_rate(categories=nominator)
         b,b_err = self.sum_rate(categories=denominator)
         if b == 0:

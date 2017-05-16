@@ -51,4 +51,10 @@ def test_strip_all_endings(prepare_test_data_for_strip_all_endings):
     (func_arg, desired_result) = prepare_test_data_for_strip_all_endings
     assert files.strip_all_endings(func_arg) == desired_result
 
+def test_group_by_regex():
+    names = [ "data_Run51000000.i3.bz2","test.GCD.i3.bz2",\
+             "foo_Run51000000.i3.bz2", "foo_Run51000000.i3.bz2"]
+    result = files.group_names_by_regex(names)
+    assert len(result[51000000]) == 3
+
 

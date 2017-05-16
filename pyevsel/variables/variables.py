@@ -265,6 +265,7 @@ class CompoundVariable(AbstractBaseVariable):
         self.variables = variables
         self.operation = operation
         self.data = pd.Series()
+        self.definitions = ((self.__repr__()),)
 
     def rewire_variables(self,vardict):
         """

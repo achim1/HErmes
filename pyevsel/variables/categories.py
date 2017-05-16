@@ -120,9 +120,9 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
         self.cuts.append(cut)
 
-    def apply_cuts(self,inplace=False):
+    def apply_cuts(self, inplace=False):
         """
-        Apply the added cuts
+        Apply the added cuts.
 
         Keyword Args:
             inplace (bool): If True, cut the internal variable buffer
@@ -152,14 +152,17 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         for cut in self.cuts:
             if cut.condition is not None:
                 continue
-            for varname,(op,value) in cut:
+            for varname, (op,value) in cut:
                 s = self.get(varname)
-                mask = np.logical_and(mask,op(s,value) )
+                assert len(mask) == len(op(s, value)),\
+                    "Cutting fails due to different varialbe lengths for {}".format(varname)
+                mask = np.logical_and(mask, op(s,value))
+
         if inplace:
             for k in list(self.vardict.keys()):
                 self.vardict[k].data = self.vardict[k].data[mask]
         else:
-            self.cutmask = np.array(mask,dtype=bool)
+            self.cutmask = np.array(mask, dtype=bool)
 
     def undo_cuts(self):
         """
@@ -459,6 +462,28 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         """
         self.plot_options = options
 
+    def show(self):
+        """
+        Print out the names of the loaded variables
+
+        Returns:
+            dict (name, len)
+        """
+        if not self.is_harvested:
+            Logger.warn("No variables for {} loaded yet!".format(self.name))
+            return {}
+
+        lengths = {}
+        for k in self.vardict.keys():
+            lengths[k] = len(self.get(k))
+
+        repr = ""
+        for k in lengths:
+            repr += "{} with definition {} : {} data points\n".\
+                format(k, self.vardict[k].definitions[0][0], lengths[k])
+
+        Logger.info(repr)
+        return lengths
 
 class Simulation(AbstractBaseCategory):
     """

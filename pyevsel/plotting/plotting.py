@@ -446,6 +446,7 @@ class VariableDistributionPlot(object):
                 k = self.histograms[list(self.histograms.keys())[ax[0]]]
                 ymax, ymin = self._draw_distribution(cur_ax,k,log=log)
             cur_ax.set_ylim(ymin=ymin - 0.1*ymin,ymax=1.1*ymax)
+            cur_ax.grid(True)
         lgax = self.canvas.select_axes(-1) # most upper one
         legend_kwargs = {"bbox_to_anchor": [0., 1.0, 1., .102],
                          "loc": 3,
@@ -457,9 +458,12 @@ class VariableDistributionPlot(object):
                          "handlelength": 2,
                          "numpoints": 1}
         lg = lgax.legend(**legend_kwargs)
-        #legendwidth = LoadConfig()
-        #legendwidth = legendwidth['legendwidth']
-        lg.get_frame().set_linewidth(legendwidth)
+        if lg is not None:
+            lg.get_frame().set_linewidth(legendwidth)
+            lg.get_frame().set_edgecolor("k")
+        else:
+            Logger.warn("Can not set legendwidth!")       
+ 
         # plot the cuts
         if self.cuts:
             for ax in h_axes:

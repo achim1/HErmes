@@ -208,11 +208,12 @@ def check_hdf_integrity(infiles,checkfor = None ):
 
 
     """
+    import tables
 
     integer_files = []
     corrupt_files = []
     allfiles = len(infiles)
-    
+
     for file_to_check in infiles:
     
         test = sub.Popen(['h5ls','-g',file_to_check],stdout=sub.PIPE,stderr=sub.PIPE)

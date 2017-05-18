@@ -6,6 +6,8 @@ import pyevsel.variables.dataset as ds
 import pyevsel.variables.variables as v
 import pyevsel.variables.magic_keywords as mk
 
+import testvardefs
+
 # test the magic keywords ..
 from pyevsel.variables import magic_keywords
 
@@ -344,6 +346,17 @@ def test_dataset(prepare_testtable, prepare_sparser_testtable):
 
     del data
     data = ds.Dataset(exp, sim, sim2)
+    data.load_vardefs(testvardefs)
+    data.read_variables()
+    assert len(data.get_category("exp").vardict["energy"].data) > 0
+    assert len(data.get_category("nu").vardict["energy"].data) > 0
+
+    data = ds.Dataset(exp, sim, sim2)
+    data.load_vardefs({"exp" : testvardefs, "nu" : testvardefs})
+    data.read_variables()
+    assert len(data.get_category("exp").vardict["energy"].data) > 0
+    assert len(data.get_category("nu").vardict["energy"].data) > 0
+
 
     energy = v.Variable("energy",bins=np.linspace(0,10,20),\
                          label=r"$\log(E_{rec}/$GeV$)$",\

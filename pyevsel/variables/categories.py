@@ -228,14 +228,18 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         Keyword Args:
             datasets (dict(dataset_id : nfiles)): i given, load only files from dataset dataset_id  set nfiles parameter to amount of L2 files the loaded files will represent
             force (bool): forcibly reload filelist (pre-readout vars will be lost)
+            append (bool): keep the already aquired files and only append the new ones
             all other kwargs will be passed to
             utils.files.harvest_files
 
         """
 
         force = False
+        append = False
         if "force" in kwargs:
             force = kwargs.pop("force")
+        if "append" in kwargs:
+            append = kwargs.pop("append")
         if self.is_harvested:
             Logger.info("Variables have already been harvested!\
                          if you really want to reload the filelist,\
@@ -249,18 +253,21 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         if "datasets" in kwargs:
             filtered_files = []
             self.datasets = kwargs.pop("datasets")
-            files = harvest_files(*args,**kwargs)
+            files = harvest_files(*args, **kwargs)
             datasets = [self._ds_regexp(x) for x in files]
             assert len(datasets) == len(files)
 
-            ds_files = list(zip(datasets,files))
+            ds_files = list(zip(datasets, files))
             for k in list(self.datasets.keys()):
                 filtered_files.extend([x[1] for x in ds_files if x[0] == k])
             files = filtered_files
         else:
-            files = harvest_files(*args,**kwargs)
+            files = harvest_files(*args, **kwargs)
 
-        self.files = files
+        if append:
+            self.files += files
+        else:
+            self.files = files
 
     def explore_files(self):
         """

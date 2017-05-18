@@ -75,15 +75,22 @@ class Dataset(object):
         for cat in self.categories:
             cat.add_variable(variable)
 
-    def load_vardefs(self, module):
+    def load_vardefs(self, vardefs):
         """
         Load the variable definitions from a module
 
         Args:
-            module (python module): Needs to contain variable definitions
+            vardefs (python module/dict): A module needs to contain variable definitions.
+                                         It can also be a dictionary of categoryname->module
+
         """
-        for cat in self.categories:
-            cat.load_vardefs( module)
+        if isinstance(vardefs, dict):
+            for k in vardefs:
+                self.__dict__[k].load_vardefs(vardefs)
+
+        else:
+            for cat in self.categories:
+                cat.load_vardefs(vardefs)
 
     #@GetTiming
     def read_variables(self, names=None):

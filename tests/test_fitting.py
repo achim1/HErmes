@@ -132,7 +132,7 @@ def test_model_clear():
 
 def test_gauss():
     assert functions.gauss(1, 0, .2) == functions.n_gauss(1, 0, .2, 1)
-
+    assert isinstance(functions.calculate_sigma_from_amp(1), float)
     data = np.random.normal(0, .2, 10000)
     gaussmod = model.Model(functions.gauss)
 
@@ -141,7 +141,7 @@ def test_gauss():
     assert gaussmod.ndf == 198
 
     gaussmod.fit_to_data()
-    assert 0.7 < gaussmod.chi2_ndf < 1.2
+    assert 0.5 < gaussmod.chi2_ndf < 1.2
     assert -0.1 < gaussmod.best_fit_params[0] < .1
     assert .18 < gaussmod.best_fit_params[1] < .22
 
@@ -159,4 +159,24 @@ def test_poisson():
     assert 0.5 < mod.chi2_ndf < 1.2
     assert 90 < mod.best_fit_params[0] < 110
 
+def test_chi2():
 
+    assert functions.calculate_chi_square(np.array([1]), np.array([1])) == 0
+    chi2 = functions.calculate_chi_square(np.random.normal(0, .2, 1000), np.random.normal(0, .2, 1000))
+    assert isinstance(chi2, float)
+
+def test_exponential():
+    assert functions.exponential(0, 5) == 1
+
+    mod = model.Model(lambda x, y: (1. / y) * functions.exponential(x, (1. / y)))
+    beta = 20.
+
+    data = np.random.exponential(beta, size=10000)
+    mod.startparams = [19.]
+    mod.add_data(data, create_distribution=True, normalize=True, density=False)
+
+    assert mod.ndf == 199
+
+    mod.fit_to_data()
+    assert 0.1 < mod.chi2_ndf < 20
+    assert 15 < mod.best_fit_params[0] < 25 #FIXME: fit is really bad...

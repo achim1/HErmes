@@ -73,6 +73,7 @@ def n_gauss(x, mu, sigma, n):
 
     return _gaussnorm(sigma, n) * np.exp(-np.power((x - (n * mu)), 2) / (2 * n * (sigma ** 2)))
 
+####################################################
 
 def calculate_sigma_from_amp(amp):
     """
@@ -87,20 +88,22 @@ def calculate_sigma_from_amp(amp):
     """
     return 1/(np.sqrt(2*np.pi)*amp)
 
+#####################################3
 
-def exponential(x, N, n_noise):
+def exponential(x, lmbda):
     """
-    An exponential model (for noise?)
+    An exponential model, e.g. for a decay with coefficent lmbda.
 
     Args:
-        x:
-        N:
-        n_noise:
+        x (float): input
+        lmbda (float): The exponent of the exponential
 
     Returns:
         np.ndarray
     """
-    return N * np.exp(-n_noise * x)
+    return np.exp(-lmbda * x)
+
+#####################################################
 
 def calculate_chi_square(data, model_data):
     """
@@ -118,6 +121,6 @@ def calculate_chi_square(data, model_data):
     chi = ((data - model_data)**2/data)
     return chi[np.isfinite(chi)].sum()
 
-
+#################################################
 
 

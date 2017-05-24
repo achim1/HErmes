@@ -12,7 +12,7 @@ from future import standard_library
 standard_library.install_aliases()
 
 
-def poisson(lmbda, k):
+def poisson(k, lmbda):
     """
     Poisson distribution
 
@@ -28,7 +28,7 @@ def poisson(lmbda, k):
 
 ################################################
 
-def gauss(x, mu, sigma, n):
+def gauss(x, mu, sigma):
     """
     Returns a normed gaussian.
 
@@ -41,6 +41,32 @@ def gauss(x, mu, sigma, n):
     Returns:
 
     """
+
+    def _gaussnorm(sigma):
+        return 1 / (sigma * np.sqrt(2 * np.pi))
+
+    return _gaussnorm(sigma) * np.exp(-np.power((x - ( mu)), 2) / (2 *  (sigma ** 2)))
+
+
+
+################################################
+
+def n_gauss(x, mu, sigma, n):
+    """
+    Returns a normed gaussian in the case of n ==1. If n > 1, The gaussian
+    mean is shifted by n and its width is enlarged by the factor of n.
+    The envelope of a sequence of these gaussians will be an expoenential.
+
+    Args:
+        x (np.ndarray): x values
+        mu (float): Gauss mu
+        sigma (float): Gauss sigma
+        n (int): > 0, linear coefficient
+
+    Returns:
+
+    """
+    assert n > 0, "Can not compute gauss with n <= 0"
 
     def _gaussnorm(sigma, n):
         return 1 / (sigma * np.sqrt(2 * n * np.pi))

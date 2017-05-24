@@ -86,7 +86,12 @@ class Dataset(object):
         """
         if isinstance(vardefs, dict):
             for k in vardefs:
-                self.__dict__[k].load_vardefs(vardefs)
+                # FIXME: the way over self.__dict__ does not work
+                # maybe there is something more fishy...
+                for cat in self.categories:
+                    if cat.name == k:
+                        cat.load_vardefs(vardefs[k])
+                #self.__dict__[k].load_vardefs(vardefs)
 
         else:
             for cat in self.categories:

@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 
 from pyevsel.fitting import fit, model, functions
 
@@ -123,10 +124,39 @@ def test_model_plot_result_distribution():
     model.fit_to_data()
     assert isinstance(model.plot_result(), p.Figure)
 
-    
 def test_model_clear():
     model = modelfactory()
     newmodel = model
     model.clear()
     assert model == newmodel
+
+def test_gauss():
+    assert functions.gauss(1, 0, .2) == functions.n_gauss(1, 0, .2, 1)
+
+    data = np.random.normal(0, .2, 10000)
+    gaussmod = model.Model(functions.gauss)
+
+    gaussmod.startparams = [-1, 1]
+    gaussmod.add_data(data, create_distribution=True, normalize=True)
+    assert gaussmod.ndf == 198
+
+    gaussmod.fit_to_data()
+    assert 0.7 < gaussmod.chi2_ndf < 1.2
+    assert -0.1 < gaussmod.best_fit_params[0] < .1
+    assert .18 < gaussmod.best_fit_params[1] < .22
+
+def test_poisson():
+
+    data = np.random.poisson(100, size=10000)
+
+    mod = model.Model(functions.poisson)
+
+    mod.startparams = [80]
+    mod.add_data(data, create_distribution=True, normalize=True, density=False)
+    assert mod.ndf == 199
+
+    mod.fit_to_data()
+    assert 0.5 < mod.chi2_ndf < 1.2
+    assert 90 < mod.best_fit_params[0] < 110
+
 

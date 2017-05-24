@@ -95,7 +95,7 @@ class Model(object):
         """
         return sum(self.n_free_params)
 
-    def _create_distribution(self,data, nbins, normalize=False):
+    def _create_distribution(self,data, nbins, normalize=False, density=True):
         """
         Create a distribution
 
@@ -109,7 +109,7 @@ class Model(object):
 
         self.norm = 1
         if normalize:
-            h_norm = h.normalized(density=True)
+            h_norm = h.normalized(density=density)
             norm = h.bincontent / h_norm.bincontent
             norm = norm[np.isfinite(norm)][0]
             self.norm = norm
@@ -244,6 +244,7 @@ class Model(object):
     def add_data(self, data, nbins=200,\
                  create_distribution=False,\
                  normalize=False,\
+                 density=True,\
                  xs=None,\
                  subtract=None):
         """
@@ -257,12 +258,13 @@ class Model(object):
             nbins (int):
             subtract (callable):
             normalize (bool): normalize the data before adding
-
+            density (bool): if normalized, assume the data is a pdf.
+                            if False, use bincount for normalization.
         Returns:
 
         """
         if create_distribution:
-            self._create_distribution(data, nbins, normalize)
+            self._create_distribution(data, nbins, normalize, density=density)
             self.ndf = nbins - len(self.startparams)
         else:
             assert xs is not None, "Have to give xs if not histogramming!" 
@@ -334,7 +336,7 @@ class Model(object):
         #    norm = norm[np.isfinite(norm)][0]
 
         #self.norm = norm
-        chi2 = (funcs.calculate_chi_square(self.data, self.norm * model(self.xs, *parameters)))
+        chi2 = (funcs.calculate_chi_square(self.norm*self.data, self.norm * model(self.xs, *parameters)))
         self.chi2_ndf = chi2/self.ndf
 
         # FIXME: new feature

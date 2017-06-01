@@ -126,6 +126,26 @@ def GetGenerator(datasets):
 
 ###########################################
 
+
+def constant_weights(size, scale=1.):
+    """
+    Calculate a constant weight for all the entries, e.g. unity
+
+    Args:
+        size (int): The size of the returned arraz (d)
+
+    Keyword Args:
+        scale (float): The returned weight is 1/scale
+
+    Returns:
+        np.ndarray
+    """
+    return (1/scale)*np.ones(size)
+
+
+############################################
+
+
 def GetModelWeight(model,datasets,\
                    mc_datasets=None,\
                    mc_p_en=None,\

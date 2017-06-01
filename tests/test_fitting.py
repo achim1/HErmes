@@ -180,3 +180,7 @@ def test_exponential():
     mod.fit_to_data()
     assert 0.1 < mod.chi2_ndf < 20
     assert 15 < mod.best_fit_params[0] < 25 #FIXME: fit is really bad...
+
+
+#def test_fitmodel()
+#    pass

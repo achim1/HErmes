@@ -24,12 +24,13 @@ def load_dataset(config, variables=None):
     configuration file
     
     Args:
-        config (str): json style config file
+        config (str/dict): json style config file or dict
     """
+    cfg = config
+    if not isinstance(config, dict):
+        assert os.path.exists(config), "Config file {} does not exist!".format(config)
+        cfg = hjson.load(open(config))
 
-    assert os.path.exists(config), "Config file {} does not exist!".format(config)
-
-    cfg = hjson.load(open(config))
     categories = dict()
     weightfunctions = dict()
     models = dict()
@@ -40,18 +41,32 @@ def load_dataset(config, variables=None):
             categories[cat] = c.Simulation(cat)
             # remember that json keys are strings, so 
             # convert to int
-            datasets = {int(x): int(thiscat['datasets'][x]) for x in thiscat['datasets'] }
-            categories[cat].get_files(os.path.join(files_basepath,thiscat['subpath']),prefix=thiscat["file_prefix"],datasets=datasets,ending=thiscat["file_type"])
-            try:
-                fluxclass, flux = thiscat["model"].split(".")
-                models[cat] = getattr(dict(inspect.getmembers(fluxes))[fluxclass],flux)
-            except ValueError:
-                Logger.warning("{} does not seem to be a valid model for {}. This might cause troubles. If not, it is probably fine!".format(thiscat["model"],cat))
-                models[cat] = None 
-            weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]] 
+            datasets = {}
+            if "datasets" in thiscat:
+                datasets = {int(x): int(thiscat['datasets'][x]) for x in thiscat['datasets']}
+
+            categories[cat].get_files(os.path.join(files_basepath,\
+                                                   thiscat['subpath']),\
+                                                   prefix=thiscat["file_prefix"],\
+                                                   datasets=datasets,\
+                                                   ending=thiscat["file_type"])
+
+            weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]]
+            if "constant" in thiscat["model_method"]:
+                models[cat] = float(thiscat["model"])
+            else:
+                try:
+                    fluxclass, flux = thiscat["model"].split(".")
+                    models[cat] = getattr(dict(inspect.getmembers(fluxes))[fluxclass],flux)
+                except ValueError:
+                    Logger.warning("{} does not seem to be a valid model for {}. This might cause troubles. If not, it is probably fine!".format(thiscat["model"],cat))
+                    models[cat] = None
+
         elif thiscat["datatype"] == "data":
             categories[cat] = c.Data(cat)
-            categories[cat].get_files(os.path.join(files_basepath,thiscat['subpath']),prefix=thiscat["file_prefix"],ending=thiscat["file_type"])
+            categories[cat].get_files(os.path.join(files_basepath,thiscat['subpath']),\
+                                      prefix=thiscat["file_prefix"],\
+                                      ending=thiscat["file_type"])
             models[cat] = float(thiscat["livetime"])
             weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]] 
             
@@ -80,9 +95,10 @@ def load_dataset(config, variables=None):
 
     # import variable defs
     vardefs = __import__(cfg["variable_definitions"])
-
-    dataset = ds.Dataset(*list(categories.values()),combined_categories=combined_categories)
-    dataset.read_variables(vardefs,names=variables)
+    dataset = ds.Dataset(*list(categories.values()),\
+                         combined_categories=combined_categories)
+    dataset.load_vardefs(vardefs)
+    dataset.read_variables(names=variables)
     dataset.set_weightfunction(weightfunctions)
     dataset.get_weights(models=models)
     return dataset

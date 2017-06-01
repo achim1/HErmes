@@ -75,6 +75,19 @@ class Dataset(object):
         for cat in self.categories:
             cat.add_variable(variable)
 
+    def delete_variable(self, varname):
+        """
+        Delete a variable entirely from the dataset
+
+        Args:
+            varname (str): the name of the variable
+
+        Returns:
+            None
+        """
+        for cat in self.categories:
+            cat.delete_variable(varname)
+
     def load_vardefs(self, vardefs):
         """
         Load the variable definitions from a module

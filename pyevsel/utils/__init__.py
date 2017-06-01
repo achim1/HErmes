@@ -13,7 +13,7 @@ Logger = logger.Logger
 
 ########################################################
 
-def GetTiming(func):
+def timeit(func):
     """
     Use as decorator to get the effective execution time of the decorated function
 

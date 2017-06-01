@@ -217,6 +217,23 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         tmpvar = deepcopy(variable)
         self.vardict[tmpvar.name] = tmpvar
 
+    def delete_variable(self, varname):
+        """
+        Remove a variable entirely from the category
+
+        Args:
+            varname (str): The name of the variable as stored in self.variable dict
+
+        Returns:
+            None
+        """
+        if not varname in self.vardict:
+            Logger.warning("Can not delete variable {} for category {}!".format(varname, self.name))
+            return
+        delvar = self.vardict.pop(varname)
+        del delvar
+
+
     def get_files(self, *args, **kwargs):
         """
         Load files for this category
@@ -250,9 +267,15 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             else:
                 Logger.warning("..using force..")
 
+        # FIXME: not sure if self.datasets should be
+        # reinitialized with empty list here...
+        datasets = {}
         if "datasets" in kwargs:
-            filtered_files = []
+            datasets = kwargs["datasets"]
             self.datasets = kwargs.pop("datasets")
+
+        if datasets:
+            filtered_files = []
             files = harvest_files(*args, **kwargs)
             datasets = [self._ds_regexp(x) for x in files]
             assert len(datasets) == len(files)
@@ -537,7 +560,7 @@ class Simulation(AbstractBaseCategory):
 
         self._mc_p_readout = True
 
-    def get_weights(self,model,model_kwargs = None):
+    def get_weights(self, model=None, model_kwargs = None):
         """
         Calculate weights for the variables in this category
 
@@ -548,6 +571,12 @@ class Simulation(AbstractBaseCategory):
             model_kwargs (dict): Will be passed to model
         """
 
+        # FIXME: clean up this mess
+
+        # inspect the argumentes and the weightfunction
+        if not callable(model):
+            self._weights = pd.Series(np.ones(self.raw_count, dtype=np.float64) / model)
+            return
 
         if not self.mc_p_readout:
             self.read_mc_primary()
@@ -570,7 +599,7 @@ class Simulation(AbstractBaseCategory):
         func_kwargs.update(model_kwargs)
         Logger.info("Getting weights for datasets {}".format(self.datasets.__repr__()))
         self._weights = pd.Series(self._weightfunction(model, self.datasets,\
-                                  **func_kwargs))
+                                   **func_kwargs))
 
     @property
     def livetime(self):

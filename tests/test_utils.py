@@ -1,6 +1,6 @@
 import pytest
 
-from pyevsel.utils import logger, files, itools
+from pyevsel.utils import logger, files, itools, timeit
 
 # helper functions generating test data
 # provide a list of input/output
@@ -57,4 +57,10 @@ def test_group_by_regex():
     result = files.group_names_by_regex(names)
     assert len(result[51000000]) == 3
 
+def test_timit():
+    @timeit 
+    def sleeper():
+        import time
+        time.sleep(2)
 
+    sleeper()

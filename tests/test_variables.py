@@ -1,11 +1,15 @@
 import pytest
 import numpy as np
 import pandas as pd
+import os
+import hjson
 import pyevsel.variables.categories as cat
 import pyevsel.variables.dataset as ds
 import pyevsel.variables.variables as v
 import pyevsel.variables.magic_keywords as mk
 
+
+from pyevsel.variables import load_dataset
 import testvardefs
 
 # test the magic keywords ..
@@ -100,6 +104,7 @@ def prepare_testtable(tmpdir_factory):
         particle['TimeScale'] = float(100. * data[i] ** 2)
         particle.append()
     table.flush()
+    testfile.flush()
     testfile.close()
     return testdatafile
 
@@ -127,7 +132,7 @@ def prepare_sparser_testtable(tmpdir_factory):
         
 
     data = np.random.normal(5,10, SPARSETESTDATALEN)
-    testdatafile = tmpdir_factory.mktemp('data').join("testdata.h5")
+    testdatafile = tmpdir_factory.mktemp('data').join("sparse_testdata.h5")
     testfile = open_file(str(testdatafile.realpath()), mode="w")
     #group = testfile.create_group("/", 'detector', 'Detector information')
     table = testfile.create_table("/", 'readout', TestParticle, "Readout example")
@@ -323,8 +328,8 @@ def test_dataset(prepare_testtable, prepare_sparser_testtable):
     sim = cat.Simulation("nu")
     filename = str(prepare_testtable.realpath())
     sparser_filename = str(prepare_sparser_testtable.realpath())
-    exp.get_files(os.path.split(filename)[0], ending=".h5", prefix="", sanitizer=lambda x: "test" in x)
-    sim.get_files(os.path.split(sparser_filename)[0], ending=".h5", prefix="", sanitizer=lambda x: "test" in x)
+    exp.get_files(os.path.split(filename)[0], ending=".h5", prefix="", sanitizer=lambda x: not "sparse" in x)
+    sim.get_files(os.path.split(sparser_filename)[0], ending=".h5", prefix="", sanitizer=lambda x: "sparse" in x)
 
     sim2 = cat.ReweightedSimulation("conv_nu", sim)
     data = ds.Dataset(exp, sim)
@@ -344,13 +349,16 @@ def test_dataset(prepare_testtable, prepare_sparser_testtable):
     with pytest.raises(KeyError) as e_info:
         data.get_category("blubb")
 
-    del data
     data = ds.Dataset(exp, sim, sim2)
     data.load_vardefs(testvardefs)
     data.read_variables()
+    assert "energy" in data.get_category("exp").vardict
     assert len(data.get_category("exp").vardict["energy"].data) > 0
     assert len(data.get_category("nu").vardict["energy"].data) > 0
+    data.delete_variable("energy")
+    assert "energy" not in data.get_category("exp").vardict
 
+    del data
     data = ds.Dataset(exp, sim, sim2)
     data.load_vardefs({"exp" : testvardefs, "nu" : testvardefs})
     data.read_variables()
@@ -397,3 +405,20 @@ def test_dataset(prepare_testtable, prepare_sparser_testtable):
     data.sum_rate(categories=["exp", "nu"])
     data.calc_ratio(nominator=["exp"], denominator=["nu"])
     #data.plot_distribution("energy")
+
+def test_load_dataset(prepare_testtable):
+    filepath = str(prepare_testtable.realpath())
+    filepath = os.path.split(filepath)[0]
+    thisdir = os.path.split(__file__)[0]
+    config = os.path.join(thisdir,"testconfig.json")
+
+    config = hjson.load(open(config))
+
+    #tweak the config to make the path right
+    config["categories"]["neutrinos"]["subpath"] = filepath
+    config["categories"]["muons"]["subpath"] = filepath
+    config["categories"]["data"]["subpath"] = filepath
+
+    data = load_dataset(config)
+    assert data.weights[1]["neutrinos"] == 1
+

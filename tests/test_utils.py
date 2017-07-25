@@ -2,6 +2,7 @@ import pytest
 
 from pyevsel.utils import logger, files, itools, timeit
 
+from fixturefactory import prepare_testtable
 # helper functions generating test data
 # provide a list of input/output
 
@@ -64,3 +65,10 @@ def test_timit():
         time.sleep(2)
 
     sleeper()
+
+def test_check_hdf_integrity(prepare_testtable):
+
+    files.check_hdf_integrity(str(prepare_testtable.realpath()))
+    files.check_hdf_integrity(str(prepare_testtable.realpath()), checkfor="energy")
+
+

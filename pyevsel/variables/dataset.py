@@ -23,7 +23,10 @@ from copy import deepcopy as copy
 
 def get_label(category):
     if category.plot_options:
-        return category.plot_options["label"]
+        if "label" in category.plot_options:
+            return category.plot_options["label"]
+        else:
+            return category.name
     else:
         return category.name
 
@@ -53,6 +56,8 @@ class Dataset(object):
         # FIXME: if not, there will be problems
         # FIXME: investigate!
         reweighted_categories = []
+
+        self.default_plotstyles = {}
         for cat in args:
             self.__dict__[cat.name] = cat
             if isinstance(cat,categories.ReweightedSimulation):
@@ -101,6 +106,10 @@ class Dataset(object):
             for k in vardefs:
                 # FIXME: the way over self.__dict__ does not work
                 # maybe there is something more fishy...
+                if str(k) == "all":
+                    for cat in self.categories:
+                        cat.load_vardefs(vardefs[k])
+
                 for cat in self.categories:
                     if cat.name == k:
                         cat.load_vardefs(vardefs[k])
@@ -123,6 +132,17 @@ class Dataset(object):
         for cat in self.categories:
             Logger.debug("Reading variables for {}".format(cat))
             cat.read_variables(names=names)
+
+    def drop_empty_variables(self):
+        """
+        Delete variables which have no len
+
+        Returns:
+            None
+        """
+
+        for cat in self.categories:
+            cat.drop_empty_variables()
 
     def set_weightfunction(self, weightfunction=lambda x:x):
         """
@@ -305,6 +325,7 @@ class Dataset(object):
                           axes_locator=((0,"c"),(1,"r"),(2,"h")),
                           heights=(.4,.2,.2),
                           color_palette='dark',
+                          normalized = False,
                           styles = dict(),
                           savepath="",savename="vdistplot"):
         """
@@ -318,6 +339,7 @@ class Dataset(object):
             path (str): The path under which the plot will be saved.
             ratio (list): A ratio plot of these categories will be crated
             color_palette (str): A predifined color palette (from seaborn or plotcolors.py
+            normalized (bool): Normalize the histogram by number of events
             styles (dict): plot styling options
         Returns:
             pyevsel.variables.VariableDistributonPlot
@@ -327,7 +349,10 @@ class Dataset(object):
 
         bins = self.get_category(sparsest).vardict[name].calculate_fd_bins()
         plot = VariableDistributionPlot(cuts=cuts,bins=bins)
-        plot.plot_options = styles
+        if styles:
+            plot.plot_options = styles
+        else:
+            plot.plot_options = self.default_plotstyles
         plotcategories = self.categories + self.combined_categories 
         for cat in [x for x in plotcategories if x.plot]:
             plot.add_variable(cat,name)
@@ -338,7 +363,8 @@ class Dataset(object):
                                             denominator=ratio[1])
 
             plot.add_ratio(ratio[0],ratio[1],total_ratio=tratio,total_ratio_errors=tratio_err)
-        plot.plot(axes_locator=axes_locator,heights=heights)
+        plot.plot(axes_locator=axes_locator,\
+                  heights=heights, normalized=normalized)
         #plot.add_legend()
         plot.canvas.save(savepath,savename,dpi=350)
         return plot

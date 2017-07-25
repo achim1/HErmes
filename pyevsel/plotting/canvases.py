@@ -30,6 +30,7 @@ class YStackedCanvas(object):
 
     def __init__(self, subplot_yheights=(.2,.2,.5),\
                        padding=(0.15, 0.05, 0.0, 0.1 ),\
+                       space_between_plots=0,\
                        figsize="auto"):
         """
         Create a new canvas with multiple axes on top of each other.
@@ -42,6 +43,8 @@ class YStackedCanvas(object):
             padding (left, right, top, bottom): The padding around the figure
             figsize (width, height) or str: The size of the figure (in inches). Keyword "auto" 
                                             means the plot figures it out by itself.
+            space_between_plots (float): Distance between the subplots
+
         """
         assert sum(subplot_yheights) <= 1., "subplot_yheights must be in relative heights"
         assert len(padding) == 4, "Needs 4 values for padding (left, right, top, bottom)"
@@ -66,10 +69,11 @@ class YStackedCanvas(object):
         axes = [p.axes([left, abs_bot, width, heights[0]])]
         abs_bot = bot + heights[0]
         for h in heights[1:]:
+            Logger.warn("Creating axes with {}".format(left, abs_bot, width, h))
             theaxes = p.axes([left, abs_bot, width, h])
             p.setp(theaxes.get_xticklabels(), visible=False)
             axes.append(theaxes)
-            abs_bot += h
+            abs_bot += h + space_between_plots
 
         self.axes = axes
         self.png_filename = None
@@ -158,10 +162,10 @@ class YStackedCanvas(object):
         Set the scope on a certain axes
 
         Args:
-            axes (int): 0, lowest, -1 highest, increasing y-order
+            axes (int): 0 lowest, -1 highest, increasing y-order
 
         Returns:
-            matplotlib.axes.axes: The axes intance
+            matplotlib.axes.axes: The axes instance
         """
         ax = self.axes[axes]
         p.sca(ax)

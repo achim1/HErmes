@@ -7,6 +7,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import numpy as np
+import scipy.stats as st
 from scipy.misc import factorial
 from future import standard_library
 standard_library.install_aliases()
@@ -14,17 +15,19 @@ standard_library.install_aliases()
 
 def poisson(k, lmbda):
     """
-    Poisson distribution
+    Poisson probability
 
     Args:
-        lmbda (int): expected number of occurences
         k (int): measured number of occurences
+        lmbda (int): expected number of occurences
 
     Returns:
-        np.ndarrya
+        np.ndarray
     """
-
-    return np.power(lmbda, k) * np.exp(-1 * lmbda) / factorial(k)
+    k = np.asarray(k, dtype=np.int64)
+    pois = st.poisson(lmbda)
+    return pois.pmf(k)
+    #return np.power(lmbda, k) * np.exp(-1 * lmbda) / factorial(k)
 
 ################################################
 

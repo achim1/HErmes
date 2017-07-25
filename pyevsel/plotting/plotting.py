@@ -27,7 +27,6 @@ p.style.use(STYLE)
 
 ###############################################
 
-
 def create_arrow(ax, x_0, y_0, dx, dy, length,\
                  width = .1, shape="right",\
                  fc="k", ec="k",\
@@ -78,7 +77,6 @@ def create_arrow(ax, x_0, y_0, dx, dy, length,\
     return ax
 
 ###############################################
-
 
 class VariableDistributionPlot(object):
     """
@@ -278,10 +276,19 @@ class VariableDistributionPlot(object):
                                  label)
         return name
 
-    def _draw_distribution(self, ax, name, log=True,\
-                           cumulative=False):
+    def _draw_distribution(self, ax, name,
+                                 log=True,\
+                                 cumulative=False,
+                                 normalized=False):
         """
         Paint the histograms!
+        
+        Args:    
+    
+        Keyword Args:
+            normalized (bool): draw by number of events normalized distribution
+                              
+
         """
         try:
             cfg = copy(self.plot_options[name])
@@ -312,6 +319,8 @@ class VariableDistributionPlot(object):
             histograms = self.histograms
 
         if cfg['histotype'] == 'scatter':
+            if normalized:
+                histograms[name] = histograms[name].normalized()
             histograms[name].scatter(log=log,cumulative=cumulative,\
                                      label=cfg["label"],\
                                      color=scattercolor, **cfg["scatterstyle"])
@@ -383,6 +392,7 @@ class VariableDistributionPlot(object):
              combined_distro=True,\
              combined_ratio=True,\
              combined_cumul=True,
+             normalized=True,
              log=True,
              legendwidth = 1.5):
         """
@@ -395,6 +405,7 @@ class VariableDistributionPlot(object):
             combined_ratio:
             combined_cumul:
             log:
+            normalized (bool):
 
         Returns:
 
@@ -440,11 +451,11 @@ class VariableDistributionPlot(object):
             if combined_distro:
                 for k in list(self.histograms.keys()):
                     print("drawing..",k)
-                    self._draw_distribution(cur_ax,k,log=log)
+                    self._draw_distribution(cur_ax,k,log=log, normalized=normalized)
                 break
             else:
                 k = self.histograms[list(self.histograms.keys())[ax[0]]]
-                ymax, ymin = self._draw_distribution(cur_ax,k,log=log)
+                ymax, ymin = self._draw_distribution(cur_ax,k,log=log, normalized=normalized)
             cur_ax.set_ylim(ymin=ymin - 0.1*ymin,ymax=1.1*ymax)
             cur_ax.grid(True)
         lgax = self.canvas.select_axes(-1) # most upper one

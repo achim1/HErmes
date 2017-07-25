@@ -206,6 +206,10 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
         self.data = harvest(files, self.definitions)
         self.declare_harvested()
 
+    @abc.abstractmethod
+    def rewire_variables(self, vardict):
+        return
+
 ############################################
 
 class Variable(AbstractBaseVariable):
@@ -244,7 +248,18 @@ class Variable(AbstractBaseVariable):
         if self.defsize  == 1:
             self.data    = pd.DataFrame()
         if self.defsize  == 2:
-            self.data    = pd.Series()    
+            self.data    = pd.Series()
+
+    def rewire_variables(self, vardict):
+        """
+        Make sure all the variables are connected properly. This is
+        only needed for combined/compound variables
+
+        Returns:
+            None
+        """
+
+        pass
 
 ##########################################################
 
@@ -267,7 +282,7 @@ class CompoundVariable(AbstractBaseVariable):
         self.data = pd.Series()
         self.definitions = ((self.__repr__()),)
 
-    def rewire_variables(self,vardict):
+    def rewire_variables(self, vardict):
         """
         Use to avoid the necessity to read out variables twice
         as the variables are copied over by the categories, 
@@ -325,7 +340,7 @@ class VariableList(AbstractBaseVariable):
             return
         self.declare_harvested()
 
-    def rewire_variables(self,vardict):
+    def rewire_variables(self, vardict):
         """
         Use to avoid the necesity to read out variables twice
         as the variables are copied over by the categories,

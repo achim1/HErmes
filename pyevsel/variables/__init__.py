@@ -10,6 +10,7 @@ import hjson
 import os
 import os.path
 import inspect
+import importlib
 
 from pyevsel.utils.logger import Logger
 
@@ -94,11 +95,27 @@ def load_dataset(config, variables=None):
         combined_categories[k] = [categories[l] for l in cfg["combined_categories"]]
 
     # import variable defs
-    vardefs = __import__(cfg["variable_definitions"])
+    vardefs = cfg["variable_definitions"]
+    if isinstance(vardefs, str) or isinstance(vardefs, unicode):
+        vardefs = importlib.import_module(cfg["variable_definitions"])
+    elif isinstance(vardefs, dict):
+        vardefs = {}
+        for k in cfg["variable_definitions"]:
+            vardefs[k] = importlib.import_module(cfg["variable_definitions"][k])
+    else:
+        raise ValueError("Can not understand variable definitions {} of type {}".\
+                         format(vardefs, type(vardefs)))
+    #vardefs = importlib.import_module(cfg["variable_definitions"])
     dataset = ds.Dataset(*list(categories.values()),\
                          combined_categories=combined_categories)
+
     dataset.load_vardefs(vardefs)
     dataset.read_variables(names=variables)
     dataset.set_weightfunction(weightfunctions)
     dataset.get_weights(models=models)
+    plot_dict = {}
+    for k in cfg["categories"]:
+        if "plotting" in cfg["categories"][k]:
+            plot_dict[k] = cfg["categories"][k]["plotting"]
+    dataset.default_plotstyles = plot_dict
     return dataset

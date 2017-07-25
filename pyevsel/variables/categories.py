@@ -71,14 +71,15 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         Return the longest variable element
         FIXME: introduce check?
         """
-
-        lengths = np.array([len(self.vardict[v].data) for v in list(self.vardict.keys())])
+        #Logger.warning("FIXME: Think about what len should return!")
+        #lengths = np.array([len(self.vardict[v].data) for v in list(self.vardict.keys())])
+        lengths = np.array([len(self.get(v)) for v in list(self.vardict.keys())])
         lengths = lengths[lengths > 0]
         selflen = list(set(lengths))
         if not selflen: # empty category should have len 0
             return 0
-
-        assert len(selflen) == 1, "Different variable lengths! {}".format(selflen)
+        debug = [(v,len(self.get(v))) for v in list(self.vardict.keys())]
+        assert len(selflen) == 1, "Different variable lengths fro {}! {}".format(self.name,debug)
         return selflen[0]
 
     @property
@@ -200,6 +201,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         """
 
         all_vars = inspect.getmembers(module)
+        Logger.info("Found {} variables".format(len(all_vars)))
         all_vars = [x[1] for x in all_vars if isinstance(x[1], variables.AbstractBaseVariable)]
         for v in all_vars:
             if v.name in self.vardict:
@@ -216,6 +218,23 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         """
         tmpvar = deepcopy(variable)
         self.vardict[tmpvar.name] = tmpvar
+
+    def drop_empty_variables(self):
+        """
+        Delete variables which have no len
+
+        Returns:
+            None
+        """
+        to_delete = []
+        for k in self.vardict.keys():
+            if not len(self.vardict[k].data):
+                to_delete.append((k))
+
+        for k in to_delete:
+            Logger.info("Deleting empty variable {}".format(k))
+            self.delete_variable(k)
+
 
     def delete_variable(self, varname):
         """
@@ -330,7 +349,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         if varkey not in self.vardict:
             raise KeyError("{} not found!".format(varkey))
 
-        if len(self.cutmask) and not uncut:
+        if len(self.vardict[varkey].data) and len(self.cutmask) and not uncut:
             return self.vardict[varkey].data[self.cutmask]
         else:
             return self.vardict[varkey].data
@@ -679,6 +698,7 @@ class Data(AbstractBaseCategory):
         """
         AbstractBaseCategory.__init__(self,name)
         self._runstartstop_set = False
+        self._livetime = np.nan
 
     @staticmethod
     def _ds_regexp(filename):
@@ -711,12 +731,15 @@ class Data(AbstractBaseCategory):
         are the paramters describing the primary
 
         Keyword Args:
-            runstart_var (pyevself.variables.variables.Variable): beginning of a run
-            runstop_var (pyevself.variables.variables.Variable): beginning of a run
+            runstart_var (pyevself.variables.variables.Variable/str): beginning of a run
+            runstop_var (pyevself.variables.variables.Variable/str): beginning of a run
 
         """
         #FIXME
         for var,name in [(runstart_var,RUN_START),(runstop_var,RUN_STOP)]:
+            if isinstance(var, str):
+                var = self.get(var)
+
             if var.name is None:
                 Logger.warning("No {0} available".format(name))
             elif name in self.vardict:

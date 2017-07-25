@@ -152,12 +152,17 @@ def test_poisson():
     mod = model.Model(functions.poisson)
 
     mod.startparams = [80]
-    mod.add_data(data, create_distribution=True, normalize=True, density=False)
+    mod.add_data(data, nbins=200,\
+                 create_distribution=True,\
+                 normalize=True,\
+                 density=False)
     assert mod.ndf == 199
 
     mod.fit_to_data()
-    assert 0.5 < mod.chi2_ndf < 1.2
+    fig = mod.plot_result(xmax=150)
+    #fig.savefig("ptest.png")
     assert 90 < mod.best_fit_params[0] < 110
+    assert 0.5 < mod.chi2_ndf < 1.2
 
 def test_chi2():
 

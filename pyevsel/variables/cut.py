@@ -33,7 +33,8 @@ class Cut(object):
             cuts (list): like this [("mc_p_energy",">=",5)]
 
         Keyword Args:
-            condition (numpy.ndarray(bool)): where to apply the cut
+            condition (dict): where to apply the cut. It has te be a dictionary of
+                              categoryname to np.ndarray(bool)
 
         Returns:
             pyevsel.variables.Cut

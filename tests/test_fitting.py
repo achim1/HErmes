@@ -35,6 +35,12 @@ def test_model_add_first_guess():
     model.add_first_guess(firstguessfactory())
     assert callable(model.first_guess)
 
+def test_model_extract_paramters():
+    model = modelfactory()
+    model.couple_models(0)
+    assert len(model.extract_parameters()) ==  2
+    assert model.extract_parameters()[1] == [0]
+
 def test_model_eval_first_guess():
     data = datafactory()
     model = modelfactory()
@@ -77,7 +83,7 @@ def test_model_call():
     data = datafactory()
     assert (model(data, *model.startparams) == data).all()
 
-def test_model_call_mutliple():
+def test_model_call_multiple():
     model = modelfactory() + modelfactory()
     data = datafactory()
     assert (model(data, *model.startparams) == 2*data).all()

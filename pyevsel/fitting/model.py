@@ -16,7 +16,11 @@ from functools import reduce
 import numpy as np
 import dashi as d
 import pylab as p
-
+import iminuit
+import types
+import functools
+import sys
+import inspect
 from copy import deepcopy as copy
 
 import scipy.optimize as optimize
@@ -26,13 +30,125 @@ from . import functions as funcs
 
 PALETTE = sb.color_palette("dark")
 
+if sys.version_info < (3,0):
+    def copy_func(f):
+        """Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)"""
+        g = types.FunctionType(f.func_code, f.func_globals, name=f.func_name,
+                           argdefs=f.func_defaults,
+                           closure=f.func_closure)
+        g = functools.update_wrapper(g, f)
+        return g
+else:
+    def copy_func(f):
+        """Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)"""
+        g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
+                               argdefs=f.__defaults__,
+                               closure=f.__closure__)
+        g = functools.update_wrapper(g, f)
+        g.__kwdefaults__ = f.__kwdefaults__
+        return g
+
+def concat_functions(fncs):
+    """
+    Inspect functions and construct a new one which returns the added result.
+    concat_functions(A(x, apars), B(x, bpars)) -> C(x, apars,bpars)
+    C(x, apars, bpars) returns (A(x, apars) + B(x, bpars))
+
+    Arguments:
+        fncs (list):
+            The callables to concat
+
+    Returns:
+        tuple (callable, list(pars))
+
+    """
+
+    datapar = inspect.getargspec(fncs[0]).args[0]
+    pars = [inspect.getargspec(f).args[1:] for f in fncs]
+    npars = [len(prs) for prs in pars]
+    renamed_pars = [[k + str(i) for k in ipars] for i,ipars in enumerate(pars)]
+    joint_pars = reduce( lambda x,y : x + y, renamed_pars)
+
+    slices = []
+    lastslice = 0
+    for i, pr in enumerate(npars):
+        thisslice = slice(lastslice, npars[i] + lastslice)
+        slices.append(thisslice)
+        lastslice += npars[i]
+    globals().update({"concat_functions_fncs":fncs,\
+                      "concat_functions_slices" : slices,\
+                      "concat_functions_joint_pars" : joint_pars,\
+                      "concat_functions_datapar" : datapar})
+    TEMPLATE = """def jointfunc({}):
+    data = concat_functions_fncs[0](*([{}] + ([{}][concat_functions_slices[0]])))
+    for i,fn in enumerate(concat_functions_fncs[1:]):
+        data += fn(*([{}] + ([{}][concat_functions_slices[1:][i]])))
+    return data
+""".format(datapar + "," + ",".join(joint_pars),datapar, ",".join(joint_pars),datapar, ",".join(joint_pars))
+    #print (TEMPLATE)
+    exec TEMPLATE
+    return jointfunc, joint_pars
+
+def construct_efunc(x, data, jointfunc, joint_pars):
+    """
+    Construct a leas-squares function
+
+    Args:
+        x:
+        data:
+        jointfunc:
+        joint_pars:
+
+    Returns:
+
+    """
+
+    datapar = inspect.getargspec(jointfunc).args[0]
+    print (datapar)
+    #print ("{}".format(datapar))
+    globals().update({"jointfunc" : jointfunc,\
+                      "{}".format(datapar) : x,\
+                      "data" : data})
+    EFUNC = """def efunc({}):
+    return ((abs(data - jointfunc({}))**2).sum())""".format(",".join(joint_pars), datapar + "," + ",".join(joint_pars))
+
+    print (EFUNC)
+    exec EFUNC
+    return efunc
+
+def create_minuit_pardict(fn, startparams, errors, limits, errordef):
+    """
+    Construct a dictionary for minuit fitting
+
+    Args:
+        fn (callable):
+        errors (list):
+        limits (list(tuple)):
+
+    Returns:
+        dict
+    """
+    parnames = inspect.getargspec(fn).args
+    mindict = dict()
+    print (parnames)
+    for i,k in enumerate(parnames):
+        print (k)
+        mindict[k] = startparams[i]
+        if not errors is None: mindict["error_" + k] = errors[i]
+        if not limits is None: mindict["limit_" + k] = (limits[i][0], limits[i][1])
+    mindict["errordef"] = errordef
+    return mindict
 
 class Model(object):
     """
     Model data with a parametrized prediction
     """
 
-    def __init__(self, func, startparams=None, func_norm=1):
+    def __init__(self, func,\
+                 startparams=None,\
+                 limits=((-np.inf, np.inf),),\
+                 errors=(10.,),
+                 func_norm=1):
         """
         Initialize a new model
 
@@ -49,10 +165,10 @@ class Model(object):
         if startparams is None:
             startparams = [0]*(func.__code__.co_argcount - 1) # first argument is not a free parameter.
 
-        def normed_func(*args):
-            return func_norm*func(*args)
+        #def normed_func(*args):
+        #    return func_norm*func(*args)
 
-        self._callbacks = [normed_func]
+        self._callbacks = [copy_func(func)]
         self.startparams = list(startparams)
         self.n_params = [len(startparams)]
         self.best_fit_params = list(startparams)
@@ -64,8 +180,9 @@ class Model(object):
         self.chi2_ndf_components = []
         self.norm = 1
         self.ndf = 1
+        self.func_norm = [float(func_norm)]
         self.prediction = lambda xs: reduce(lambda x, y: x + y,\
-                                  [f(xs) for f in self.components])
+                                  [self.func_norm[i]*f(xs) for i,f in enumerate(self.components)])
         self.first_guess = None
         self._distribution = None
 
@@ -84,6 +201,19 @@ class Model(object):
 
         """
         self._distribution = distr
+
+
+
+    #def construct_minuit_function(self):
+    #    func_args, coupling = self.extract_parameters()
+    #    parameter_set = ["a","b","c","d","e","f","g"]
+    #    if self.all_coupled:
+    #        func_args = func_args[0]
+    #        # x is always 0
+    #        fnc_src = """def to_minimize({}):\n\t
+    #        """
+    #        #def to_minimize()
+
 
     @property
     def n_free_params(self):
@@ -164,6 +294,12 @@ class Model(object):
 
         self.coupling_variable.append(coupling_variable)
 
+    def construct_error_function(self, startparams, errors, limits, errordef):
+        concated, concated_pars = concat_functions(self._callbacks)
+        error_func = construct_efunc(self.xs, self.data, concated, concated_pars)
+        pardict = create_minuit_pardict(error_func, startparams, errors, limits, errordef)
+        return error_func, pardict
+
     def couple_all_models(self):
         """
         Use the first models startparams for
@@ -193,10 +329,7 @@ class Model(object):
         newmodel.startparams = self.startparams + other.startparams
         newmodel.n_params = self.n_params + other.n_params
         newmodel.best_fit_params = newmodel.startparams
-        # self._callbacks = self._callbacks + other._callbacks
-        # self.startparams = self.startparams + other.startparams
-        # self.n_params = self.n_params + other.n_params
-        # self.best_fit_params = self.startparams
+        newmodel.func_norm = self.func_norm + other.func_norm
         return newmodel
 
     @property
@@ -210,7 +343,20 @@ class Model(object):
             best_fit = self.best_fit_params[thisslice]
             if self.all_coupled:
                 best_fit = self.best_fit_params[0:self.n_params[0]]
-            yield lambda xs: tmpcmp(xs, *best_fit)
+            yield lambda xs: self.func_norm[i]*tmpcmp(xs, *best_fit)
+
+    def extract_parameters(self):
+        """
+        Get the variable names and coupling references for
+        the individual model components
+
+        Returns:
+            tuple
+        """
+        all_pars = []
+        for i in self._callbacks:
+            all_pars.append(iminuit.describe(i))
+        return all_pars, self.coupling_variable
 
     def __call__(self, xs, *params):
         """
@@ -224,7 +370,7 @@ class Model(object):
         """
         thecomponents = []
         firstparams = params[0:self.n_params[0]]
-        first = self._callbacks[0](xs, *firstparams)
+        first = self.func_norm[0]*self._callbacks[0](xs, *firstparams)
 
         lastslice = self.n_params[0]
         for i, cmp in enumerate(self._callbacks[1:]):
@@ -238,7 +384,7 @@ class Model(object):
                 theparams = firstparams
             # thecomponents.append(lambda xs: tmpcmp(xs, *params[thisslice]))
             lastslice += self.n_params[1:][i]
-            first += cmp(xs, *theparams)
+            first += self.func_norm[i]*cmp(xs, *theparams)
         return first
 
     def add_data(self, data, nbins=200,\
@@ -274,37 +420,27 @@ class Model(object):
         if subtract is not None:
             self.data -= subtract(self.xs)
 
-    def fit_to_data(self, silent=False, **kwargs):
+    def fit_to_data(self, silent=False,\
+                    use_minuit=True,\
+                    errors=None,\
+                    limits=None,\
+                    errordef=1000,\
+                    **kwargs):
         """
         Apply this model to data
 
         Args:
             data (np.ndarray): the data, unbinned
             silent (bool): silence output
+            use_minuit (bool): use minuit for fitting
+            errors (list): errors for minuit, see miniuit manual
+            limits (list of tuples): limits for minuit, see minuit manual
+            errordef (int) : convergence criterion, see minuit manual
             **kwargs: will be passed on to scipy.optimize.curvefit
 
         Returns:
             None
         """
-        def model(xs, *params):
-            thecomponents = []
-            firstparams = params[0:self.n_params[0]]
-            first = self._callbacks[0](xs, *firstparams)
-
-            lastslice = self.n_params[0]
-            for i, cmp in enumerate(self._callbacks[1:]):
-                thisslice = slice(lastslice, self.n_params[1:][i] + lastslice)
-                #tmpcmp = copy(cmp)
-                theparams = list(params[thisslice])
-                if self.coupling_variable:
-                    for k in self.coupling_variable:
-                        theparams[k] = firstparams[k]
-                elif self.all_coupled:
-                    theparams = firstparams
-                #thecomponents.append(lambda xs: tmpcmp(xs, *params[thisslice]))
-                lastslice += self.n_params[1:][i]
-                first += cmp(xs, *theparams)
-            return first
 
         startparams = self.startparams
 
@@ -316,7 +452,19 @@ class Model(object):
             # this is a matplotlib quirk
             fitkwargs["max_nfev"] = 1000000
         fitkwargs.update(kwargs)
-        parameters, covariance_matrix = optimize.curve_fit(model, self.xs,\
+        if use_minuit:
+            errorfunc, params = self.construct_error_function(self.startparams,\
+                                                               errors,\
+                                                               limits,\
+                                                               errordef)
+            m = iminuit.Minuit(errorfunc, **params)
+            m.migrad()
+            values = m.values
+            parameters=[]
+            for k in sorted(m.var2pos, key=m.var2pos.get):
+                parameters.append(m.var2pos[k])
+            covariance_matrix = []
+        parameters, covariance_matrix = optimize.curve_fit(self, self.xs,\
                                                            self.data, p0=startparams,\
                                                            # bounds=(np.array([0, 0, 0, 0, 0] + [0]*len(start_params[5:])),\
                                                            # np.array([np.inf, np.inf, np.inf, np.inf, np.inf] +\
@@ -336,7 +484,7 @@ class Model(object):
         #    norm = norm[np.isfinite(norm)][0]
 
         #self.norm = norm
-        chi2 = (funcs.calculate_chi_square(self.norm*self.data, self.norm * model(self.xs, *parameters)))
+        chi2 = (funcs.calculate_chi_square(self.norm*self.data, self.norm * self(self.xs, *parameters)))
         self.chi2_ndf = chi2/self.ndf
 
         # FIXME: new feature
@@ -358,9 +506,11 @@ class Model(object):
         """
         self.__init__(self._callbacks[0], self.startparams[:self.n_params[0]])
 
-    def plot_result(self, ymin=1000, xmax=8, ylabel="normed bincount",\
+    def plot_result(self, ymin=1000, xmax=8,\
+                    ylabel="normed bincount",\
                     xlabel="Q [C]", fig=None,\
                     log=True,\
+                    axes_range="auto",
                     model_alpha=.3,\
                     add_parameter_text=((r"$\mu_{{SPE}}$& {:4.2e}\\",0),),
                     histostyle="scatter",
@@ -376,6 +526,7 @@ class Model(object):
                                 for the model
             ylabel (str): label for yaxis
             log (bool): plot in log scale
+            axes_range (str): the "field of view" to show
             fig (pylab.figure): A figure instance
             add_parameter_text (tuple): Display a parameter in the table on the plot
                                         ((text, parameter_number), (text, parameter_number),...)
@@ -387,6 +538,18 @@ class Model(object):
             pylab.figure
         """
         assert self.chi2_ndf is not None, "Needs to be fitted first before plotting!"
+
+        def auto_adjust_limits(ax, data, xs):
+            scalemax, scalemin = 1.1, 0.9
+
+            ymax, ymin = scalemax*max(data), scalemin*min(data)
+            xmax, xmin = scalemax*max(xs[abs(data) > 0]), scalemin*min(xs[abs(data) >0])
+            print (xmin, xmax)
+            print (ymin, ymax)
+            ax.set_xlim(xmin, xmax)
+            ax.set_ylim(ymin, ymax)
+            return ax
+
 
         if fig is None:
             fig = p.figure()
@@ -408,6 +571,8 @@ class Model(object):
         ax.set_xlim(xmax=xmax)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
+        if axes_range == "auto":
+            ax = auto_adjust_limits(ax, self.data, self.xs)
 
         if self.distribution is not None:
             infotext += r"entries& {}\\".format(self.distribution.stats.nentries)
@@ -420,7 +585,7 @@ class Model(object):
             horizontalalignment='center',
             verticalalignment='center',
             transform=ax.transAxes)
-        if log: ax.set_yscale("log")
-        sb.despine()
+        if log: ax.set_yscale("symlog", linthreshy=1)
+        #sb.despine()
         return fig
 

@@ -223,22 +223,23 @@ def check_hdf_integrity(infiles,checkfor = None ):
             Logger.warning(error)
             corrupt_files.append(file_to_check)
 
-        else:
-            if checkfor != None:
-                f = tables.openFile(file_to_check)
-                try:
-                    f.getNode(checkfor)
-                except tables.NoSuchNodeError:
-                    Logger.info("File %s has no Node %s" %(file_to_check,checkfor))
-                    corrupt_files.append(file_to_check)
-                    continue
-                finally:
-                    f.close() 
+        elif checkfor is not None:
+            f = tables.openFile(file_to_check)
+            try:
+                f.getNode(checkfor)
+            except tables.NoSuchNodeError:
+                Logger.info("File %s has no Node %s" %(file_to_check,checkfor))
+                corrupt_files.append(file_to_check)
+                continue
+            finally:
+                f.close() 
 
             integer_files.append(file_to_check)
+        else:
+            integer_files.append(file_to_check)
 
-    Logger.debug("These files are corrupt! %s",corrupt_files.__repr__())
-    Logger.info('%i of %i files corrupt!' %(len(corrupt_files),allfiles))
+    Logger.debug("These files are corrupt! {}".format(corrupt_files.__repr__()))
+    Logger.info("{} of {} files corrupt!".format(len(corrupt_files),allfiles))
     return integer_files,corrupt_files
 
 

@@ -13,7 +13,7 @@ except ImportError:
     print ("WARNING: module icecube not found!")
 
 from pyevsel.utils.logger import Logger
-from pyevsel.variables.magic_keywords import  MC_P_EN,\
+from pyevsel.selection.magic_keywords import  MC_P_EN,\
                             MC_P_TY,\
                             MC_P_ZE,\
                             MC_P_WE,\

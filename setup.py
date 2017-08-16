@@ -1,10 +1,69 @@
 import sys
 import re
+import os
 import os.path
+import stat
+import shutil
+import atexit
+
+from glob import glob
 
 from setuptools import setup
+from setuptools.command.install import install
 
-# get_version and conditional adding of pytest-runner 
+
+
+def _post_install():
+    """
+    Copy matplotlib style files and set the permissions right
+    - at least for unix/sudo style systems
+
+    Returns:
+        None
+    """
+    print ("--------------------------------")
+    print ("Running post install...")
+
+    from matplotlib import get_configdir
+
+    styles = sorted(glob("resources/*mplstyle"))
+    mplstylelib = get_configdir()
+    mplstylelib = os.path.join(mplstylelib, "stylelib")
+    if not os.path.exists(mplstylelib):
+        print ("WARNING: Can not find stylelib dir {}".format(mplstylelib))
+        print ("Creating {}".format(mplstylelib))
+        os.mkdir(mplstylelib)
+
+    if os.getuid() == 0:
+        uid = int(os.getenv("SUDO_UID"))
+        gid = int(os.getenv("SUDO_GID"))
+
+    else:
+        uid = int(os.getuid())
+        gid = int(os.getgid())
+
+    for st in styles:
+
+        print("INSTALLING {} to {}".format(st, mplstylelib))
+        shutil.copy(st, mplstylelib)
+        with open(os.path.join(mplstylelib, os.path.split(st)[1])) as fd:
+
+            os.fchown(fd.fileno(), uid, gid)
+            #os.fchmod(fd.fileno(), stat.S_IRWXU & stat.S_IRGRP & stat.S_IROTH)
+            os.fchmod(fd.fileno(), 0o755)
+
+class full_install(install):
+    """
+    Installation routine which executes post_install
+    """
+
+    def __init__(self, *args, **kwargs):
+        #super(new_install, self).__init__(*args, **kwargs)
+        install.__init__(self, *args, **kwargs)
+        atexit.register(_post_install)
+
+
+# get_version and conditional adding of pytest-runner
 # are taken from 
 # https://github.com/mark-adams/pyjwt/blob/b8cc504ee09b4f6b2ba83a3db95206b305fe136c/setup.py
 
@@ -67,6 +126,7 @@ setup(name='pyevsel',
       install_requires=requirements, 
       setup_requires=setup_requires,
       license="GPL",
+    cmdclass={'install': full_install},
       platforms=["Ubuntu 14.04","Ubuntu 16.04", "Ubuntu 16.10", "SL6.1"],
       classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
@@ -83,7 +143,12 @@ setup(name='pyevsel',
       tests_require=tests_require,
       packages=['pyevsel','pyevsel.icecube_goodies',\
                 'pyevsel.plotting','pyevsel.utils',\
-                'pyevsel.variables', 'pyevsel.fitting'],
+                'pyevsel.selection', 'pyevsel.fitting',\
+                'pyevsel.analysis'],
       #scripts=[],
-      package_data={'pyevsel': ['plotting/plotsconfig.yaml','plotting/pyevseldefault.mplstyle','plotting/pyevselpresent.mplstyle','utils/PATTERNS.cfg']}
+      package_data={'pyevsel': [#'plotting/plotsconfig.yaml',\
+                                #'plotting/pyevseldefault.mplstyle',\
+                                #'plotting/pyevselpresent.mplstyle',\
+                                'utils/PATTERNS.cfg',\
+                                "icecube_goodies/geometry_ic86.h5"]}
       )

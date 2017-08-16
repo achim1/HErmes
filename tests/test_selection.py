@@ -3,21 +3,21 @@ import numpy as np
 import pandas as pd
 import os
 import hjson
-import pyevsel.variables.categories as cat
-import pyevsel.variables.dataset as ds
-import pyevsel.variables.variables as v
-import pyevsel.variables.magic_keywords as mk
+import pyevsel.selection.categories as cat
+import pyevsel.selection.dataset as ds
+import pyevsel.selection.variables as v
+import pyevsel.selection.magic_keywords as mk
 
 
-from pyevsel.variables import load_dataset
+from pyevsel.selection import load_dataset
 
 import testvardefs
 from fixturefactory import prepare_testtable, prepare_sparser_testtable, TESTDATALEN 
 
 # test the magic keywords ..
-from pyevsel.variables import magic_keywords
+from pyevsel.selection import magic_keywords
 
-from pyevsel.variables import cut
+from pyevsel.selection import cut
 
 
 # define some test variables

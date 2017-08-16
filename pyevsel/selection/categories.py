@@ -7,10 +7,18 @@ from builtins import zip
 from builtins import map
 from builtins import object
 from future.utils import with_metaclass
-MAX_CORES = 6
 
-from pyevsel.utils.files import harvest_files,DS_ID,EXP_RUN_ID
-from pyevsel.utils.logger import Logger
+
+import pandas as pd
+import inspect
+import numpy as np
+import abc
+import concurrent.futures as fut
+import tables
+from copy import deepcopy
+
+from ..utils.files import harvest_files,DS_ID,EXP_RUN_ID
+from ..utils.logger import Logger
 
 from .magic_keywords import MC_P_EN,\
                             MC_P_TY,\
@@ -24,14 +32,8 @@ from .magic_keywords import MC_P_EN,\
                             EVENT,\
                             DATASETS
 from . import variables
-import pandas as pd
-import inspect
-import numpy as np
-import abc
-import concurrent.futures as fut
-import tables
+MAX_CORES = 6
 
-from copy import deepcopy
 
 class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
     """
@@ -201,13 +203,14 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         """
 
         all_vars = inspect.getmembers(module)
-        Logger.info("Found {} variables".format(len(all_vars)))
         all_vars = [x[1] for x in all_vars if isinstance(x[1], variables.AbstractBaseVariable)]
+        Logger.info("Found {} variables".format(len(all_vars)))
         for v in all_vars:
             if v.name in self.vardict:
                 Logger.debug("Variable {} already defined,skipping!".format(v.name))
                 continue
             self.add_variable(v)
+
 
     def add_variable(self,variable):
         """
@@ -399,11 +402,14 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         progbar = False
         try:
             import pyprind
+            import tqdm
             n_it = len(list(future_to_varname.keys()))
-            bar = pyprind.ProgBar(n_it,monitor=False,bar_char='#',title=self.name)
+            #bar = pyprind.ProgBar(n_it,monitor=False,bar_char='#',title=self.name)
+            bar = tqdm.tqdm(total = n_it)
             progbar = True
         except ImportError:
             pass
+
 
         exc_caught = """"""
         for future in fut.as_completed(future_to_varname):

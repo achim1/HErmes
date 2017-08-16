@@ -1,6 +1,6 @@
 import pytest
 
-import pyevsel.variables.cut as cut
+import pyevsel.selection.cut as cut
 import pyevsel.plotting as plt
 import pyevsel.plotting.plotting as pltplt
 

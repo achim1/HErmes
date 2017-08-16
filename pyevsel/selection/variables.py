@@ -9,8 +9,8 @@ import pandas as pd
 import tables
 import abc
 
-from pyevsel.utils import files as f
-from pyevsel.utils.logger import Logger
+from ..utils import files as f
+from ..utils.logger import Logger
 from future.utils import with_metaclass
 from functools import reduce
 

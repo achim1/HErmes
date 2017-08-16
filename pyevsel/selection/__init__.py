@@ -12,12 +12,12 @@ import os.path
 import inspect
 import importlib
 
-from pyevsel.utils.logger import Logger
+from ..utils.logger import Logger
 
 from . import categories as c
 from . import dataset as ds
-from pyevsel.icecube_goodies import weighting as wgt
-from pyevsel.icecube_goodies import fluxes as fluxes
+from ..icecube_goodies import weighting as wgt
+from ..icecube_goodies import fluxes as fluxes
 
 def load_dataset(config, variables=None):
     """

@@ -158,7 +158,7 @@ def test_poisson():
     mod = model.Model(functions.poisson)
 
     mod.startparams = [80]
-    mod.add_data(data, nbins=200,\
+    mod.add_data(data, bins=200,\
                  create_distribution=True,\
                  normalize=True,\
                  density=False)

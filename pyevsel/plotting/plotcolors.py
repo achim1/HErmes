@@ -1,6 +1,12 @@
+"""
+Color management - provide a nice color scheme even if seaborn is not available
+
+"""
+
+
 from builtins import zip
 from builtins import range
-from pyevsel.utils.logger import Logger
+from ..utils.logger import Logger
 import os.path
 
 class ColorDict(dict):

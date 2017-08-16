@@ -2,8 +2,11 @@
 Use with pyevsel.categories.Category to perfom cuts
 """
 
+from __future__ import absolute_import
+
+
 from builtins import object
-from pyevsel.variables.variables import Variable as V
+from .variables import Variable as V
 
 from collections import defaultdict
 

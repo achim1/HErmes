@@ -9,8 +9,8 @@ import numpy as np
 
 from collections import OrderedDict
 
-from pyevsel.plotting import VariableDistributionPlot
-from pyevsel.utils.logger import Logger
+from ..plotting import VariableDistributionPlot
+from ..utils.logger import Logger
 from dashi.tinytable import TinyTable
 
 from builtins import map

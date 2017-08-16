@@ -202,8 +202,6 @@ class Model(object):
         """
         self._distribution = distr
 
-
-
     #def construct_minuit_function(self):
     #    func_args, coupling = self.extract_parameters()
     #    parameter_set = ["a","b","c","d","e","f","g"]
@@ -225,26 +223,36 @@ class Model(object):
         """
         return sum(self.n_free_params)
 
-    def _create_distribution(self,data, nbins, normalize=False, density=True):
+    def _create_distribution(self, data, bins,\
+                             normalize=False, density=True):
         """
         Create a distribution
+
+        Args:
+            data (np.ndarray):
+            bins (np.ndarray or int):
+
+        Keyword Args:
+            normalize (bool):
+            density (bool):
 
         Returns:
             None
         """
-        bins = np.linspace(min(data), max(data), nbins)
+        if np.isscalar(bins):
+            bins = np.linspace(min(data), max(data), bins)
 
         h = d.factory.hist1d(data, bins)
-        self.set_distribution(h)
 
-        self.norm = 1
         if normalize:
             h_norm = h.normalized(density=density)
             norm = h.bincontent / h_norm.bincontent
             norm = norm[np.isfinite(norm)][0]
             self.norm = norm
             self.set_distribution(h_norm)
-
+        else:
+            self.norm = 1
+            self.set_distribution(h)
         self.data = self.distribution.bincontent
         self.xs = self.distribution.bincenters
 
@@ -387,7 +395,7 @@ class Model(object):
             first += self.func_norm[i]*cmp(xs, *theparams)
         return first
 
-    def add_data(self, data, nbins=200,\
+    def add_data(self, data, bins=200,\
                  create_distribution=False,\
                  normalize=False,\
                  density=True,\
@@ -409,8 +417,13 @@ class Model(object):
         Returns:
 
         """
+        if np.isscalar(bins):
+            nbins = bins
+        else:
+            nbins = len(bins)
+
         if create_distribution:
-            self._create_distribution(data, nbins, normalize, density=density)
+            self._create_distribution(data, bins, normalize, density=density)
             self.ndf = nbins - len(self.startparams)
         else:
             assert xs is not None, "Have to give xs if not histogramming!" 
@@ -464,7 +477,8 @@ class Model(object):
             for k in sorted(m.var2pos, key=m.var2pos.get):
                 parameters.append(m.var2pos[k])
             covariance_matrix = []
-        parameters, covariance_matrix = optimize.curve_fit(self, self.xs,\
+        else:
+            parameters, covariance_matrix = optimize.curve_fit(self, self.xs,\
                                                            self.data, p0=startparams,\
                                                            # bounds=(np.array([0, 0, 0, 0, 0] + [0]*len(start_params[5:])),\
                                                            # np.array([np.inf, np.inf, np.inf, np.inf, np.inf] +\
@@ -474,7 +488,7 @@ class Model(object):
                                                            **fitkwargs)
 
         if not silent: print("Fit yielded parameters", parameters)
-        if not silent: print("{:4.2f} NANs in covariance matrix".format(len(covariance_matrix[np.isnan(covariance_matrix)])))
+        if (not silent) and (not use_minuit): print("{:4.2f} NANs in covariance matrix".format(len(covariance_matrix[np.isnan(covariance_matrix)])))
         if not silent: print("##########################################")
 
         # simple GOF

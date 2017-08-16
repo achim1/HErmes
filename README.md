@@ -3,9 +3,9 @@
 
 
 
-# pyevsel
+# HErmes
 
-An API for event selection as used in HEP analysis.
+*Highly efficient rapid multipurpose event selection toolset with a focus on high energy physics analysis tasks* 
 
 
 Requirements
@@ -63,16 +63,16 @@ In the end, what is really desired is a *datacube*, which is the full parameter 
 
 Each point in the *datacube* can be adressed by its coordinates (A,1,2,..) and then it can be searched for clustering, e.g. by machine learning methods e.g. by [scikit-learn](http://scikit-learn.org/stable/documentation.html)
 
-The pyevsel project should provide everything to go from files to a working datacube as quickly as possible. As filtering is important from an early stage on, it will provide also a set of routines which allow filtering and cross-checking the results.
+The HErmes project provides everything to go from files to a working datacube as quickly as possible. As filtering is important from an early stage on, it provides also a set of routines which allow filtering and cross-checking the results.
 
-As a bonus, it allows for easy-weighting on the fly fro IceCube analysis.
+As a bonus, it allows for easy-weighting on the fly for IceCube analysis.
 
 #Examples
 
 
 ##Setting up categories from files
 
-First tell the software, where to find the files to uread the data from. Categories need to be initialized with an unique name.
+First tell the software, where to find the files to read the data from. Categories need to be initialized with an unique name.
 The ReweightedSimulation category holds a reference to all the variables defined in the given category, however it allows for 
 the calculation of different weights.
 

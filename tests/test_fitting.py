@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-from pyevsel.fitting import fit, model, functions
+from HErmes.fitting import fit, model, functions
 
 def funcfactory():
     def f(xs, p1, p2):
@@ -143,10 +143,13 @@ def test_gauss():
     gaussmod = model.Model(functions.gauss)
 
     gaussmod.startparams = [-1, 1]
-    gaussmod.add_data(data, create_distribution=True, normalize=True)
+    gaussmod.add_data(data, create_distribution=True,\
+                      normalize=True, density=True)
     assert gaussmod.ndf == 198
 
     gaussmod.fit_to_data()
+    fig = gaussmod.plot_result(xmax=5)
+    fig.savefig("ptestgauss.png")
     assert 0.5 < gaussmod.chi2_ndf < 1.2
     assert -0.1 < gaussmod.best_fit_params[0] < .1
     assert .18 < gaussmod.best_fit_params[1] < .22

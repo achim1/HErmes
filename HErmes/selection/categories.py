@@ -405,7 +405,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             import tqdm
             n_it = len(list(future_to_varname.keys()))
             #bar = pyprind.ProgBar(n_it,monitor=False,bar_char='#',title=self.name)
-            bar = tqdm.tqdm(total = n_it)
+            bar = tqdm.tqdm(total=n_it, leave=True, desc=self.name)
             progbar = True
         except ImportError:
             pass
@@ -433,6 +433,10 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         if exc_caught:
             Logger.warning("During the variable readout some exceptions occured!\n" + exc_caught)
         self._is_harvested = True
+
+        if progbar:
+            bar.close()
+            del bar
 
     @abc.abstractmethod
     def get_weights(self, model, model_kwargs=None):

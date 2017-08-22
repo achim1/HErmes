@@ -1,6 +1,6 @@
 import pytest
 
-from pyevsel.utils import logger, files, itools, timeit
+from HErmes.utils import logger, files, itools, timeit
 
 from fixturefactory import prepare_testtable
 # helper functions generating test data

@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 
-import pyevsel.icecube_goodies.helpers as helpers
+import HErmes.icecube_goodies.helpers as helpers
 
 def test_geometry():
     geo = helpers.IceCubeGeometry()

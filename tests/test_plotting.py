@@ -1,14 +1,14 @@
 import pytest
-
-import pyevsel.selection.cut as cut
-import pyevsel.plotting as plt
-import pyevsel.plotting.plotting as pltplt
-
-from pyevsel.plotting import plotcolors as pc
-from pyevsel.plotting import canvases as cv
-from pyevsel.plotting import layout
-
 import numpy as np
+
+import HErmes.selection.cut as cut
+import HErmes.plotting as plt
+import HErmes.plotting.plotting as pltplt
+
+from HErmes.plotting import plotcolors as pc
+from HErmes.plotting import canvases as cv
+from HErmes.plotting import layout
+
 
 @pytest.fixture(scope='session')
 def png_file(tmpdir_factory):

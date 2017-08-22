@@ -75,7 +75,7 @@ def get_version(package):
         src = init_py.read().decode('utf-8')
         return re.search("__version__ = ['\"]([^'\"]+)['\"]", src).group(1)
 
-version = get_version('pyevsel')
+version = get_version('HErmes')
 
 with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
     long_description = readme.read()
@@ -114,9 +114,9 @@ needs_pytest = set(('pytest', 'test', 'ptr')).intersection(sys.argv)
 setup_requires = ['pytest-runner'] if needs_pytest else []
 #setup_requires += ["matplotlib>=1.5.0"]
 
-setup(name='pyevsel',
+setup(name='HErmes',
       version=version,
-      description='Eventselection for HEP analysis',
+      description='Highly efficient, rapid multipurpose event selection',
       #long_description='Manages bookkeeping for different simulation datasets, developed for the use with IceCube data',
       long_description=long_description,
       author='Achim Stoessl',
@@ -141,12 +141,12 @@ setup(name='pyevsel',
                 "hep", "particle physics"\
                 "astrophysics", "icecube"],
       tests_require=tests_require,
-      packages=['pyevsel','pyevsel.icecube_goodies',\
-                'pyevsel.plotting','pyevsel.utils',\
-                'pyevsel.selection', 'pyevsel.fitting',\
-                'pyevsel.analysis'],
+      packages=['HErmes','HErmes.icecube_goodies',\
+                'HErmes.plotting', 'HErmes.utils',\
+                'HErmes.selection', 'HErmes.fitting',\
+                'HErmes.analysis'],
       #scripts=[],
-      package_data={'pyevsel': [#'plotting/plotsconfig.yaml',\
+      package_data={'HErmes': [#'plotting/plotsconfig.yaml',\
                                 #'plotting/pyevseldefault.mplstyle',\
                                 #'plotting/pyevselpresent.mplstyle',\
                                 'utils/PATTERNS.cfg',\

@@ -1,0 +1,59 @@
+{
+  "files_basepath": "",
+  "variable_definitions": "testvardefs",
+  "combined_categories": {"astro_nu": ["astro_nue","astro_numu","astro_nutau"],
+                          "conv_nu": ["conv_nue","conv_numu"],
+                          "prompt_nu": ["prompt_nue","prompt_numu"],
+                          "mu": ["atmos_mu","atmos_cc_mu"]},
+  "plotting": {
+  },
+  "categories": {"neutrinos": {
+                        "subpath": ".",
+                        "file_prefix": "",
+                        "file_type": ".h5",
+                        "datatype": "simulation",
+                        "model_method": "constant_weights",
+                        "model": "1",
+                        "plotting": {"label": "$\\nu_{e_{astr}}$",
+                                     "linestyle": {"color": 2,
+                                                    "linewidth": 3,
+                                                    "alpha": 1,
+                                                    "filled": 0,
+                                                    "linestyle": "solid"},
+                                    "histotype": "line"}       
+                     },
+                   "data": {
+                        "subpath": ".",
+                        "file_prefix": "",
+                        "file_type": ".h5",
+                        "datatype": "data",
+                        #"datasets": {"9095": 10000,
+                        #             "6726": 10000,
+                        #             "6454": 500},
+                        "model_method": "constant_weights",
+                        "livetime": "10000",
+                        "plotting": {"label": "$\\nu_{\\mu_{astr}}$",
+                                     "linestyle": {"color": 0,
+                                                    "linewidth": 3,
+                                                    "alpha": 1,
+                                                    "filled": 0,
+                                                    "linestyle": "solid"},
+                                    "histotype": "line"}
+                                },
+                   "muons": {
+                        "subpath": ".",
+                        "file_prefix": "",
+                        "file_type": ".h5",
+                        "datatype": "simulation",
+                        "model_method": "constant_weights",
+                        "model": "1",
+                        "plotting": {"label": "$\\nu_{\tau_{astr}}$",
+                                     "linestyle": {"color": 2,
+                                                    "linewidth": 3,
+                                                    "alpha": 1,
+                                                    "filled": 0,
+                                                    "linestyle": "solid"},
+                                    "histotype": "line"}
+                                }
+                }
+}

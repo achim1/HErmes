@@ -218,7 +218,7 @@ def check_hdf_integrity(infiles,checkfor = None ):
     for file_to_check in infiles:
     
         test = sub.Popen(['h5ls','-g',file_to_check],stdout=sub.PIPE,stderr=sub.PIPE)
-        __,error = test.communicate()
+        __, error = test.communicate()
 
         if error:
             Logger.warning(error)

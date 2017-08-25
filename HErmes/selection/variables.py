@@ -49,10 +49,12 @@ def harvest(filenames, definitions, **kwargs):
         transformation (func): After the data is read out from the files,
                                transformation will be applied, e.g. the log
                                to the energy.
+        FIXME: Not implemented yet! precision (int): Precision in bit
 
     Returns:
         pd.Series or pd.DataFrame
     """.format(REGISTERED_FILEEXTENSIONS.__repr__())
+
 
     data = pd.Series()
     for filename in filenames:
@@ -75,7 +77,13 @@ def harvest(filenames, definitions, **kwargs):
                 try:
                     # data = store.select_column(*definition)
                     tmpdata = hdftable.get_node("/" + definition[0]).col(definition[1])
-                    tmpdata = pd.Series(tmpdata, dtype=n.float64)
+                    if tmpdata.ndim == 2:
+                        if data.empty:
+                            data = pd.DataFrame()
+                        tmpdata = pd.DataFrame(tmpdata, dtype=n.float32)
+                    else:
+                        tmpdata = pd.Series(tmpdata, dtype=n.float32)
+
                     Logger.debug("Found {} entries in table for {}{}".format(len(tmpdata),definition[0],definition[1]))
                     break
                 except tables.NoSuchNodeError:
@@ -265,8 +273,8 @@ class Variable(AbstractBaseVariable):
 
 class CompoundVariable(AbstractBaseVariable):
     """
-    A variable which can not be read out, but is calculated
-    from other variables
+    Has no representation in any file, but is calculated
+    by other variables
     """
 
     def __init__(self,name,variables=None,label="",\
@@ -319,7 +327,7 @@ class VariableList(AbstractBaseVariable):
     Holds several variable values
     """
 
-    def __init__(self,name,variables=None,label="",bins=None):
+    def __init__(self, name, variables=None, label="", bins=None):
         AbstractBaseVariable.__init__(self)
         self.name = name
         self.label = label
@@ -328,7 +336,7 @@ class VariableList(AbstractBaseVariable):
             variables = []
         self.variables = variables
 
-    def harvest(self,*filenames):
+    def harvest(self, *filenames):
         #FIXME: filenames is not used, just
         #there for compatibility
 

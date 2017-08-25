@@ -37,6 +37,7 @@ class Dataset(object):
     of them
     """
 
+
     def __init__(self, *args, **kwargs):
         """
         Iniitalize with the categories
@@ -189,7 +190,32 @@ class Dataset(object):
 
         self.categories.append(category)
 
-    def get_category(self,categoryname):
+    def __getitem__(self, item):
+        """
+        Shortcut for self.get_category/get_variable
+
+        Args:
+            item:
+
+        Returns:
+
+        """
+        try:
+            return self.get_category(item)
+        except KeyError:
+            pass
+        try:
+            return self.get_variable(item)
+        except  KeyError:
+            pass
+        if ":" in item:
+            cat, var = item.split(":")
+            return self.get_category(cat).get(var)
+
+        else:
+            raise KeyError("{} can not be found".format(item))
+
+    def get_category(self, categoryname):
         """
         Get a reference to a category
 

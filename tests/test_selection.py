@@ -127,6 +127,7 @@ def test_simcat(prepare_testtable):
         sim.add_variable(var)
 
     sim.read_variables()
+    assert (sim["energy"] == sim.get("energy")).all()
     lengths = sim.show() 
     assert isinstance(lengths, dict)
     assert sim.is_harvested
@@ -258,6 +259,7 @@ def test_dataset(prepare_testtable, prepare_sparser_testtable):
     assert len(data.categorynames) == 2
     assert len(data.categories) == 2
 
+
     # test helpers
     assert ds.get_label(exp) == "exp"
     exp.plot_options = {"label" : "foo"}
@@ -277,6 +279,10 @@ def test_dataset(prepare_testtable, prepare_sparser_testtable):
     assert "energy" in data.get_category("exp").vardict
     assert len(data.get_category("exp").vardict["energy"].data) > 0
     assert len(data.get_category("nu").vardict["energy"].data) > 0
+    assert data["energy"].equals(data.get_variable("energy"))
+    assert data["exp"] == data.get_category("exp")
+    assert (data["exp:energy"] == data.get_category("exp").get("energy")).all()
+
     data.delete_variable("energy")
     assert "energy" not in data.get_category("exp").vardict
     assert isinstance(sim.get_datacube(), pd.DataFrame)

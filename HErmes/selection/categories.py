@@ -57,7 +57,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         self._is_harvested = False
 
     def __repr__(self):
-        return """<{0}: {1}>""".format(self.__class__,self.name)
+        return """<{0}: {1}>""".format(self.__class__, self.name)
 
     def __hash__(self):
         return hash((self.name,"".join(map(str,list(self.datasets.keys())))))
@@ -67,6 +67,19 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             return True
         else:
             return False
+
+    def __getitem__(self, item):
+        """
+        Shortcut for the get method
+
+        Args:
+            item (str):
+
+        Returns:
+            np.ndarray
+        """
+        return self.get(item)
+
 
     def __len__(self):
         """

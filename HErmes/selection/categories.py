@@ -86,15 +86,33 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         Return the longest variable element
         FIXME: introduce check?
         """
-        #Logger.warning("FIXME: Think about what len should return!")
         #lengths = np.array([len(self.vardict[v].data) for v in list(self.vardict.keys())])
-        lengths = np.array([len(self.get(v)) for v in list(self.vardict.keys())])
+        #lengths = np.array([len(self.get(v)) for v in list(self.vardict.keys())])
+        #lengths = lengths[lengths > 0]
+        #selflen = list(set(lengths))
+        #if not selflen: # empty category should have len 0
+        #    return 0
+        #FIXME: deal with pandas DataFrames more reliably
+        #FIXME: HACK
+        debug = []
+        for v in list(self.vardict.keys()):
+            variable = self.get(v)
+            print v, variable.shape
+            if len(variable.shape) == 2:
+                vlen = variable.shape[0]
+            else:
+                vlen = len(variable)
+            debug.append((v, vlen))
+
+        #debug = [(v,len(self.get(v))) for v in list(self.vardict.keys())]
+        lengths = np.array([l for v,l in debug])
         lengths = lengths[lengths > 0]
+        print lengths
         selflen = list(set(lengths))
         if not selflen: # empty category should have len 0
             return 0
-        debug = [(v,len(self.get(v))) for v in list(self.vardict.keys())]
-        assert len(selflen) == 1, "Different variable lengths fro {}! {}".format(self.name,debug)
+
+        assert len(selflen) == 1, "Different variable lengths for {}! {}".format(self.name,debug)
         return selflen[0]
 
     @property
@@ -176,7 +194,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
         if inplace:
             for k in list(self.vardict.keys()):
-                self.vardict[k].data = self.vardict[k].data[mask]
+                self.vardict[k]._data = self.vardict[k].data[mask]
         else:
             self.cutmask = np.array(mask, dtype=bool)
 
@@ -436,7 +454,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                 exc_caught += "Reading {} for {} generated an exception: {}\n".format(varname,self.name, exc)
                 data = pd.Series([])
 
-            self.vardict[varname].data = data
+            self.vardict[varname]._data = data
             self.vardict[varname].declare_harvested()
             if progbar: bar.update()
         for varname in compound_variables:

@@ -49,13 +49,16 @@ def harvest(filenames, definitions, **kwargs):
         transformation (func): After the data is read out from the files,
                                transformation will be applied, e.g. the log
                                to the energy.
+        fill_empty (bool): Fill empty fields with zeros
+
+
         FIXME: Not implemented yet! precision (int): Precision in bit
 
     Returns:
         pd.Series or pd.DataFrame
     """.format(REGISTERED_FILEEXTENSIONS.__repr__())
 
-
+    fill_empty = kwargs["fill_empty"] if "fill_empty" in kwargs else False
     data = pd.Series()
     for filename in filenames:
         filetype = f.strip_all_endings(filename)[1]
@@ -211,12 +214,19 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
             *files: walk through these files and readout
         """
 
-        self.data = harvest(files, self.definitions)
+        self._data = harvest(files, self.definitions)
         self.declare_harvested()
 
     @abc.abstractmethod
     def rewire_variables(self, vardict):
         return
+
+    @property
+    def data(self):
+        if isinstance(self._data, pd.DataFrame):
+            return self._data.as_matrix()
+        else:
+            return self._data
 
 ############################################
 
@@ -253,10 +263,11 @@ class Variable(AbstractBaseVariable):
         self.label       = label
         self.transform   = transform
         self.definitions = definitions
-        if self.defsize  == 1:
-            self.data    = pd.DataFrame()
-        if self.defsize  == 2:
-            self.data    = pd.Series()
+        self._data       = pd.Series()
+        #if self.defsize  == 1:
+        #    self.data    = pd.DataFrame()
+        #if self.defsize  == 2:
+        #    self.data    = pd.Series()
 
     def rewire_variables(self, vardict):
         """
@@ -287,7 +298,7 @@ class CompoundVariable(AbstractBaseVariable):
             variables = []
         self.variables = variables
         self.operation = operation
-        self.data = pd.Series()
+        self._data = pd.Series()
         self.definitions = ((self.__repr__()),)
 
     def rewire_variables(self, vardict):
@@ -316,7 +327,7 @@ class CompoundVariable(AbstractBaseVariable):
             Logger.error("Only {} is harvested".format(harvested))
             return
         #self.data = reduce(self.operation,[var.data for var in self.variables])
-        self.data = self.operation(*[var.data for var in self.variables])
+        self._data = self.operation(*[var.data for var in self.variables])
         self.declare_harvested()
 
 ##########################################################
@@ -357,7 +368,7 @@ class VariableList(AbstractBaseVariable):
         newvars = []
         for var in self.variables:
             newvars.append(vardict[var.name])
-        self.   variables = newvars
+        self.variables = newvars
 
     @property
     def data(self):

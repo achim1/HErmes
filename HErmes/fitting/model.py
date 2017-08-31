@@ -473,9 +473,11 @@ class Model(object):
             m = iminuit.Minuit(errorfunc, **params)
             m.migrad()
             values = m.values
+            print (values, "result")
             parameters=[]
             for k in sorted(m.var2pos, key=m.var2pos.get):
-                parameters.append(m.var2pos[k])
+                print (k)
+                parameters.append(m.values[k])
             covariance_matrix = []
         else:
             parameters, covariance_matrix = optimize.curve_fit(self, self.xs,\

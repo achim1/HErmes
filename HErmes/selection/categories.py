@@ -97,7 +97,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         debug = []
         for v in list(self.vardict.keys()):
             variable = self.get(v)
-            print v, variable.shape
+            #print v, variable.shape
             if len(variable.shape) == 2:
                 vlen = variable.shape[0]
             else:
@@ -107,7 +107,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         #debug = [(v,len(self.get(v))) for v in list(self.vardict.keys())]
         lengths = np.array([l for v,l in debug])
         lengths = lengths[lengths > 0]
-        print lengths
+        #print lengths
         selflen = list(set(lengths))
         if not selflen: # empty category should have len 0
             return 0

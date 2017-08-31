@@ -303,7 +303,7 @@ class VariableDistributionPlot(object):
 
         if "linestyle" in cfg: 
             color = cfg["linestyle"].pop('color')
-            if isinstance(color,int):
+            if isinstance(color, int):
                 color = self.color_palette[color]
         if 'scatterstyle' in cfg:
             scattercolor = cfg["scatterstyle"].pop('color')

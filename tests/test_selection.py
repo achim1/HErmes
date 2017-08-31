@@ -92,6 +92,10 @@ def test_Cut():
     assert sorted(testcut.variablenames) == sorted(generate_test_cut_variablenames())
     assert len([k for k in testcut]) == len(generate_test_cut_variablenames())
     assert isinstance(testcut.__repr__(), str)
+    testcut2 = cut.Cut(*generate_test_cuts())
+    testcut2 += testcut
+    assert len(testcut.variablenames) == len(testcut2.variablenames)
+    
 
 
 def test_init_Cut_w_condition():

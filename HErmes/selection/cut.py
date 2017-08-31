@@ -9,7 +9,7 @@ from builtins import object
 from .variables import Variable as V
 
 from collections import defaultdict
-
+from copy import deepcopy as copy
 import operator
 operator_lookup = {\
     ">" : operator.gt,\
@@ -40,7 +40,7 @@ class Cut(object):
                               categoryname to np.ndarray(bool)
 
         Returns:
-            pyevsel.variables.Cut
+            HErmes.selection.Cut
         """
 
         self.condition = None
@@ -51,6 +51,7 @@ class Cut(object):
             self.name = kwargs['name']
         self.cutdict = defaultdict(list)
         for var, operation, value in cuts:
+            # FIXME: most likely this has to go away...
             if isinstance(var, V):
                 name = var.name
             if isinstance(var, str):
@@ -66,6 +67,28 @@ class Cut(object):
         variables
         """
         return list(self.cutdict.keys())
+
+    def __add__(self, other):
+        new = copy(self)
+        for k in other.cutdict:
+            if k in self.cutdict:
+                new.cutdict[k] += other.cutdict[k]
+            else:
+                new.cutdict[k] = other.cutdict[k]
+        if other.condition is None:
+            pass
+        else:
+            # condition is dict catname -> np.ndarray(bool)
+            if new.condition is None:
+                new.condition = other.condition
+            else:
+                for k in other.condition:
+                    if k in self.condition:
+                        new.condition[k] = np.logical_and(self.condition[k],\
+                                                           other.condition[k])
+                    else:
+                        new.condition[k] = other.condition[k]
+        return new
 
     def __iter__(self):
         """

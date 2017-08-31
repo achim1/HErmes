@@ -8,26 +8,65 @@ from __future__ import absolute_import
 
 import numpy as np
 import scipy.stats as st
-from scipy.misc import factorial
+
 from future import standard_library
 standard_library.install_aliases()
 
+from ..utils.logger import Logger
 
-def poisson(k, lmbda):
+def poisson(x, lmbda):
     """
     Poisson probability
 
     Args:
-        k (int): measured number of occurences
+        x (int): measured number of occurences
         lmbda (int): expected number of occurences
 
     Returns:
         np.ndarray
     """
-    k = np.asarray(k, dtype=np.int64)
+    x = np.asarray(x, dtype=np.int32)
     pois = st.poisson(lmbda)
-    return pois.pmf(k)
+    return pois.pmf(x)
     #return np.power(lmbda, k) * np.exp(-1 * lmbda) / factorial(k)
+
+################################################
+
+def pandel_factory(c_ice):
+    """
+    Create a pandel function with the defined parameters
+
+    Args:
+        c_ice (float): group velocity in ice in m/ns
+
+    Returns:
+        callable
+    """
+    tau = 450.
+    el = 47.
+    ella = 98.
+
+    if c_ice > 1:
+        Logger.warning("Wrong unit for c_ice... multiplying with 1e-9")
+        c_ice *= 1e-9
+
+    from math import gamma
+    gamma = np.vectorize(gamma)
+    a = lambda tau, ella: 1 / tau + c_ice / ella
+    b = lambda r, el: r / el
+
+    def pandel(x, distance):
+        """
+
+        Args:
+            x : time where the pandel is evalueated (in ns)
+        """
+        val = (a(tau, ella) * ((a(tau, ella) * x) ** (b(distance, el) - 1))\
+               * np.exp(-1 * a(tau, ella) * x)) / gamma(b(distance, el))
+        return val
+
+    return pandel
+
 
 ################################################
 

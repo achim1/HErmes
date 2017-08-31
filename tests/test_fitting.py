@@ -142,12 +142,12 @@ def test_gauss():
     data = np.random.normal(0, .2, 10000)
     gaussmod = model.Model(functions.gauss)
 
-    gaussmod.startparams = [-1, 1]
+    gaussmod.startparams = [-0.2, .5]
     gaussmod.add_data(data, create_distribution=True,\
                       normalize=True, density=True)
     assert gaussmod.ndf == 198
 
-    gaussmod.fit_to_data()
+    gaussmod.fit_to_data(errordef=1)
     fig = gaussmod.plot_result(xmax=5)
     fig.savefig("ptestgauss.png")
     assert 0.5 < gaussmod.chi2_ndf < 1.2
@@ -167,7 +167,7 @@ def test_poisson():
                  density=False)
     assert mod.ndf == 199
 
-    mod.fit_to_data()
+    mod.fit_to_data(errordef=1)
     fig = mod.plot_result(xmax=150)
     #fig.savefig("ptest.png")
     assert 90 < mod.best_fit_params[0] < 110
@@ -191,10 +191,13 @@ def test_exponential():
 
     assert mod.ndf == 199
 
-    mod.fit_to_data()
+    mod.fit_to_data(limits=((1,100),))
     assert 0.1 < mod.chi2_ndf < 20
     assert 15 < mod.best_fit_params[0] < 25 #FIXME: fit is really bad...
 
+def test_pandel():
+    pd = functions.pandel_factory(250000)
+    assert isinstance(pd(np.linspace(0,2500,100), 50),np.ndarray)
 
 #def test_fitmodel()
 #    pass

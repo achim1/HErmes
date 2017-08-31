@@ -91,7 +91,7 @@ def concat_functions(fncs):
 
 def construct_efunc(x, data, jointfunc, joint_pars):
     """
-    Construct a leas-squares function
+    Construct a least-squares function
 
     Args:
         x:

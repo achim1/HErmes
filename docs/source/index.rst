@@ -10,6 +10,15 @@ Welcome to HErmes's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   HErmes.rst
+   HErmes.icecube_goodies
+   HErmes.selection
+   modules
+   HErmes.analysis
+   HErmes.plotting
+   HErmes.utils
+   HErmes.fitting  
+
 
 
 Indices and tables

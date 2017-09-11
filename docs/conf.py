@@ -27,6 +27,10 @@ MOCK_MODULES = ['numpy',\
                 'matplotlib',\
                 'matplotlib.pyplot',\
                 'scipy.interpolate',\
+                'scipy.stats',\
+                'scipy.integrate',\
+                'dashi',
+                'dashi.histogram'\
                 'iminuit',\
                 'tables',\
                 'pandas',

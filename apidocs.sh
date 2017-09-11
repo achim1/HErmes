@@ -1,5 +1,5 @@
 #sphinx-apidoc -f -o docs/apidocs HErmes
-sphinx-apidoc -f -o docs/source HErmes
+sphinx-apidoc -f -o docs HErmes
 python setup.py build_sphinx 
 #touch docs/build/html/.nojekyll
 #rm -rf docs/build/doctrees

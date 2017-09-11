@@ -26,6 +26,8 @@ MOCK_MODULES = ['numpy',\
                 'scipy',\
                 'matplotlib',\
                 'matplotlib.pyplot',\
+                'pylab',\
+                'matplotlib.pylab',\
                 'scipy.interpolate',\
                 'scipy.stats',\
                 'scipy.integrate',\

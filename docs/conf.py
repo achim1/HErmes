@@ -35,8 +35,9 @@ MOCK_MODULES = ['numpy',\
                 'dashi.histogram'\
                 'iminuit',\
                 'tables',\
-                'pandas',
-                'seaborn']
+                'pandas',\
+                'seaborn',\
+                'seaborn.apionly']
 try:
     import mock
     for mod_name in MOCK_MODULES:

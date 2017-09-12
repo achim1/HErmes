@@ -1,9 +1,9 @@
 """
 Globals for layouts
 """
-from numpy import sqrt
+import numpy as np
 
-GOLDEN_RATIO = (1 + sqrt(5))/2.
+GOLDEN_RATIO = (1 + np.sqrt(5))/2.
 
 WIDTH_A4 = 5.78851 # inch
 FIGSIZE_A4_LANDSCAPE = (WIDTH_A4, WIDTH_A4/GOLDEN_RATIO)

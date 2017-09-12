@@ -5,7 +5,6 @@ HErmes documentation contents
 =============================
 
 .. toctree::
-      :maxdepth: 2
 
    HErmes
 

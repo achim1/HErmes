@@ -22,7 +22,9 @@ install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib pandas pytables 
   - python setup.py install
   - pip install coveralls
+  - pip install https://github.com/emiddell/dashi/zipball/master#egg=dashi
+
 script:
-  coverage run --source=pyevsel setup.py test
+  coverage run --source=HErmes setup.py test
 after_success:
   coveralls

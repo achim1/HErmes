@@ -1,5 +1,5 @@
 """
-Convenience function to provide easy logging
+A logger with customizable loglevel at runtime.
 """
 
 from future.utils import with_metaclass
@@ -15,16 +15,17 @@ alertstring = lambda x :  "\033[0;31m" + x + "\033[00m"
 
 def get_logger(loglevel):
     """
-    Get the root logger from the logging
-    module -> All logging will end up at 
-    the same place
+    A logger from python logging on steroids.
+
+    Args:
+        loglevel (int): 10 = DEBUG, 20 = INFO, 30 = WARNING
+
+    Returns:
+        logging.Logger
     """
 
     def exception_handler(exctype, value, tb):
         logger.critical("Uncaught exception", exc_info=(exctype, value, tb))
-
-
-
 
     logger = logging.getLogger()
     logger.setLevel(loglevel)
@@ -42,7 +43,14 @@ def get_logger(loglevel):
     return logger
 
 
-class CustomLoggerType(type):
+class AbstractCustomLoggerType(type):
+    """
+    A modified logging.logger. Do not use directly, but as metaclass.
+    Whenever the logger is called, HErmes.utils.logger.LOGLEVEL is queried
+    to check for a change in the loglevel and a new logger instance is created
+    accordingly. Python inspect is used to inspect the
+    stack.
+    """
 
     @staticmethod
     def __getattr__(item):
@@ -74,7 +82,12 @@ class CustomLoggerType(type):
         return wrapper
 
 
-class Logger(with_metaclass(CustomLoggerType,object)):
+class Logger(with_metaclass(AbstractCustomLoggerType,object)):
+    """
+    A custom logger with loglevel changeable at runtime. To change the loglevel,
+    set the HErmes.utils.logger.LOGLEVEL variable:
+    10 = DEBUG, 20 = INFO, 30 = WARNING
+    """
     pass
 
 

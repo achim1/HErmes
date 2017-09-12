@@ -27,8 +27,16 @@ import scipy.optimize as optimize
 import seaborn.apionly as sb
 
 from . import functions as funcs
+from .. import utils as u
+Logger = u.Logger
 
-PALETTE = sb.color_palette("dark")
+default_color = "r"
+try:
+    default_color = sb.color_palette("dark")[2]
+except Exception as e:
+    Logger.warn("Can not use seaborn dark colorpalette for setting the default color! Exception thrown {}".\
+                format(e))
+
 
 if sys.version_info < (3,0):
     def copy_func(f):

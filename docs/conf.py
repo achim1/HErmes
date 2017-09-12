@@ -30,7 +30,8 @@ MOCK_MODULES = ['scipy',\
                 'scipy.stats',\
                 'scipy.optimize',\
                 'scipy.integrate',\
-                'dashi',
+                'dashi',\
+                'dashi.tinytable',\
                 'dashi.histogram'\
                 'iminuit',\
                 'tables',\

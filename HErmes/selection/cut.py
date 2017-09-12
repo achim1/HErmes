@@ -1,5 +1,5 @@
 """
-Use with pyevsel.categories.Category to perfom cuts
+Remove part of the data which falls below a certain criteria.
 """
 
 from __future__ import absolute_import
@@ -29,9 +29,6 @@ class Cut(object):
 
     def __init__(self, *cuts, **kwargs):
         """
-        Create a new cut, with the variables and operations
-        given in cuts
-
         Args:
             cuts (list): like this [("mc_p_energy",">=",5)]
 
@@ -63,8 +60,7 @@ class Cut(object):
     @property
     def variablenames(self):
         """
-        Returns a list of strings with the names of the 
-        variables
+        The names of the variables the cut will be applied to
         """
         return list(self.cutdict.keys())
 

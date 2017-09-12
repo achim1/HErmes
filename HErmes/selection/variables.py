@@ -34,17 +34,17 @@ except ImportError:
 
 def harvest(filenames, definitions, **kwargs):
     """
-    Extract the variable data from the provided files
+    Read variables from files into memory. Will be used by HErmes.selection.variables.Variable.harvest
 
     Args:
         filenames (list): the files to extract the variables from.
-                          currently supported: {0}
+                          currently supported: hdf
         definitions (list): where to find the data in the files. They usually
                             have some tree-like structure, so this a list
                             of leaf-value pairs. If there is more than one
                             all of them will be tried. (As it might be that
                             in some files a different naming scheme was used)
-                            Example: [("hello_reoncstruction", "x"), ("helo_reoncstruction", "x")] ]
+                            Example: [("hello_reoncstruction", "x"), ("hello_reoncstruction", "y")] ]
     Keyword Args:
         transformation (func): After the data is read out from the files,
                                transformation will be applied, e.g. the log
@@ -56,7 +56,7 @@ def harvest(filenames, definitions, **kwargs):
 
     Returns:
         pd.Series or pd.DataFrame
-    """.format(REGISTERED_FILEEXTENSIONS.__repr__())
+    """
 
     fill_empty = kwargs["fill_empty"] if "fill_empty" in kwargs else False
     data = pd.Series()
@@ -157,11 +157,7 @@ def freedman_diaconis_bins(data,leftedge,\
 
 class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
     """
-    A 'variable' is a large set of numerical data
-    stored in some file or database.
-    This class purpose is to read this data
-    and load it into memory so that it cna be
-    used with pandas/numpy
+    Read out tagged numerical data from files
     """    
     _is_harvested = False
 
@@ -232,14 +228,11 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
 
 class Variable(AbstractBaseVariable):
     """
-    Container class holding variable
-    properties
+    A hook to a single variable read out from a file
     """
 
     def __init__(self,name,definitions=None,bins=None,label="",transform=lambda x : x):
         """
-        Create a new variable
-
         Args:
             name (str): An unique identifier
 
@@ -284,12 +277,19 @@ class Variable(AbstractBaseVariable):
 
 class CompoundVariable(AbstractBaseVariable):
     """
-    Has no representation in any file, but is calculated
-    by other variables
+    Calculate a variable from other variables. This kind of variable will not read any file.
     """
 
-    def __init__(self,name,variables=None,label="",\
+    def __init__(self, name, variables=None,label="",\
                  bins=None,operation=lambda x,y : x + y):
+        """
+        Args:
+            name (str): An unique identifier for the new category.
+            variables (list): A list of variables used to calculate the new variable.
+            label (str): A label for plotting.
+            bins (np.ndarray): binning for distributions.
+            operation (fnc): The operation which will be applied to variables.
+        """
         AbstractBaseVariable.__init__(self)
         self.name = name
         self.label = label
@@ -335,7 +335,7 @@ class CompoundVariable(AbstractBaseVariable):
 
 class VariableList(AbstractBaseVariable):
     """
-    Holds several variable values
+    A list of variable. Can not be read out from files.
     """
 
     def __init__(self, name, variables=None, label="", bins=None):

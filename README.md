@@ -1,4 +1,4 @@
-[![Coverage Status](https://coveralls.io/repos/github/achim1/pyevsel/badge.svg?branch=master)](https://coveralls.io/github/achim1/pyevsel?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/achim1/HErmes/badge.svg?branch=master)](https://coveralls.io/github/achim1/HErmes?branch=master)
 [![Build Status](https://travis-ci.org/achim1/HErmes.svg?branch=master)](https://travis-ci.org/achim1/HErmes.svg?branch=master)
 
 

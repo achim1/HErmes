@@ -22,6 +22,7 @@ install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib pandas pytables 
   - python setup.py install
   - pip install coveralls
+  - pip install jinja2
   - pip install https://github.com/emiddell/dashi/zipball/master#egg=dashi
 
 script:

@@ -27,4 +27,4 @@ install:
 script:
   coverage run --source=HErmes setup.py test
 after_success:
-  coveralls
+  coveralls -v

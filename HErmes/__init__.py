@@ -26,3 +26,5 @@ __all__ = ["fitting", "icecube_goodies", "utils",\
 from . import utils
 loglevel = utils.logger.LOGLEVEL
 
+def _hook():
+    pass

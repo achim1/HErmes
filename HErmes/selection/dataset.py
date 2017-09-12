@@ -1,6 +1,7 @@
 """
-Provides a container for different
-categories
+Datasets group categories together. Method calls on datasets invoke the individual methods
+on the individual categories. Cuts applied to datasets will act on each individual category.
+
 """
 from __future__ import division
 
@@ -13,15 +14,20 @@ from ..plotting import VariableDistributionPlot
 from ..utils.logger import Logger
 from dashi.tinytable import TinyTable
 
-from builtins import map
 from builtins import object
 from . import categories
-from . import variables
-
-from copy import deepcopy as copy
-
 
 def get_label(category):
+    """
+    Get the label for labeling plots from a datasets plot_options dictionary.
+
+    Args:
+        category (HErmes.selection.categories.category): Query the category's plot_options dict, if not fall back to category.name
+
+    Returns:
+        string
+    """
+
     if category.plot_options:
         if "label" in category.plot_options:
             return category.plot_options["label"]
@@ -34,22 +40,16 @@ def get_label(category):
 class Dataset(object):
     """
     Holds different categories, relays calls to each
-    of them
+    of them.
     """
-
 
     def __init__(self, *args, **kwargs):
         """
-        Iniitalize with the categories
-
         Args:
-            *args: pyevsel.variables.categories.Category list
+            *args: HErmes.selection.variables.categories.Category list
 
         Keyword Args:
-            combined_categories: 
-
-        Returns:
-
+            combined_categories:
         """
         self.categories = []
         self.combined_categories = []
@@ -75,7 +75,7 @@ class Dataset(object):
         Add a variable to this category
 
         Args:
-            variable (pyevsel.variables.variables.Variable): A Variable instalce
+            variable (HErmes.selection.variables.variables.Variable): A Variable instalce
         """
 
         for cat in self.categories:
@@ -184,7 +184,7 @@ class Dataset(object):
         Add another category to the dataset
 
         Args:
-            category (pyevsel.categories.Category): add this category
+            category (HErmes.selection.categories.Category): add this category
 
         """
 
@@ -198,7 +198,7 @@ class Dataset(object):
             item:
 
         Returns:
-
+            HErmes.selection.variables.Variable
         """
         try:
             return self.get_category(item)
@@ -217,12 +217,13 @@ class Dataset(object):
 
     def get_category(self, categoryname):
         """
-        Get a reference to a category
+        Get a reference to a category.
 
         Args:
             category: A name which has to be associated to a category
 
-        Returns (pyevsel.variables.categories.Category): Category
+        Returns:
+             HErmes.selection.variables.categories.Category
         """
 
         for cat in self.categories:
@@ -288,7 +289,7 @@ class Dataset(object):
         Add a cut without applying it yet
 
         Args:
-            cut (pyevsel.variables.cut.Cut): Append this cut to the internal cutlist
+            cut (HErmes.selection.variables.cut.Cut): Append this cut to the internal cutlist
 
         """
         for cat in self.categories:
@@ -325,9 +326,9 @@ class Dataset(object):
     def combined_categorynames(self):
         return [cat.name for cat in self.combined_categories]
 
-    def get_sparsest_category(self,omit_zeros=True):
+    def get_sparsest_category(self, omit_zeros=True):
         """
-        Find out which category of the dataset has the least statiscal power
+        Find out which category of the dataset has the least statistical power
 
         Keyword Args:
             omit_zeros (bool): if a category has no entries at all, omit
@@ -368,7 +369,7 @@ class Dataset(object):
             normalized (bool): Normalize the histogram by number of events
             styles (dict): plot styling options
         Returns:
-            pyevsel.variables.VariableDistributonPlot
+            HErmes.selection.variables.VariableDistributionPlot
         """
         cuts = self.categories[0].cuts
         sparsest = self.get_sparsest_category()
@@ -400,8 +401,8 @@ class Dataset(object):
         """
         Integrated rate for each category
 
-        Returns (pandas.Panel):
-            rate with error
+        Returns:
+            pandas.Panel: rate with error
         """
 
         rdata,edata,index = [],[],[]

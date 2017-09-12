@@ -20,7 +20,6 @@ import os
 import sys
 import sphinx_rtd_theme
 # sys.path.insert(0, os.path.abspath('.'))
-import mock
  
 MOCK_MODULES = ['numpy',\
                 'scipy',\
@@ -30,6 +29,7 @@ MOCK_MODULES = ['numpy',\
                 'matplotlib.pylab',\
                 'scipy.interpolate',\
                 'scipy.stats',\
+                'scipy.optimize',\
                 'scipy.integrate',\
                 'dashi',
                 'dashi.histogram'\
@@ -37,10 +37,13 @@ MOCK_MODULES = ['numpy',\
                 'tables',\
                 'pandas',
                 'seaborn']
-
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = mock.Mock()
-
+try:
+    import mock
+    for mod_name in MOCK_MODULES:
+        sys.modules[mod_name] = mock.Mock()
+except ImportError:
+    import warnings
+    warnings.warn("WARNING: Can not import mock module!")
 
 # -- General configuration ------------------------------------------------
 

@@ -539,7 +539,7 @@ class Model(object):
                     add_parameter_text=((r"$\mu_{{SPE}}$& {:4.2e}\\",0),),
                     histostyle="scatter",
                     datacolor="k",
-                    modelcolor=PALETTE[2]):
+                    modelcolor=default_color):
         """
         Show the fit result
 
@@ -585,7 +585,7 @@ class Model(object):
 
         infotext = r"\begin{tabular}{ll}"
 
-        ax.plot(self.xs, self.prediction(self.xs), color=PALETTE[2], alpha=model_alpha)
+        ax.plot(self.xs, self.prediction(self.xs), color=default_color, alpha=model_alpha)
         for comp in self.components:
             ax.plot(self.xs, comp(self.xs), linestyle=":", lw=1, color="k")
 

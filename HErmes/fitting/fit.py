@@ -13,7 +13,7 @@ standard_library.install_aliases()
 import sys
 import pylab as p
 import numpy as np
-from scipy.misc import factorial
+
 
 from functools import reduce
 from copy import deepcopy as copy

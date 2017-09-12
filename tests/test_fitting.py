@@ -1,5 +1,8 @@
 import pytest
 import numpy as np
+import matplotlib
+
+matplotlib.use('Agg')
 
 from HErmes.fitting import fit, model, functions
 
@@ -119,7 +122,7 @@ def test_model_plot_result():
     data = datafactory()
     model.add_data(data, xs = data)
     model.fit_to_data()
-    assert isinstance(model.plot_result(), p.Figure)
+    assert isinstance(model.plot_result(), matplotlib.figure.Figure)
 
 def test_model_plot_result_distribution():
     import pylab as p
@@ -128,7 +131,7 @@ def test_model_plot_result_distribution():
     data = datafactory()
     model.add_data(data,  create_distribution = True)
     model.fit_to_data()
-    assert isinstance(model.plot_result(), p.Figure)
+    assert isinstance(model.plot_result(), matplotlib.figure.Figure)
 
 def test_model_clear():
     model = modelfactory()

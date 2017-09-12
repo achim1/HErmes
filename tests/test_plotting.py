@@ -1,5 +1,8 @@
 import pytest
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+
 
 import HErmes.selection.cut as cut
 import HErmes.plotting as plt
@@ -41,9 +44,9 @@ def test_YStackedCanvas(png_file):
     import os.path
 
     canvas = cv.YStackedCanvas(figsize=layout.FIGSIZE_A4_LANDSCAPE)
-    assert isinstance(canvas.figure, p.Figure)
+    assert isinstance(canvas.figure, matplotlib.figure.Figure)
     canvas = cv.YStackedCanvas()
-    assert isinstance(canvas.figure, p.Figure)
+    assert isinstance(canvas.figure, matplotlib.figure.Figure)
     xlim = (1, 10)
     ylim = (10, 100)
     canvas.limit_xrange(*xlim)
@@ -62,7 +65,7 @@ def test_create_arrow():
     import pylab as p
     import matplotlib
 
-    fig = p.figure()
+    fig = p.Figure()
     ax = fig.gca()
     ax = pltplt.create_arrow(ax, 1, 1, .2, .2, 5,\
                  width = .1, shape="right",\

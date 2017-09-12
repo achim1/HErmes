@@ -1,5 +1,5 @@
 [![Coverage Status](https://coveralls.io/repos/github/achim1/pyevsel/badge.svg?branch=master)](https://coveralls.io/github/achim1/pyevsel?branch=master)
-
+[![Build Status](https://travis-ci.org/achim1/HErmes.svg?branch=master)](https://travis-ci.org/achim1/HErmes.svg?branch=master)
 
 
 # HErmes
@@ -10,11 +10,8 @@
 Requirements
 ---------------------------
 
-Should work in python2/3. For a list of requirements, see `requirements.txt`
+For now python2 only - python3 is in the works. For a list of requirements, see `requirements.txt`
 
-### prerequisites
-
-For the installation of matplotlib and pytables, make sure the python headers as well as libfreetype and libhdf5-dev is installed
 
 Rationale
 ----------------------------

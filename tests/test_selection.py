@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import os
 import hjson
+import matplotlib
+matplotlib.use("Agg")
 
 import HErmes.selection.categories as cat
 import HErmes.selection.dataset as ds
@@ -160,6 +162,11 @@ def test_simcat(prepare_testtable):
     sim.add_cut(energycut)
     sim.apply_cuts()
     cutted_len = len(sim.get("energy"))
+    fig = sim.distribution("energy")
+    assert isinstance(fig, matplotlib.figure.Figure)
+    fig = sim.distribution("energy", log=True)
+    fig = sim.distribution("energy", style="scatter")
+    
 
     sim.undo_cuts()
     sim.delete_cuts()

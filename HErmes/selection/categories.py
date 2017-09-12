@@ -12,6 +12,8 @@ from future.utils import with_metaclass
 import pandas as pd
 import inspect
 import numpy as np
+import dashi as d
+import pylab as p
 import abc
 import concurrent.futures as fut
 import tables
@@ -19,6 +21,7 @@ from copy import deepcopy
 
 from ..utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from ..utils.logger import Logger
+from ..plotting.plotcolors import get_color_palette
 
 from .magic_keywords import MC_P_EN,\
                             MC_P_TY,\
@@ -80,7 +83,6 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         """
         return self.get(item)
 
-
     def __len__(self):
         """
         Return the longest variable element
@@ -114,6 +116,57 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
         assert len(selflen) == 1, "Different variable lengths for {}! {}".format(self.name,debug)
         return selflen[0]
+
+    def distribution(self, varname, bins=None,\
+                     color=None, alpha=0.5,\
+                     fig=None, xlabel=None,
+                     style="line", log=False):
+        """
+        Plot the distribution of variable in the dataset
+
+        Args:
+            varname (str): The name of the variable in the
+
+        Keyword Args:
+            bins (int/np.ndarray): Bins for the distribution
+            color (str/int): A color identifier, either number 0-5 or matplotlib compatible
+            alpha (float): 0-1 alpha value for histogram
+            fig (matplotlib.figure.Figure): Canvas for plotting, if None an empty one will be created
+            xlabel (str): xlabel for the plot. If None, default is used
+            style (str): Either "line" or "scatter"
+            log (bool): Plot yaxis in log scale
+
+        Returns:
+            matplotlib.figure.Figure
+        """
+        if fig is None:
+            fig = p.figure()
+        ax = fig.gca()
+        if bins is None:
+            bins = self.vardict[varname].bins
+        if bins is None:
+            bins = self.vardict[varname].calculate_fd_bins()
+        palette = get_color_palette()
+        if color is None:
+            color=palette[2]
+        if xlabel is None:
+            xlabel = self.vardict[varname].label
+        if xlabel is None:
+            xlabel = varname
+        h = d.factory.hist1d(self.get(varname), bins)
+        if style == "line":
+            h.line(filled=True, color=color, fc=color, alpha=alpha)  # hatch="//")
+            h.line(color=color)
+        elif style == "scatter":
+            h.scatter()
+
+        else:
+            raise ValueError("Can not understand style {}. Has to be either 'line' or 'scatter'".format(style))
+        ax.set_ylabel("events")
+        ax.set_xlabel(xlabel)
+        if log:
+            ax.semilogy(nonposy="clip")
+        return fig
 
     @property
     def raw_count(self):

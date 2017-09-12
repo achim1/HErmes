@@ -160,6 +160,7 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
     Read out tagged numerical data from files
     """    
     _is_harvested = False
+    bins = None
 
     def __hash__(self):
         return hash(self.name)
@@ -199,8 +200,8 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
         Returns:
             numpy.ndarray: Freedman Diaconis bins
         """
-        nbins = freedman_diaconis_bins(self.data,min(self.data),max(self.data))
-        self.bins = n.linspace(min(self.data),max(self.data),nbins)
+        nbins = freedman_diaconis_bins(self.data, min(self.data), max(self.data))
+        self.bins = n.linspace(min(self.data),max(self.data), nbins)
         return self.bins
 
     def harvest(self, *files):
@@ -231,7 +232,8 @@ class Variable(AbstractBaseVariable):
     A hook to a single variable read out from a file
     """
 
-    def __init__(self,name,definitions=None,bins=None,label="",transform=lambda x : x):
+    def __init__(self, name, definitions=None,\
+                 bins=None, label="", transform=lambda x: x):
         """
         Args:
             name (str): An unique identifier

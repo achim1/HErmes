@@ -19,7 +19,7 @@ The HErmes modules provides the following submodules:
 
 """
 
-__version__ = '0.0.7'
+__version__ = '0.0.8'
 __all__ = ["fitting", "icecube_goodies", "utils",\
            "selection", "plotting", "analysis"]
 

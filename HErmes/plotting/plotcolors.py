@@ -7,7 +7,7 @@ Color management - provide a nice color scheme even if seaborn is not available
 from builtins import zip
 from builtins import range
 from ..utils.logger import Logger
-import os.path
+
 
 class ColorDict(dict):
     """
@@ -16,7 +16,7 @@ class ColorDict(dict):
     like string like 'k' for matplotlib
     """
 
-    def __getitem__(self,item):
+    def __getitem__(self, item):
         if item in self:
             return self.get(item)
         else:
@@ -35,7 +35,13 @@ except ImportError:
     
 def get_color_palette(name="dark"):
     """
-    Load a color pallete, use seaborn if available
+    Load a color pallete, use seaborn if available.
+
+    Keyword Args:
+        name (str): A string which is passed though seaborn.color_palette
+
+    Returns:
+        HErmes.plotting.plot_colors.ColorDict
     """
     if not seaborn_loaded:
         color_palette = ColorDict()   # stolen from seaborn color-palette

@@ -1,8 +1,24 @@
 """
-Load variables from files into memory,
-sort them into different categories whcih
-represent experimental data or several
-types of simulation
+Provides containers for in-memory variable. These containers are called "categroies",
+and they represent a set of variables for a certain type of data. Categories can
+be further grouped into "Datasets". Variables can be read out from files and stored
+in memory in the form of numpy arrays or pandas DataSeries/DataFrames. Selection criteria
+can be applied simultaniously (and reversibly) to all categories in a dataset with the "Cut"
+class.
+
+HErmes.selection provides the following submodules:
+
+- `categories` : Container classes for variables.
+
+- `dataset` : Grouping categories together.
+
+- `cut` : Apply selection criteria on variables in a category.
+
+- `variables` : Variable definition. Harvest variables from files.
+
+- `magic_keywords` : A bunch of fixed names for automatic weight calculation.
+
+
 """
 from __future__ import absolute_import
 
@@ -21,11 +37,18 @@ from ..icecube_goodies import fluxes as fluxes
 
 def load_dataset(config, variables=None):
     """
-    Loads a dataset according to a 
-    configuration file
-    
+    Read a json configuration file and load a dataset populated
+    with variables from the files given in the configuration file.
+
     Args:
         config (str/dict): json style config file or dict
+
+    Keyword Args:
+        variables (list): list of strings of variable names to read out
+
+    Returns:
+        HErmes.selection.dataset.Dataset
+
     """
     cfg = config
     if not isinstance(config, dict):

@@ -8,12 +8,11 @@ import os
 import pandas as pd
 import tables
 import abc
+import enum
 
 from ..utils import files as f
 from ..utils.logger import Logger
 from future.utils import with_metaclass
-from functools import reduce
-
 
 DEFAULT_BINS = 70
 
@@ -155,12 +154,31 @@ def freedman_diaconis_bins(data,leftedge,\
 
 #############################################################
 
+class VariableRole(enum.Enum):
+    """
+    Define roles for variables. Some variables used in a special context (like weights)
+    are easily recognizable by this flag.
+    """
+    UNKNOWN         = 0
+    SCALAR          = 10
+    ARRAY           = 20
+    GENERATORWEIGHT = 30
+    RUNID           = 40
+    EVENTID         = 50
+    STARTIME        = 60
+    ENDTIME         = 70
+
+
+
+##############################################################
+
 class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
     """
     Read out tagged numerical data from files
     """    
-    _is_harvested = False
-    bins = None
+    _harvested = False
+    _bins = None
+    ROLES = VariableRole
 
     def __hash__(self):
         return hash(self.name)
@@ -184,14 +202,22 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
         return self > other or self == other
 
     def declare_harvested(self):
-        self._is_harvested = True
-
-    def undeclare_harvested(self):
-        self._is_harvested = False
+        self._harvested = True
 
     @property
-    def is_harvested(self):
-        return self._is_harvested
+    def harvested(self):
+        return self._harvested
+
+    @property
+    def bins(self):
+        if self._bins is None:
+            return self.calculate_fd_bins()
+        else:
+            return self._bins
+
+    @bins.setter
+    def bins(self, value):
+        self._bins = value
 
     def calculate_fd_bins(self):
         """
@@ -210,7 +236,6 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
         Args:
             *files: walk through these files and readout
         """
-
         self._data = harvest(files, self.definitions)
         self.declare_harvested()
 
@@ -233,7 +258,8 @@ class Variable(AbstractBaseVariable):
     """
 
     def __init__(self, name, definitions=None,\
-                 bins=None, label="", transform=lambda x: x):
+                 bins=None, label="", transform=lambda x: x,
+                 role=VariableRole.SCALAR):
         """
         Args:
             name (str): An unique identifier
@@ -243,6 +269,7 @@ class Variable(AbstractBaseVariable):
             bins (numpy.ndarray): used for histograms
             label (str): used for plotting and as a label in tables
             transform (func): apply to each member of the underlying data at readout
+            role (HErmes.selection.variables.VariableRole): The role the variable is playing. In most cases the default is the best choice
         """
         AbstractBaseVariable.__init__(self)
 
@@ -254,6 +281,7 @@ class Variable(AbstractBaseVariable):
             self.defsize = 0
 
         self.name        = name
+        self.role        = role
         self.bins        = bins # when histogrammed
         self.label       = label
         self.transform   = transform
@@ -272,28 +300,33 @@ class Variable(AbstractBaseVariable):
         Returns:
             None
         """
-
         pass
 
 ##########################################################
+
 
 class CompoundVariable(AbstractBaseVariable):
     """
     Calculate a variable from other variables. This kind of variable will not read any file.
     """
 
-    def __init__(self, name, variables=None,label="",\
-                 bins=None,operation=lambda x,y : x + y):
+    def __init__(self, name, variables=None, label="",\
+                 bins=None, operation=lambda x,y : x + y,
+                 role=VariableRole.SCALAR):
         """
         Args:
             name (str): An unique identifier for the new category.
+
+        Keyword Args:
             variables (list): A list of variables used to calculate the new variable.
             label (str): A label for plotting.
             bins (np.ndarray): binning for distributions.
             operation (fnc): The operation which will be applied to variables.
+            role (HErmes.selection.variables.VariableRole): The role the variable is playing. In most cases the default is the best choice
         """
         AbstractBaseVariable.__init__(self)
         self.name = name
+        self.role = role
         self.label = label
         self.bins = bins
         if variables is None:
@@ -317,18 +350,17 @@ class CompoundVariable(AbstractBaseVariable):
     def __repr__(self):
         return """<CompoundVariable {} created from: {}>""".format(self.name,"".join([x.name for x in self.variables ]))
 
-    def harvest(self,*filenames):
+    def harvest(self, *filenames):
         #FIXME: filenames is not used, just
         #there for compatibility
 
-        if self.is_harvested:
+        if self.harvested:
             return
-        harvested = [var for var in self.variables if var.is_harvested]
+        harvested = [var for var in self.variables if var.harvested]
         if not len(harvested) == len(self.variables):
             Logger.error("Variables have to be harvested for compound variable {0} first!".format(self.variables))
             Logger.error("Only {} is harvested".format(harvested))
             return
-        #self.data = reduce(self.operation,[var.data for var in self.variables])
         self._data = self.operation(*[var.data for var in self.variables])
         self.declare_harvested()
 
@@ -340,7 +372,18 @@ class VariableList(AbstractBaseVariable):
     A list of variable. Can not be read out from files.
     """
 
-    def __init__(self, name, variables=None, label="", bins=None):
+    def __init__(self, name, variables=None, label="", bins=None, role=VariableRole.SCALAR):
+        """
+        Args:
+            name (str): An unique identifier for the new category.
+
+        Keyword Args:
+            variables (list): A list of variables used to calculate the new variable.
+            label (str): A label for plotting.
+            bins (np.ndarray): binning for distributions.
+            role (HErmes.selection.variables.VariableRole): The role the variable is playing. In most cases the default is the best choice
+        """
+
         AbstractBaseVariable.__init__(self)
         self.name = name
         self.label = label
@@ -353,9 +396,12 @@ class VariableList(AbstractBaseVariable):
         #FIXME: filenames is not used, just
         #there for compatibility
 
-        if self.is_harvested:
+        # do not calculate weights yet!
+
+
+        if self.harvested:
             return
-        harvested = [var for var in self.variables if var.is_harvested]
+        harvested = [var for var in self.variables if var.harvested]
         if not len(harvested) == len(self.variables):
             Logger.error("Variables have to be harvested for compound variable {} first!".format(self.name))
             return
@@ -363,7 +409,7 @@ class VariableList(AbstractBaseVariable):
 
     def rewire_variables(self, vardict):
         """
-        Use to avoid the necesity to read out variables twice
+        Use to avoid the necessity to read out variables twice
         as the variables are copied over by the categories,
         the refernce is lost. Can be rewired though
         """

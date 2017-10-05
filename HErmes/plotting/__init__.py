@@ -1,5 +1,5 @@
 """
-Provide the usual plots
+A set of
 """
 
 from .plotting import VariableDistributionPlot

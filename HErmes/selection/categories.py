@@ -44,6 +44,8 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
     detector data in a specific configuarion,
     simulated data etc.
     """
+    weightvarname = None
+    _harvested = False
 
     def __init__(self, name):
         self.name = name
@@ -57,7 +59,6 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         self.plot = True
         self.show_in_table = True
         self._weights = pd.Series()
-        self._is_harvested = False
 
     def __repr__(self):
         return """<{0}: {1}>""".format(self.__class__, self.name)
@@ -139,8 +140,15 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         Returns:
             matplotlib.figure.Figure
         """
+
         if fig is None:
             fig = p.figure()
+
+        if self.get(varname).ndim != 1:
+            Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\
+                            Data shape is {}".format(self.get(varname).shape))
+            return fig
+
         ax = fig.gca()
         if bins is None:
             bins = self.vardict[varname].bins
@@ -176,7 +184,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         Returns:
             int
         """
-        assert self.is_harvested,"Please read out variables first"
+        assert self.harvested,"Please read out variables first"
         return len(self)
 
     @property
@@ -184,17 +192,23 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         return list(self.vardict.keys())
 
     @property
-    def is_harvested(self):
-        return self._is_harvested
+    def harvested(self):
+        return self._harvested
 
-    def set_weightfunction(self,func):
+    def declare_harvested(self):
         """
-        Register a function used for weighting
+        Set the flag that all the variables have been read out
+        """
+        self._harvested = True
 
-        Args:
-            func (func): the function to be used
-        """
-        self._weightfunction = func
+    #def set_weightfunction(self,func):
+    #    """
+    #    Register a function used for weighting
+    #
+    #    Args:
+    #        func (func): the function to be used
+    #    """
+    #    self._weightfunction = func
 
     def add_cut(self,cut):
         """
@@ -295,7 +309,6 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                 continue
             self.add_variable(v)
 
-
     def add_variable(self,variable):
         """
         Add a variable to this category
@@ -343,7 +356,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
     def get_files(self, *args, **kwargs):
         """
         Load files for this category
-        uses pyevsel.utils.files.harvest_files
+        uses HErmes.utils.files.harvest_files
 
         Args:
             *args (list of strings): Path to possible files
@@ -363,7 +376,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             force = kwargs.pop("force")
         if "append" in kwargs:
             append = kwargs.pop("append")
-        if self.is_harvested:
+        if self.harvested:
             Logger.info("Variables have already been harvested!\
                          if you really want to reload the filelist,\
                          use 'force=True'.\
@@ -494,7 +507,6 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         except ImportError:
             pass
 
-
         exc_caught = """"""
         for future in fut.as_completed(future_to_varname):
             varname = future_to_varname[future]
@@ -514,16 +526,17 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             #FIXME check if this causes a memory leak
             self.vardict[varname].rewire_variables(self.vardict)
             self.vardict[varname].harvest()
+
         if exc_caught:
             Logger.warning("During the variable readout some exceptions occured!\n" + exc_caught)
-        self._is_harvested = True
+        self.declare_harvested()
 
         if progbar:
             bar.close()
             del bar
 
     @abc.abstractmethod
-    def get_weights(self, model, model_kwargs=None):
+    def calculate_weights(self, model, model_args=None):
         return
 
     def get_datacube(self):
@@ -612,7 +625,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         Returns:
             dict (name, len)
         """
-        if not self.is_harvested:
+        if not self.harvested:
             Logger.warn("No variables for {} loaded yet!".format(self.name))
             return {}
 
@@ -635,8 +648,17 @@ class Simulation(AbstractBaseCategory):
     """
     _mc_p_readout = False
 
-    def __init__(self,name):
+    def __init__(self,name, weightvarname=None):
+        """
+
+        Args:
+            name (str): An unique identifier for tis category
+
+        Keyword Args:
+            weightvarname (str): Use this variable for weighting
+        """
         AbstractBaseCategory.__init__(self,name)
+        self.weightvarname = weightvarname
 
     @property
     def mc_p_readout(self):
@@ -673,46 +695,79 @@ class Simulation(AbstractBaseCategory):
 
         self._mc_p_readout = True
 
-    def get_weights(self, model=None, model_kwargs = None):
+    def calculate_weights(self, model=None, model_args=None):
         """
-        Calculate weights for the variables in this category
+        Walk the variables of this category and identify the
+        weighting variables and calculate them.
 
-        Args:
-            model (callable): A model to be evaluated
+        Usage example: calculate_weights(model=lambda x: np.pow(x, -2.), model_args=["primary_energy"])
 
         Keyword Args:
-            model_kwargs (dict): Will be passed to model
+            model (func): The target flux to weight to, if None, generated flux is used for weighting
+            model_args (list): The variables the model should be applied to from the variable dict
+
+        Returns:
+            np.ndarray
         """
-
-        # FIXME: clean up this mess
-
-        # inspect the argumentes and the weightfunction
-        if not callable(model):
-            self._weights = pd.Series(np.ones(self.raw_count, dtype=np.float64) / model)
+        if self.weightvarname is None:
+            Logger.warn("Have to specify which variable to use for weighting! Set weightvarname first!")
+            self._weights = None
             return
 
-        if not self.mc_p_readout:
-            self.read_mc_primary()
+        #weights = [self.vardict[v] for v in self.vardict if self.vardict[v].role == v.ROLES.WEIGHT]
+        #weight_vars = [v for v in weights if v.name == self.weightvarname]
+        #if len(weight_vars) != 1:
+        #    Logger.warn("Can not calculate weights, {} weight variables found!".format(len(weight_vars)))
+        #    self._weights = None
+        #    return
+        if model is None:
+            self._weights = self.vardict[self.weightvarname].data
+        else:
+            model_args = [self.get(v) for v in model_args]
+            target_flux = model(*model_args)
+            self._weights = target_flux/self.vardict[self.weightvarname].data
 
-        if model_kwargs is None:
-            model_kwargs = dict()
-        func_kwargs = {MC_P_EN : self.get(MC_P_EN),\
-                       MC_P_TY : self.get(MC_P_TY),\
-                       MC_P_WE : self.get(MC_P_WE)}
 
-        for key in MC_P_ZE,MC_P_GW,MC_P_TS,DATASETS:
-            reg = key
-            if key == DATASETS:
-                reg = 'mc_datasets'
-            try:
-                func_kwargs[reg] = self.get(key)
-            except KeyError:
-                Logger.warning("No MCPrimary {0} information! Trying to omit..".format(key))
-
-        func_kwargs.update(model_kwargs)
-        Logger.info("Getting weights for datasets {}".format(self.datasets.__repr__()))
-        self._weights = pd.Series(self._weightfunction(model, self.datasets,\
-                                   **func_kwargs))
+    # def get_weights(self, model=None, model_kwargs = None):
+    #     """
+    #     Calculate weights for the variables in this category
+    #
+    #     Args:
+    #         model (callable): A model to be evaluated
+    #
+    #     Keyword Args:
+    #         model_kwargs (dict): Will be passed to model
+    #     """
+    #
+    #     # FIXME: clean up this mess
+    #
+    #     # inspect the argumentes and the weightfunction
+    #     if not callable(model):
+    #         self._weights = pd.Series(np.ones(self.raw_count, dtype=np.float16) / model)
+    #         return
+    #
+    #     if not self.mc_p_readout:
+    #         self.read_mc_primary()
+    #
+    #     if model_kwargs is None:
+    #         model_kwargs = dict()
+    #     func_kwargs = {MC_P_EN : self.get(MC_P_EN),\
+    #                    MC_P_TY : self.get(MC_P_TY),\
+    #                    MC_P_WE : self.get(MC_P_WE)}
+    #
+    #     for key in MC_P_ZE,MC_P_GW,MC_P_TS,DATASETS:
+    #         reg = key
+    #         if key == DATASETS:
+    #             reg = 'mc_datasets'
+    #         try:
+    #             func_kwargs[reg] = self.get(key)
+    #         except KeyError:
+    #             Logger.warning("No MCPrimary {0} information! Trying to omit..".format(key))
+    #
+    #     func_kwargs.update(model_kwargs)
+    #     Logger.info("Getting weights for datasets {}".format(self.datasets.__repr__()))
+    #     self._weights = pd.Series(self._weightfunction(model, self.datasets,\
+    #                                **func_kwargs))
 
     @property
     def livetime(self):
@@ -743,7 +798,7 @@ class ReweightedSimulation(Simulation):
                         setter)
     files         = property(lambda self: self.mother.files,\
                         setter)
-    _is_harvested = property(lambda self: self.mother.is_harvested,\
+    harvested = property(lambda self: self.mother.harvested, \
                              setter)
     _mc_p_readout = property(lambda self: self.mother.mc_p_readout,\
                              setter)
@@ -893,13 +948,15 @@ class Data(AbstractBaseCategory):
         self.set_livetime(est_ltime)
         return 
 
-    def get_weights(self, livetime):
+    def calculate_weights(self, model=None, model_args=None):
         """
         Calculate weights as rate, that is number of
         events per livetime
+
+        Keyword Args: for compatibility...
         """
 
-        self.set_livetime(livetime)
+        #self.set_livetime(livetime)
         if self.livetime == "guess":
             self.estimate_livetime()
         self._weights = pd.Series(np.ones(self.raw_count, dtype=np.float64)/self.livetime)

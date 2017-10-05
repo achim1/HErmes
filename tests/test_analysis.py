@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from HErmes.analysis import calculus
+from HErmes.analysis import calculus, fluxes
 
 def test_opening_angle():
 
@@ -18,3 +18,11 @@ def test_opening_angle():
     assert (calculus.opening_angle(z1, a1, z1, a1)).sum() == 0
     assert (calculus.opening_angle(z1, a1, z2, a2)).sum() == 5*90.
     assert (calculus.opening_angle(z2, a2, z3, a2)).sum() == 5*180
+
+
+def test_powerlaw_flux():
+
+    pl = fluxes.PowerLawFlux(10,100,1,-2)
+    assert isinstance(pl.fluxsum(), float)
+    assert isinstance(pl(np.array([1,2,3,4])), np.ndarray)
+

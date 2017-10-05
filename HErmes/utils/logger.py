@@ -13,6 +13,8 @@ LOGFORMAT = '%(levelname)s:%(message)s'
 LOGLEVEL  = 30
 alertstring = lambda x :  "\033[0;31m" + x + "\033[00m"
 
+logging.captureWarnings(True)
+
 def get_logger(loglevel):
     """
     A logger from python logging on steroids.

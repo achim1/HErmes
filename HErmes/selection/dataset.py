@@ -164,20 +164,38 @@ class Dataset(object):
             for cat in self.categories:
                 cat.set_weightfunction(weightfunction)
 
-
-    def get_weights(self, models):
+    def calculate_weights(self, model=None, model_args=None):
         """
         Calculate the weights for all categories
 
-        Args:
-            models (dict or callable): A dictionary of categoryname -> model or a single clbl
+        Keyword Args:
+            model (dict/func) : Either a dict catname -> func or a single func
+                                 If it is a single funct it will be applied to all categories
+            model_args (dict/list): variable names as arguments for the function
         """
-        if isinstance(models, dict):
-            for catname in models:
-                self.get_category(catname).get_weights(models[catname])
-        if callable(models):
+        if isinstance(model, dict):
+            if not isinstance(model_args, dict):
+                raise ValueError("if model is a dict, model_args has to be a dict too!")
+            for catname in model:
+                self.get_category(catname).calculate_weights(model=model[catname], model_args=model_args[catname])
+
+        else:
             for cat in self.categories:
-                cat.get_weights(models)
+                cat.calculate_weights(model=model, model_args=model_args)
+
+    # def get_weights(self, models):
+    #     """
+    #     Calculate the weights for all categories
+    #
+    #     Args:
+    #         models (dict or callable): A dictionary of categoryname -> model or a single clbl
+    #     """
+    #     if isinstance(models, dict):
+    #         for catname in models:
+    #             self.get_category(catname).get_weights(models[catname])
+    #     if callable(models):
+    #         for cat in self.categories:
+    #             cat.get_weights(models)
 
     def add_category(self,category):
         """
@@ -198,7 +216,7 @@ class Dataset(object):
             item:
 
         Returns:
-            HErmes.selection.variables.Variable
+            HErmes.selection.variables.Variable/HErmes.selection.categories.Category
         """
         try:
             return self.get_category(item)
@@ -223,14 +241,14 @@ class Dataset(object):
             category: A name which has to be associated to a category
 
         Returns:
-             HErmes.selection.variables.categories.Category
+             HErmes.selection.categories.Category
         """
 
         for cat in self.categories:
             if cat.name == categoryname:
                 return cat
 
-        raise KeyError("Can not find category {}".format(categoryname))
+        raise KeyError("Can not find category {}.".format(categoryname))
 
     def get_variable(self, varname):
         """
@@ -271,6 +289,7 @@ class Dataset(object):
         w = dict()
         for cat in self.categories:
             w[cat.name] = cat.weights
+        print (w)
         return pd.DataFrame.from_dict(w,orient='index')
 
     def __repr__(self):
@@ -346,15 +365,28 @@ class Dataset(object):
                 name  = cat.name
         return name
 
-    def plot_distribution(self,name,\
-                          ratio=([],[]),
-                          cumulative=True,
-                          axes_locator=((0,"c"),(1,"r"),(2,"h")),
-                          heights=(.4,.2,.2),
-                          color_palette='dark',
-                          normalized = False,
-                          styles = dict(),
-                          savepath="",savename="vdistplot"):
+
+    def distribution(self,name,\
+                     ratio=([],[]),
+                     cumulative=True,
+                     #axes_locator=((0,"c"),(1,"r"),(2,"h")),
+                     #heights=(.4,.2,.2),
+                     color_palette='dark',
+                     normalized = False,
+                     styles = dict(),
+                     axis_properties={
+                         "top": {"type": "h", \
+                                 "height": 0.4,
+                                 "index": 2},
+                         "center": {"type": "r", \
+                                    "height": 0.2,
+                                    "index": 1},
+                         "bottom": {"type": "c", \
+                                    "height": 0.2,
+                                    "index": 0}
+                     },
+                     savepath="",
+                     savename="vdistplot"):
         """
         One shot short-cut for one of the most used
         plots in eventselections
@@ -368,28 +400,36 @@ class Dataset(object):
             color_palette (str): A predifined color palette (from seaborn or plotcolors.py
             normalized (bool): Normalize the histogram by number of events
             styles (dict): plot styling options
+            axis_props (dict): axis for the plots
+
         Returns:
             HErmes.selection.variables.VariableDistributionPlot
         """
+        axes_locator = [(axis_properties[k]["index"], axis_properties[k]["type"]) for k in axis_properties]
+        heights = [axis_properties[k]["height"] for k in ("top", "center", "bottom")]
         cuts = self.categories[0].cuts
         sparsest = self.get_sparsest_category()
 
         bins = self.get_category(sparsest).vardict[name].calculate_fd_bins()
-        plot = VariableDistributionPlot(cuts=cuts,bins=bins)
+        plot = VariableDistributionPlot(cuts=cuts, bins=bins)
         if styles:
             plot.plot_options = styles
         else:
             plot.plot_options = self.default_plotstyles
         plotcategories = self.categories + self.combined_categories 
+
+        Logger.warn("For variables with different lengths the weighting is broken. If weights, it will fail")
         for cat in [x for x in plotcategories if x.plot]:
-            plot.add_variable(cat,name)
+            plot.add_variable(cat, name)
             if cumulative:
                 plot.add_cumul(cat.name)
+
         if len(ratio[0]) and len(ratio[1]):
             tratio,tratio_err = self.calc_ratio(nominator=ratio[0],\
-                                            denominator=ratio[1])
+                                                denominator=ratio[1])
 
             plot.add_ratio(ratio[0],ratio[1],total_ratio=tratio,total_ratio_errors=tratio_err)
+
         plot.plot(axes_locator=axes_locator,\
                   heights=heights, normalized=normalized)
         #plot.add_legend()

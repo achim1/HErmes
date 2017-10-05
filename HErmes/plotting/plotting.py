@@ -1,6 +1,5 @@
 """
-Some basic plot routines for plots which occur over and 
-over in eventselections
+Define some
 """
 from __future__ import print_function
 
@@ -8,9 +7,6 @@ from builtins import range
 from builtins import object
 
 from copy import deepcopy as copy
-
-import os
-import os.path
 
 import numpy as n
 import dashi as d
@@ -22,10 +18,8 @@ from ..utils.logger import Logger
 
 d.visual()
 
-#STYLE = os.path.join(os.path.split(__file__)[0],"pyevseldefault.mplstyle")
-#p.style.use(STYLE)
-
 ###############################################
+
 
 def create_arrow(ax, x_0, y_0, dx, dy, length,\
                  width = .1, shape="right",\
@@ -52,8 +46,7 @@ def create_arrow(ax, x_0, y_0, dx, dy, length,\
         fc (str): facecolor
         ec (str): edgecolor
         alpha (float): 0 -1 alpha value of the arrow
-        log (bool): Ifor logscale, the proportion can be
-                     automatically adjust
+        log (bool): I for logscale, the proportions of the arrow will be adjusted accorginly.
 
     Returns:
         matplotlib.axes._subplots.AxesSubplot
@@ -80,18 +73,15 @@ def create_arrow(ax, x_0, y_0, dx, dy, length,\
 
 class VariableDistributionPlot(object):
     """
-    A container class to hold histograms
-    and ratio plots for variables
+    A plot which shows the distribution of a certain variable.
+    Cuts can be indicated with lines and arrows. This class defines
+    (and somehow enforces) a certain style.
     """
 
     def __init__(self, cuts=None,\
                  color_palette="dark",\
                  bins=None):
         """
-        A plot which shows the distribution of a certain variable.
-        Cuts can be indicated with lines and arrows. This class defines
-        (and somehow enforces) a certain style.
-
         Keyword Args:
             bins (array-like): desired binning, if None use default
             cuts (pyevsel.variables.cut.Cut):
@@ -117,7 +107,7 @@ class VariableDistributionPlot(object):
         Add a cut to the the plot which can be indicated by an arrow
 
         Args:
-            cuts ():
+            cuts (HErmes.selection.cuts.Cut):
 
         Returns:
             None
@@ -163,9 +153,13 @@ class VariableDistributionPlot(object):
         if self.bins is None:
             self.bins = category.vardict[variable_name].bins
         self.name = variable_name
+        weights = category.weights
+        if len(weights) == 0:
+            weights = None
+
         self.add_data(category.get(variable_name),\
                       category.name,\
-                      self.bins, weights=category.weights,\
+                      self.bins, weights=weights,\
                       label=category.vardict[variable_name].label)
 
     def add_cumul(self, name):
@@ -311,13 +305,14 @@ class VariableDistributionPlot(object):
             if isinstance(scattercolor,int):
                 scattercolor = self.color_palette[scattercolor]
 
-
         if cumulative:
             histograms = self.cumuls
             log = False
         else:
             histograms = self.histograms
 
+        print (cfg)
+        print (cfg.keys())
         if cfg['histotype'] == 'scatter':
             if normalized:
                 histograms[name] = histograms[name].normalized()
@@ -436,6 +431,8 @@ class VariableDistributionPlot(object):
             else:
                 k = self.cumuls[list(self.cumuls.keys())[ax[0]]]
                 self._draw_distribution(cur_ax,cumulative=True,log=log)
+
+
         for ax in r_axes:
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_ratio:
@@ -518,6 +515,8 @@ class VariableDistributionPlot(object):
         self.canvas.eliminate_lower_yticks()
         # set the label on the lowest axes
         self.canvas.axes[0].set_xlabel(self.label)
+        for x in self.canvas.figure.axes:
+            x.spines["right"].set_visible(True)
 
     def add_legend(self, **kwargs):
         """

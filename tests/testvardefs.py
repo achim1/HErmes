@@ -4,6 +4,7 @@ import numpy as np
 # define some test variables
 # run and event id
 V = v.Variable
+CV = v.CompoundVariable
 run   = V("RUN",definitions=[("header","runid")])
 event = V("EVENT",definitions=[("header","eventid")])
 
@@ -19,6 +20,8 @@ mc_p_ze     = V("mc_p_ze", definitions=[("MCPrimary","zenith"),("mostEnergeticPr
 mc_p_we     = V("mc_p_we", definitions=[("I3MCWeightDict","TotalInteractionProbabilityWeight"),("CorsikaWeightMap","DiplopiaWeight")])
 mc_p_gw     = V('mc_p_gw', definitions=[('CorsikaWeightMap','Weight')])
 mc_p_ts     = V('mc_p_ts', definitions=[('CorsikaWeightMap','TimeScale')])
+
+generation_weights = CV("generation_weights", variables=[mc_p_en],operation= lambda w: np.ones(len(w)), role=CV.ROLES.GENERATORWEIGHT)
 
 # more MC related things
 mc_nevents  = V("mc_nevents", definitions=[("I3MCWeightDict","NEvents")])

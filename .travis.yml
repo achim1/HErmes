@@ -22,6 +22,7 @@ install:
   - python setup.py install
   - pip install coveralls
   - pip install jinja2
+  - pip install enum34
   - pip install https://github.com/emiddell/dashi/zipball/master#egg=dashi
 
 script:

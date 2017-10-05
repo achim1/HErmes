@@ -1,6 +1,15 @@
 """
-Globals for layouts
+A set of figure sizes for publication-ready figures on A4 paper based on the
+golden ratio. For the use with pylabe figure, e.g. fig =pylab.figure(figsize=FIGSIZE_A4)
+
+Available layouts:
+
+- FIGSIZE_A4: Figure on full A4 width, portrait mode, golden ratio
+- FIGSIZE_A4_LANDSCAPE: Figure on full A4 width, landscape mode, golden ratio
+- FIGSIZE_A4_LANDSCAPE_HALF_HEIGHT: Figure on full A4 width, landscape mode, height half of golden ratio
+- FIGSIZE_A4_SQUARE: Figure on full A4 width, square
 """
+
 import numpy as np
 
 GOLDEN_RATIO = (1 + np.sqrt(5))/2.

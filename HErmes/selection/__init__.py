@@ -33,7 +33,7 @@ from ..utils.logger import Logger
 from . import categories as c
 from . import dataset as ds
 from ..icecube_goodies import weighting as wgt
-from ..icecube_goodies import fluxes as fluxes
+from ..analysis import fluxes as fluxes
 
 def load_dataset(config, variables=None):
     """
@@ -58,6 +58,7 @@ def load_dataset(config, variables=None):
     categories = dict()
     weightfunctions = dict()
     models = dict()
+    model_args = dict()
     files_basepath   = cfg["files_basepath"]
     for cat in list(cfg["categories"].keys()):
         thiscat = cfg["categories"][cat]
@@ -75,13 +76,18 @@ def load_dataset(config, variables=None):
                                                    datasets=datasets,\
                                                    ending=thiscat["file_type"])
 
-            weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]]
-            if "constant" in thiscat["model_method"]:
-                models[cat] = float(thiscat["model"])
+            #weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]]
+            if False:
+                pass
+            #if "constant" in thiscat["model_method"]:
+            #    models[cat] = float(thiscat["model"])
             else:
                 try:
                     fluxclass, flux = thiscat["model"].split(".")
+                    #fluxclass = thiscat["model"]
+                    #flux = "__call__"
                     models[cat] = getattr(dict(inspect.getmembers(fluxes))[fluxclass],flux)
+                    model_args[cat] = thiscat["model_args"]
                 except ValueError:
                     Logger.warning("{} does not seem to be a valid model for {}. This might cause troubles. If not, it is probably fine!".format(thiscat["model"],cat))
                     models[cat] = None
@@ -91,26 +97,32 @@ def load_dataset(config, variables=None):
             categories[cat].get_files(os.path.join(files_basepath,thiscat['subpath']),\
                                       prefix=thiscat["file_prefix"],\
                                       ending=thiscat["file_type"])
-            models[cat] = float(thiscat["livetime"])
-            weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]] 
+            #models[cat] = float(thiscat["livetime"])
+            #weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]]
             
         elif thiscat["datatype"] == "reweighted":
             pass
         else:
             raise TypeError("Data type not understood. Has to be either 'simulation', 'reweighted' or 'data'!!")
+
     # at last we can take care of reweighted categories
     for cat in list(cfg["categories"].keys()):
         thiscat = cfg["categories"][cat]
         if thiscat["datatype"] == "reweighted":
             categories[cat] = c.ReweightedSimulation(cat,categories[thiscat["parent"]])
-            if thiscat["model"]:
-                fluxclass, flux = thiscat["model"].split(".")
-                models[cat] = getattr(dict(inspect.getmembers(fluxes))[fluxclass],flux)
-                weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]] 
-        elif thiscat["datatype"] in ["data","simulation"]:
+            #if thiscat["model"]:
+            #    fluxclass, flux = thiscat["model"].split(".")
+            #    models[cat] = getattr(dict(inspect.getmembers(fluxes))[fluxclass],flux)
+            #    weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]]
+        elif thiscat["datatype"] in ["data", "simulation"]:
             pass
         else:
             raise TypeError("Data type not understood. Has to be either 'simulation', 'reweighted' or 'data'!!")
+
+    for cat in categories:
+        if isinstance(categories[cat], c.Data):
+            continue
+        categories[cat].weightvarname = cfg["categories"][cat]["weights"]
 
     #combined categories
     combined_categories = dict() 
@@ -134,8 +146,9 @@ def load_dataset(config, variables=None):
 
     dataset.load_vardefs(vardefs)
     dataset.read_variables(names=variables)
-    dataset.set_weightfunction(weightfunctions)
-    dataset.get_weights(models=models)
+    #dataset.set_weightfunction(weightfunctions)
+    #dataset.get_weights(models=models)
+    dataset.calculate_weights(model=models, model_args=model_args)
     plot_dict = {}
     for k in cfg["categories"]:
         if "plotting" in cfg["categories"][k]:

@@ -55,9 +55,7 @@ def generate_test_cut_variablenames():
 def test_Variable(prepare_testtable):
     testvar = mc_p_en
     testvar.declare_harvested()
-    assert testvar.is_harvested
-    testvar.undeclare_harvested()
-    assert (not testvar.is_harvested)
+    assert testvar.harvested
     assert (testvar == testvar)
     testvar.harvest(str(prepare_testtable.realpath()))
     testvar.declare_harvested()
@@ -71,7 +69,7 @@ def test_Variable(prepare_testtable):
     assert isinstance(hash(comp_var), int)
     assert isinstance(comp_var.__repr__(), str)
     comp_var.harvest(prepare_testtable.realpath())
-    assert comp_var.is_harvested
+    assert comp_var.harvested
     comp_var.rewire_variables(dict(zip([i.name for i in comp_var.variables ], comp_var.variables)))
 
 
@@ -79,7 +77,7 @@ def test_Variable(prepare_testtable):
     assert isinstance(hash(list_var), int)
     assert isinstance(list_var.__repr__(), str)
     list_var.harvest(prepare_testtable.realpath())
-    assert list_var.is_harvested
+    assert list_var.harvested
     assert len(list_var.data) == 2
     list_var.rewire_variables(dict(zip([i.name for i in list_var.variables],list_var.variables)))
 
@@ -136,7 +134,7 @@ def test_simcat(prepare_testtable):
     assert (sim["energy"] == sim.get("energy")).all()
     lengths = sim.show() 
     assert isinstance(lengths, dict)
-    assert sim.is_harvested
+    assert sim.harvested
     assert sim.mc_p_readout
     sim.get_files(os.path.split(filename)[0], use_ls = True, ending=".h5", prefix="", sanitizer=lambda x : "test" in x, force=True)
     sim.add_variable(energy)
@@ -152,10 +150,13 @@ def test_simcat(prepare_testtable):
     assert "energy" in sim.variablenames
     def wf(x,y,**kwargs):
         return np.ones(TESTDATALEN)
-    sim.set_weightfunction(wf)
-    sim.get_weights(lambda x: x)
+    #sim.set_weightfunction(wf)
+    #sim.get_weights(lambda x: x)
     #assert np.isfinite(sim.livetime)
-    assert sim.livetime == 1.
+    sim.weightvarname = "mc_p_we"
+    print sim.variablenames
+    sim.calculate_weights()
+    #assert sim.livetime == 1.
     energycut = cut.Cut(("energy", ">", 500**2))
 
 
@@ -243,7 +244,8 @@ def test_datcat(prepare_testtable):
     exp.add_variable(energy)
     exp.read_variables()
     assert len(exp.get("energy")) > 0
-    exp.get_weights(100.)
+    exp.set_livetime(100.)
+    exp.calculate_weights()
     assert (exp.weights == (np.ones(exp.raw_count)/100.)).all()
 
     exp = cat.Data("exp")
@@ -271,11 +273,6 @@ def test_dataset(prepare_testtable, prepare_sparser_testtable):
     assert len(data.categories) == 2
 
 
-    # test helpers
-    assert ds.get_label(exp) == "exp"
-    exp.plot_options = {"label" : "foo"}
-    assert ds.get_label(exp) == "foo" 
-
     data.add_category(sim2)
     assert isinstance(data.__repr__(), str)
     assert len(data.categorynames) == 3
@@ -294,10 +291,19 @@ def test_dataset(prepare_testtable, prepare_sparser_testtable):
     assert data["exp"] == data.get_category("exp")
     assert (data["exp:energy"] == data.get_category("exp").get("energy")).all()
 
+    data.distribution("energy")
+
+    # test helpers
+    assert ds.get_label(exp) == "exp"
+    exp.plot_options = {"label" : "foo"}
+    assert ds.get_label(exp) == "foo" 
+
     data.delete_variable("energy")
     assert "energy" not in data.get_category("exp").vardict
     assert isinstance(sim.get_datacube(), pd.DataFrame)
     del data
+    sim.weightvarname = "mc_p_we"
+    sim2.weightvarname = "mc_p_we"
     data = ds.Dataset(exp, sim, sim2)
     data.load_vardefs({"exp" : testvardefs, "nu" : testvardefs})
     data.read_variables()
@@ -326,6 +332,7 @@ def test_dataset(prepare_testtable, prepare_sparser_testtable):
 
     assert len(data.get_category("nu")) > 0
     assert data.get_category("exp") == exp
+
     sparsest = data.get_sparsest_category()
     assert sparsest == "nu" 
     sparsest = data.get_sparsest_category(omit_zeros=False)
@@ -337,13 +344,13 @@ def test_dataset(prepare_testtable, prepare_sparser_testtable):
         return None
     models = {"nu" : model}
     data.set_livetime(1000.)
-    data.set_weightfunction(hobo_weightfunc)
-    data.get_weights(models)
+    #data.set_weightfunction(hobo_weightfunc)
+    #data.get_weights(models)
+    data.calculate_weights()
     assert len(data.weights) > 0
     data.integrated_rate
     data.sum_rate(categories=["exp", "nu"])
     data.calc_ratio(nominator=["exp"], denominator=["nu"])
-    #data.plot_distribution("energy")
     combi_cat = cat.CombinedCategory("combined", data.categories)
     combi_cat.weights
     assert isinstance(combi_cat.vardict, dict)
@@ -365,5 +372,8 @@ def test_load_dataset(prepare_testtable):
     config["categories"]["data"]["subpath"] = filepath
 
     data = load_dataset(config)
-    assert data.weights[1]["neutrinos"] == 1
+    print data.weights.keys()
+    print type(data.weights)
+    #print data.weights
+    #assert data.weights["neutrinos"] == 1
 

@@ -32,8 +32,9 @@ ytick.minor.size : 5
 
 
 #font
-font.family      : serif
-font.sans-serif  : GillSans
+font.family      : sans-serif
+#font.sans-serif  : GillSans
+font.sans-serif  : Open Sans
 #font.serif      : TeX Gyre Pagella
 font.serif       : Palatino
 font.weight      : bold

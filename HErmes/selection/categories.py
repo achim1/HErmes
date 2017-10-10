@@ -172,6 +172,8 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             raise ValueError("Can not understand style {}. Has to be either 'line' or 'scatter'".format(style))
         ax.set_ylabel("events")
         ax.set_xlabel(xlabel)
+        ax.set_ylim(ymin=0)
+        ax.set_xlim(xmin=min(h.binedges))
         if log:
             ax.semilogy(nonposy="clip")
         return fig

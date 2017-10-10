@@ -225,7 +225,7 @@ def check_hdf_integrity(infiles,checkfor = None ):
             corrupt_files.append(file_to_check)
 
         elif checkfor is not None:
-            f = tables.openFile(file_to_check)
+            f = tables.open_file(file_to_check)
             try:
                 f.getNode(checkfor)
             except tables.NoSuchNodeError:
@@ -241,7 +241,5 @@ def check_hdf_integrity(infiles,checkfor = None ):
 
     Logger.debug("These files are corrupt! {}".format(corrupt_files.__repr__()))
     Logger.info("{} of {} files corrupt!".format(len(corrupt_files),allfiles))
-    return integer_files,corrupt_files
-
-
+    return integer_files,corrupt_file_file
 

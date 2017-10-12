@@ -12,6 +12,14 @@ HErmes\.analysis\.calculus module
     :undoc-members:
     :show-inheritance:
 
+HErmes\.analysis\.fluxes module
+-------------------------------
+
+.. automodule:: HErmes.analysis.fluxes
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 HErmes\.analysis\.tasks module
 ------------------------------
 

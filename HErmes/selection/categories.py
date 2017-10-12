@@ -159,7 +159,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             color=palette[2]
         if xlabel is None:
             xlabel = self.vardict[varname].label
-        if xlabel is None:
+        if (xlabel is None) or (not xlabel):
             xlabel = varname
         h = d.factory.hist1d(self.get(varname), bins)
         if style == "line":

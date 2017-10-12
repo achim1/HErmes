@@ -241,5 +241,5 @@ def check_hdf_integrity(infiles,checkfor = None ):
 
     Logger.debug("These files are corrupt! {}".format(corrupt_files.__repr__()))
     Logger.info("{} of {} files corrupt!".format(len(corrupt_files),allfiles))
-    return integer_files,corrupt_file_file
+    return integer_files,corrupt_files
 

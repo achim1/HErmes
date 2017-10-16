@@ -8,7 +8,7 @@ import HErmes.selection.cut as cut
 import HErmes.plotting as plt
 import HErmes.plotting.plotting as pltplt
 
-from HErmes.plotting import plotcolors as pc
+from HErmes.plotting import colors as pc
 from HErmes.plotting import canvases as cv
 from HErmes.plotting import layout
 

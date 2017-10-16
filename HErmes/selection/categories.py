@@ -21,7 +21,7 @@ from copy import deepcopy
 
 from ..utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from ..utils.logger import Logger
-from ..plotting.plotcolors import get_color_palette
+from ..plotting.colors import get_color_palette
 
 from .magic_keywords import MC_P_EN,\
                             MC_P_TY,\
@@ -156,7 +156,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             bins = self.vardict[varname].calculate_fd_bins()
         palette = get_color_palette()
         if color is None:
-            color=palette[2]
+            color=palette[0]
         if xlabel is None:
             xlabel = self.vardict[varname].label
         if (xlabel is None) or (not xlabel):

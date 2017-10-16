@@ -397,7 +397,7 @@ class Dataset(object):
         Keyword Args:
             path (str): The path under which the plot will be saved.
             ratio (list): A ratio plot of these categories will be crated
-            color_palette (str): A predifined color palette (from seaborn or plotcolors.py
+            color_palette (str): A predifined color palette (from seaborn or HErmes.plotting.colors) 
             normalized (bool): Normalize the histogram by number of events
             styles (dict): plot styling options
             axis_props (dict): axis for the plots

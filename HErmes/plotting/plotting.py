@@ -12,7 +12,7 @@ import numpy as n
 import dashi as d
 import pylab as p
 
-from .plotcolors import get_color_palette
+from .colors import get_color_palette
 from .canvases import YStackedCanvas
 from ..utils.logger import Logger
 

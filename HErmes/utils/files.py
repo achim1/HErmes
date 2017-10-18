@@ -226,8 +226,10 @@ def check_hdf_integrity(infiles,checkfor = None ):
 
         elif checkfor is not None:
             f = tables.open_file(file_to_check)
+            if not checkfor.startswith("/"):
+                checkfor = "/" + checkfor
             try:
-                f.getNode(checkfor)
+                f.get_node(checkfor)
             except tables.NoSuchNodeError:
                 Logger.info("File %s has no Node %s" %(file_to_check,checkfor))
                 corrupt_files.append(file_to_check)

@@ -68,6 +68,7 @@ def test_timit():
 
 def test_check_hdf_integrity(prepare_testtable):
 
-    files.check_hdf_integrity(str(prepare_testtable.realpath()), checkfor="energy")
+    files.check_hdf_integrity([str(prepare_testtable.realpath())] )
+    files.check_hdf_integrity([str(prepare_testtable.realpath())], checkfor="energy")
 
 

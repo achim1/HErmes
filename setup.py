@@ -36,7 +36,10 @@ def _post_install():
 
     as_root = False
     if os.getuid() == 0:
+<<<<<<< HEAD
         as_root = True
+=======
+>>>>>>> 7b77aaed651d6b6d91067d5e26d87871f30b0e7b
         try:
             uid = int(os.getenv("SUDO_UID"))
             gid = int(os.getenv("SUDO_GID"))
@@ -45,6 +48,7 @@ def _post_install():
             print ("There is no SUDO_UID/SUDO_GID shellvariable...")
             
             import pwd
+<<<<<<< HEAD
             import subprocess as sub
 
             whois = sub.Popen(["who"], stdout=sub.PIPE).communicate()[0].split()[0]
@@ -54,6 +58,12 @@ def _post_install():
 
             uid = int(pwd.getpwnam(whois).pw_uid)
             gid = int(pwd.getpwnam(whois).pw_gid)
+=======
+
+            whois = sub.Popen(["who"], stdout=sub.PIPE).communicate()[0].split()[0]
+            uid = int(pwd.getpwnam(whois)).pw_uid
+            gid = int(pwd.getpwnam(whois)).pw_gid
+>>>>>>> 7b77aaed651d6b6d91067d5e26d87871f30b0e7b
     else:
         uid = int(os.getuid())
         gid = int(os.getgid())

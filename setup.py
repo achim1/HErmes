@@ -27,12 +27,6 @@ def _post_install():
     from matplotlib import get_configdir
 
     styles = sorted(glob("resources/*mplstyle"))
-    mplstylelib = get_configdir()
-    mplstylelib = os.path.join(mplstylelib, "stylelib")
-    if not os.path.exists(mplstylelib):
-        print ("WARNING: Can not find stylelib dir {}".format(mplstylelib))
-        print ("Creating {}".format(mplstylelib))
-        os.mkdir(mplstylelib)
 
     as_root = False
     if os.getuid() == 0:
@@ -49,21 +43,24 @@ def _post_install():
 
             whois = sub.Popen(["who"], stdout=sub.PIPE).communicate()[0].split()[0]
             # python2/3
-            if hasattr(name, "decode"):
-                name = name.decode()
+            if hasattr(whois, "decode"):
+                whois = whois.decode()
 
             uid = int(pwd.getpwnam(whois).pw_uid)
             gid = int(pwd.getpwnam(whois).pw_gid)
 
-            whois = sub.Popen(["who"], stdout=sub.PIPE).communicate()[0].split()[0]
-            uid = int(pwd.getpwnam(whois)).pw_uid
-            gid = int(pwd.getpwnam(whois)).pw_gid
     else:
         uid = int(os.getuid())
         gid = int(os.getgid())
 
+    mplstylelib = get_configdir()
+    mplstylelib = os.path.join(mplstylelib, "stylelib")
     if as_root:
-        mplstylelib.replace("root", whois)
+        mplstylelib = mplstylelib.replace("/root", "/home/" + whois)
+    if not os.path.exists(mplstylelib):
+        print ("WARNING: Can not find stylelib dir {}".format(mplstylelib))
+        print ("Creating {}".format(mplstylelib))
+        os.mkdir(mplstylelib)
     for st in styles:
 
         print("INSTALLING {} to {}".format(st, mplstylelib))

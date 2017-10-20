@@ -35,9 +35,18 @@ def _post_install():
         os.mkdir(mplstylelib)
 
     if os.getuid() == 0:
-        uid = int(os.getenv("SUDO_UID"))
-        gid = int(os.getenv("SUDO_GID"))
+        try:
+            uid = int(os.getenv("SUDO_UID"))
+            gid = int(os.getenv("SUDO_GID"))
+        except Exception as e:
+            print ("Caught exception {}".format(e))
+            print ("There is no SUDO_UID/SUDO_GID shellvariable...")
+            
+            import pwd
 
+            whois = sub.Popen(["who"], stdout=sub.PIPE).communicate()[0].split()[0]
+            uid = int(pwd.getpwnam(whois)).pw_uid
+            gid = int(pwd.getpwnam(whois)).pw_gid
     else:
         uid = int(os.getuid())
         gid = int(os.getgid())

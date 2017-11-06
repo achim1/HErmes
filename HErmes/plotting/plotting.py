@@ -311,8 +311,6 @@ class VariableDistributionPlot(object):
         else:
             histograms = self.histograms
 
-        print (cfg)
-        print (cfg.keys())
         if cfg['histotype'] == 'scatter':
             if normalized:
                 histograms[name] = histograms[name].normalized()

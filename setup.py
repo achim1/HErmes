@@ -30,13 +30,13 @@ def _post_install():
 
     as_root = False
     if os.getuid() == 0:
-        as_root = True
         try:
             uid = int(os.getenv("SUDO_UID"))
             gid = int(os.getenv("SUDO_GID"))
         except Exception as e:
             print ("Caught exception {}".format(e))
             print ("There is no SUDO_UID/SUDO_GID shellvariable...")
+            as_root = True
             
             import pwd
             import subprocess as sub

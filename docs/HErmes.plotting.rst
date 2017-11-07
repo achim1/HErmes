@@ -12,18 +12,18 @@ HErmes\.plotting\.canvases module
     :undoc-members:
     :show-inheritance:
 
-HErmes\.plotting\.layout module
+HErmes\.plotting\.colors module
 -------------------------------
 
-.. automodule:: HErmes.plotting.layout
+.. automodule:: HErmes.plotting.colors
     :members:
     :undoc-members:
     :show-inheritance:
 
-HErmes\.plotting\.plotcolors module
------------------------------------
+HErmes\.plotting\.layout module
+-------------------------------
 
-.. automodule:: HErmes.plotting.plotcolors
+.. automodule:: HErmes.plotting.layout
     :members:
     :undoc-members:
     :show-inheritance:

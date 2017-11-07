@@ -385,8 +385,7 @@ class Dataset(object):
                                     "height": 0.2,
                                     "index": 0}
                      },
-                     savepath="",
-                     savename="vdistplot"):
+                     bins=None):
         """
         One shot short-cut for one of the most used
         plots in eventselections
@@ -401,7 +400,7 @@ class Dataset(object):
             normalized (bool): Normalize the histogram by number of events
             styles (dict): plot styling options
             axis_props (dict): axis for the plots
-
+            bins (np.ndarray): binning, if None binning will be deduced from the varialbe definition
         Returns:
             HErmes.selection.variables.VariableDistributionPlot
         """
@@ -410,8 +409,16 @@ class Dataset(object):
         cuts = self.categories[0].cuts
         sparsest = self.get_sparsest_category()
 
-        bins = self.get_category(sparsest).vardict[name].calculate_fd_bins()
-        plot = VariableDistributionPlot(cuts=cuts, bins=bins)
+        # check if there are user-defined bins for that variable
+        if bins is None:
+            bins = self.get_category(sparsest).vardict[name].bins
+        # calculate the best possible binning
+        if bins is None:
+            bins = self.get_category(sparsest).vardict[name].calculate_fd_bins()
+        label = self.get_category(sparsest).vardict[name].label
+        plot = VariableDistributionPlot(cuts=cuts, bins=bins,\
+                                        xlabel=label,\
+                                        color_palette=color_palette)
         if styles:
             plot.plot_options = styles
         else:
@@ -433,7 +440,7 @@ class Dataset(object):
         plot.plot(axes_locator=axes_locator,\
                   heights=heights, normalized=normalized)
         #plot.add_legend()
-        plot.canvas.save(savepath,savename,dpi=350)
+        #plot.canvas.save(savepath,savename,dpi=350)
         return plot
 
     @property

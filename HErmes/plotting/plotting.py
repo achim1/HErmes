@@ -12,6 +12,8 @@ import numpy as n
 import dashi as d
 import pylab as p
 
+import matplotlib.ticker
+
 from .colors import get_color_palette
 from .canvases import YStackedCanvas
 from ..utils.logger import Logger
@@ -80,12 +82,14 @@ class VariableDistributionPlot(object):
 
     def __init__(self, cuts=None,\
                  color_palette="dark",\
-                 bins=None):
+                 bins=None,\
+                 xlabel=None):
         """
         Keyword Args:
             bins (array-like): desired binning, if None use default
-            cuts (pyevsel.variables.cut.Cut):
+            cuts (HErmes.selection.cut.Cut):
             color_palette (str): use this palette for the plotting
+            xlabel (str): descriptive string for x-label
         """
         self.histograms = {}
         self.histratios = {}
@@ -99,7 +103,10 @@ class VariableDistributionPlot(object):
         if cuts is None:
             cuts = []
         self.cuts = cuts
-        self.color_palette = get_color_palette(color_palette)
+        if isinstance(color_palette, str):
+            self.color_palette = get_color_palette(color_palette)
+        else:
+            self.color_palette = color_palette
         self.plot_options = dict()
 
     def add_cuts(self, cut):
@@ -318,7 +325,21 @@ class VariableDistributionPlot(object):
                                      label=cfg["label"],\
                                      color=scattercolor, **cfg["scatterstyle"])
         elif cfg['histotype'] == "line":
-            histograms[name].line(log=log, cumulative=cumulative,\
+            # apply th alpha only to the "fill" setting
+            linecfg = copy(cfg["linestyle"])
+            if "alpha" in linecfg:
+                linecfg.pop("alpha")
+                linecfg["filled"] = False
+            if "filled" in cfg["linestyle"]:
+                histograms[name].line(log=log, cumulative=cumulative,\
+                                  label=cfg["label"], color=color,\
+                                  **linecfg)
+
+                histograms[name].line(log=log, cumulative=cumulative,\
+                                  label=None, color=color,\
+                                  **cfg["linestyle"])
+            else:
+                histograms[name].line(log=log, cumulative=cumulative,\
                                   label=cfg["label"], color=color,\
                                   **cfg["linestyle"])
         elif cfg['histotype'] == "overlay":
@@ -513,6 +534,17 @@ class VariableDistributionPlot(object):
         self.canvas.eliminate_lower_yticks()
         # set the label on the lowest axes
         self.canvas.axes[0].set_xlabel(self.label)
+        minor_tick_space = self.canvas.axes[0].xaxis.get_ticklocs()
+        minor_tick_space = (minor_tick_space[1] - minor_tick_space[0])/10.
+        self.canvas.axes[0].xaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(minor_tick_space))
+        for x in self.canvas.axes[1:]:
+            p.setp(x.get_xticklabels(), visible=False)
+            p.setp(x.get_xticklines(), visible=False)
+            x.xaxis.set_tick_params(which="both",\
+                                    length=0,\
+                                    width=0,\
+                                    bottom=False,\
+                                    labelbottom=False)
         for x in self.canvas.figure.axes:
             x.spines["right"].set_visible(True)
 

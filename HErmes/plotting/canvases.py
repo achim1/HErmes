@@ -70,9 +70,12 @@ class YStackedCanvas(object):
         abs_bot = bot + heights[0]
         for h in heights[1:]:
             Logger.warn("Creating axes with {}".format(left, abs_bot, width, h))
-            theaxes = p.axes([left, abs_bot, width, h])
-            p.setp(theaxes.get_xticklabels(), visible=False)
-            axes.append(theaxes)
+            theaxis = p.axes([left, abs_bot, width, h], sharex=axes[0])
+            p.setp(theaxis.get_xticklabels(), visible=False)
+            p.setp(theaxis.get_xticklines(), visible=False)
+            #theaxis.xaxis.minorTicks = []
+            #theaxis.xaxis.majorTicks = []
+            axes.append(theaxis)
             abs_bot += h + space_between_plots
 
         self.axes = axes

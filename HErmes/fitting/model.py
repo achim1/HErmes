@@ -41,9 +41,12 @@ except Exception as e:
 if sys.version_info < (3,0):
     def copy_func(f):
         """Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)"""
-        g = types.FunctionType(f.func_code, f.func_globals, name=f.func_name,
-                           argdefs=f.func_defaults,
-                           closure=f.func_closure)
+        g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
+                           argdefs=f.__defaults__,
+                           closure=f.__closure__)
+        #g = types.FunctionType(f.func_code, f.func_globals, name=f.func_name,
+        #                   argdefs=f.func_defaults,
+        #                   closure=f.func_closure)
         g = functools.update_wrapper(g, f)
         return g
 else:
@@ -94,7 +97,7 @@ def concat_functions(fncs):
     return data
 """.format(datapar + "," + ",".join(joint_pars),datapar, ",".join(joint_pars),datapar, ",".join(joint_pars))
     #print (TEMPLATE)
-    exec TEMPLATE
+    exec (TEMPLATE, globals())
     return jointfunc, joint_pars
 
 def construct_efunc(x, data, jointfunc, joint_pars):
@@ -121,7 +124,7 @@ def construct_efunc(x, data, jointfunc, joint_pars):
     return ((abs(data - jointfunc({}))**2).sum())""".format(",".join(joint_pars), datapar + "," + ",".join(joint_pars))
 
     print (EFUNC)
-    exec EFUNC
+    exec (EFUNC, globals())
     return efunc
 
 def create_minuit_pardict(fn, startparams, errors, limits, errordef):

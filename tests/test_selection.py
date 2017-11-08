@@ -154,7 +154,7 @@ def test_simcat(prepare_testtable):
     #sim.get_weights(lambda x: x)
     #assert np.isfinite(sim.livetime)
     sim.weightvarname = "mc_p_we"
-    print sim.variablenames
+    #print sim.variablenames
     sim.calculate_weights()
     #assert sim.livetime == 1.
     energycut = cut.Cut(("energy", ">", 500**2))
@@ -372,8 +372,8 @@ def test_load_dataset(prepare_testtable):
     config["categories"]["data"]["subpath"] = filepath
 
     data = load_dataset(config)
-    print data.weights.keys()
-    print type(data.weights)
+    #print data.weights.keys()
+    #print type(data.weights)
     #print data.weights
     #assert data.weights["neutrinos"] == 1
 

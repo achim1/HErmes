@@ -165,7 +165,11 @@ def group_names_by_regex(names,regex=EXP_RUN_ID,firstpattern=GCD,estimate_first=
     identifiers        = list(map(regex,names))
     unique_identifiers = set(identifiers)
     meta_names         = list(zip(identifiers,names))
-    meta_names         = sorted(meta_names)
+    def sorter(pair):
+        if pair[0] is None:
+            return 0
+        return pair[0] 
+    meta_names         = sorted(meta_names, key=sorter)
     groupdict          = dict()
     for i in unique_identifiers:
         groupdict[i] = [j[1] for j in meta_names if j[0] == i]

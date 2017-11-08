@@ -7,7 +7,9 @@ notifications:
 
 # Setup anaconda
 before_install:
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - uname -r
+  - if [[$TRAVIS_PYTHON_VERSION < 3.0]]; wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - if [[$TRAVIS_PYTHON_VERSION > 3.0]]; wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - chmod +x miniconda.sh
   - ./miniconda.sh -b
   - export PATH=/home/travis/miniconda2/bin:$PATH
@@ -22,7 +24,7 @@ install:
   - python setup.py install
   - pip install coveralls
   - pip install jinja2
-  - pip install enum34
+  - if [[ $TRAVIS_PYTHON_VERSION < 3.5 ]]; pip install enum34
   - pip install https://github.com/emiddell/dashi/zipball/master#egg=dashi
 
 script:

@@ -106,7 +106,10 @@ def parse_requirements(req_file):
         for r in f.readlines():
             if not r.startswith("http"):
                 reqs.append(r)
-        
+            elif ";" in r:
+                continue # FIXME: find better solution
+                #data = r.split(";")       
+                #reqs.append(data[0]) 
         return reqs
 
 try:

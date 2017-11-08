@@ -1,16 +1,15 @@
 [![Coverage Status](https://coveralls.io/repos/github/achim1/HErmes/badge.svg?branch=master)](https://coveralls.io/github/achim1/HErmes?branch=master)
+[![Supported python versions](https://img.shields.io/badge/Python-2.7%2C%203.5-blue.svg)](https://img.shields.io/badge/Python-2.7%2C%203.5-blue.svg)
 [![Build Status](https://travis-ci.org/achim1/HErmes.svg?branch=master)](https://travis-ci.org/achim1/HErmes.svg?branch=master)
 [![Docs](https://readthedocs.org/projects/hermes-python/badge/?version=latest)](http://hermes-python.readthedocs.io/en/latest/?badge=latest)
+
+
 
 # HErmes
 
 *Highly efficient rapid multipurpose event selection toolset with a focus on high energy physics analysis tasks* 
 
 
-Requirements
----------------------------
-
-For now python2 only - python3 is in the works. For a list of requirements, see `requirements.txt`
 
 
 Rationale

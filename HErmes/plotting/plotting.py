@@ -22,7 +22,29 @@ d.visual()
 
 ###############################################
 
+def adjust_minor_xticks(axis):
+    """
+    Decorate the x-axis with a reasonable set of
+    minor x-ticks
+    
+    Args:
+        axis (matplotlib.axis): The axis to decorate
 
+    Returns:
+        matplotlib.axis
+
+    """
+
+    axis.set_xlabel(self.label)
+    minor_tick_space = axis.xaxis.get_ticklocs()
+    minor_tick_space = (minor_tick_space[1] - minor_tick_space[0])/10.
+    if minor_tick_space < 0.1:
+        Logger.debug("Adjusting for small numbers in tick spacing, tickspace detectected {}".format(minor_tick_space))
+        minor_tick_space = 0.1
+    axis.xaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(minor_tick_space))
+    return axis
+
+###############################################
 def create_arrow(ax, x_0, y_0, dx, dy, length,\
                  width = .1, shape="right",\
                  fc="k", ec="k",\

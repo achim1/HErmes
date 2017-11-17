@@ -536,6 +536,9 @@ class VariableDistributionPlot(object):
         self.canvas.axes[0].set_xlabel(self.label)
         minor_tick_space = self.canvas.axes[0].xaxis.get_ticklocs()
         minor_tick_space = (minor_tick_space[1] - minor_tick_space[0])/10.
+        if minor_tick_space < 0.1:
+            Logger.debug("Adjusting for small numbers in tick spacing, tickspace detectected {}".format(minor_tick_space))
+            minor_tick_space = 0.1
         self.canvas.axes[0].xaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(minor_tick_space))
         for x in self.canvas.axes[1:]:
             p.setp(x.get_xticklabels(), visible=False)

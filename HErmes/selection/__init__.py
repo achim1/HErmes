@@ -62,6 +62,16 @@ def load_dataset(config, variables=None):
     files_basepath   = cfg["files_basepath"]
     for cat in list(cfg["categories"].keys()):
         thiscat = cfg["categories"][cat]
+        sanitizer = lambda x: True
+
+        if "file_regex" in thiscat:
+            to_sanitize = thiscat["file_regex"]
+            def sanitizer(x):
+                if to_sanitize in x:
+                    return True
+                else: 
+                    return False
+
         if thiscat["datatype"] == "simulation":
             categories[cat] = c.Simulation(cat)
             # remember that json keys are strings, so 
@@ -70,10 +80,12 @@ def load_dataset(config, variables=None):
             if "datasets" in thiscat:
                 datasets = {int(x): int(thiscat['datasets'][x]) for x in thiscat['datasets']}
 
+            
             categories[cat].get_files(os.path.join(files_basepath,\
                                                    thiscat['subpath']),\
                                                    prefix=thiscat["file_prefix"],\
                                                    datasets=datasets,\
+                                                   sanitizer=sanitizer,\
                                                    ending=thiscat["file_type"])
 
             #weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]]
@@ -96,6 +108,7 @@ def load_dataset(config, variables=None):
             categories[cat] = c.Data(cat)
             categories[cat].get_files(os.path.join(files_basepath,thiscat['subpath']),\
                                       prefix=thiscat["file_prefix"],\
+                                      sanitizer=sanitizer,\
                                       ending=thiscat["file_type"])
             #models[cat] = float(thiscat["livetime"])
             #weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]]

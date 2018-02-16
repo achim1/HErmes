@@ -21,9 +21,9 @@ DEFAULT_BINS = 70
 REGISTERED_FILEEXTENSIONS = [".h5"]
 
 try:
-    import root_numpy as rn
+    import uproot as ur
 except ImportError:
-    Logger.warning("No root_numpy found, root support is limited!")
+    Logger.warning("No uproot found, root support is limited!")
     if ".root" in REGISTERED_FILEEXTENSIONS:
         REGISTERED_FILEEXTENSIONS.remove(".root")
 
@@ -242,6 +242,10 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
     @abc.abstractmethod
     def rewire_variables(self, vardict):
         return
+
+    @property
+    def ndim(self):
+        return self._data.ndim
 
     @property
     def data(self):

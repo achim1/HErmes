@@ -5,6 +5,8 @@ import os.path
 import stat
 import shutil
 import atexit
+import pylab # seems useless, however triggers
+             # the matplotlib.style mechanism
 
 from glob import glob
 
@@ -24,7 +26,7 @@ def _post_install():
     print ("--------------------------------")
     print ("Running post install...")
 
-    from matplotlib import get_configdir
+    import matplotlib
 
     styles = sorted(glob("resources/*mplstyle"))
 
@@ -53,7 +55,7 @@ def _post_install():
         uid = int(os.getuid())
         gid = int(os.getgid())
 
-    mplstylelib = get_configdir()
+    mplstylelib = matplotlib.get_configdir()
     mplstylelib = os.path.join(mplstylelib, "stylelib")
     if as_root:
         mplstylelib = mplstylelib.replace("/root", "/home/" + whois)
@@ -70,6 +72,9 @@ def _post_install():
             os.fchown(fd.fileno(), uid, gid)
             #os.fchmod(fd.fileno(), stat.S_IRWXU & stat.S_IRGRP & stat.S_IROTH)
             os.fchmod(fd.fileno(), 0o755)
+
+    matplotlib.style.reload_library()
+    return
 
 class full_install(install):
     """

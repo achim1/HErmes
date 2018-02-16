@@ -387,9 +387,10 @@ class VariableDistributionPlot(object):
         else:
             histograms = self.histograms
 
+        if normalized and not cumulative:
+            histograms[name] = histograms[name].normalized()
+
         if cfg['histotype'] == 'scatter':
-            if normalized:
-                histograms[name] = histograms[name].normalized()
             histograms[name].scatter(log=log,cumulative=cumulative,\
                                      label=cfg["label"],\
                                      color=scattercolor, **cfg["scatterstyle"])
@@ -574,7 +575,7 @@ class VariableDistributionPlot(object):
         minplotrange = n.inf
         maxplotrange = -n.inf
         for h in list(self.histograms.values()):
-            if not h.bincenters[h.bincontent > 0].sum():
+            if not h.bincontent.any():
                 continue
             if h.bincenters[h.bincontent > 0][0] < leftplotedge:
                 leftplotedge = h.bincenters[h.bincontent > 0][0]
@@ -589,10 +590,11 @@ class VariableDistributionPlot(object):
             maxplotrange *= 8
         else:
             maxplotrange *= 1.2
-        if n.isfinite(leftplotedge):
-            self.canvas.limit_xrange(xmin=leftplotedge)
-        if n.isfinite(rightplotedge):
-            self.canvas.limit_xrange(xmax=rightplotedge)
+        print (leftplotedge, rightplotedge)
+        #if n.isfinite(leftplotedge):
+        #    self.canvas.limit_xrange(xmin=leftplotedge)
+        #if n.isfinite(rightplotedge):
+        #    self.canvas.limit_xrange(xmax=rightplotedge)
         for ax in h_axes:
             self.canvas.select_axes(ax[0]).set_ylim(ymax=maxplotrange,ymin=minplotrange)
 

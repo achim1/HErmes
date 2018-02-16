@@ -37,6 +37,23 @@ from .magic_keywords import MC_P_EN,\
 from . import variables
 MAX_CORES = 6
 
+def cut_with_nans(data, cutmask):
+    """
+    Cut the individual fields of a 2d array and keep the 
+    shape by filling up with nans
+
+    Args:
+        data (np.ndarray): The array to cut
+        cutmask (np.ndarray): Cut with this boolean array
+
+    Returns:
+        np.ndarray: data with applied cuts
+    """
+    dlen = len(data)
+    tmpdata = data[cutmask]
+    tmpdata = np.hstack((tmpdata, np.nan*np.ones(dlen-len(tmpdata))))
+    return tmpdata
+
 
 class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
     """
@@ -242,9 +259,11 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             cond_mask = np.ones(self.raw_count)
             if cut.condition is None:
                 continue
+
+
             for varname,(op,value) in cut:
                 s = self.get(varname)
-                cond_mask = np.logical_and(cond_mask,op(s,value) )
+                cond_mask = np.logical_and(cond_mask, op(s,value) )
             cond_mask = np.logical_or(cond_mask, np.logical_not(cut.condition[self.name]))
             cond_masks.append(cond_mask)
 
@@ -257,15 +276,30 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                 continue
             for varname, (op,value) in cut:
                 s = self.get(varname)
-                assert len(mask) == len(op(s, value)),\
-                    "Cutting fails due to different varialbe lengths for {}".format(varname)
-                mask = np.logical_and(mask, op(s,value))
+                
+                # special treatement if variable
+                # is an array
+                if self[varname].ndim == 2:
+                    Logger.warning("Cut on array variable can be only applied inline!")
+                    Logger.warning("Conditions can not be applied to array variable!")
+                    for i, k in enumerate(s):
+                        mask =  op(s[i],value) 
+                        s[i] = cut_with_nans(s[i], mask)
+                    self.vardict[varname]._data = s
+
+                else:
+                    assert len(mask) == len(op(s, value)),\
+                        "Cutting fails due to different varialbe lengths for {}".format(varname)
+                    mask = np.logical_and(mask, op(s,value))
 
         if inplace:
             for k in list(self.vardict.keys()):
-                self.vardict[k]._data = self.vardict[k].data[mask]
-        else:
+                if self.vardict[varname].ndim != 2:
+                    self.vardict[k]._data = self.vardict[k].data[mask]
+        elif self.vardict[varname].ndim != 2:
             self.cutmask = np.array(mask, dtype=bool)
+        else:
+            pass
 
     def undo_cuts(self):
         """
@@ -500,7 +534,6 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
         progbar = False
         try:
-            import pyprind
             import tqdm
             n_it = len(list(future_to_varname.keys()))
             #bar = pyprind.ProgBar(n_it,monitor=False,bar_char='#',title=self.name)

@@ -89,8 +89,9 @@ def load_dataset(config, variables=None):
                                                    ending=thiscat["file_type"])
 
             #weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]]
-            if False:
-                pass
+            if not "model" in thiscat:
+                models[cat] = None
+                model_args[cat] = [None]
             #if "constant" in thiscat["model_method"]:
             #    models[cat] = float(thiscat["model"])
             else:

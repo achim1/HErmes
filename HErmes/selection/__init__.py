@@ -92,8 +92,6 @@ def load_dataset(config, variables=None):
             if not "model" in thiscat:
                 models[cat] = None
                 model_args[cat] = [None]
-            #if "constant" in thiscat["model_method"]:
-            #    models[cat] = float(thiscat["model"])
             else:
                 try:
                     fluxclass, flux = thiscat["model"].split(".")
@@ -135,6 +133,8 @@ def load_dataset(config, variables=None):
 
     for cat in categories:
         if isinstance(categories[cat], c.Data):
+            continue
+        if not "weights" in  cfg["categories"][cat]:
             continue
         categories[cat].weightvarname = cfg["categories"][cat]["weights"]
 

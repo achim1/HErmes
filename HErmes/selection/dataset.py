@@ -122,7 +122,7 @@ class Dataset(object):
 
     @property
     def variablenames(self):
-        return {cat.name : cat.variablenames for cat in self.categories]}
+        return {cat.name : cat.variablenames for cat in self.categories}
 
 
     #@GetTiming

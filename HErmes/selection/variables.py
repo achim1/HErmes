@@ -76,16 +76,16 @@ def harvest(filenames, definitions, **kwargs):
         tmpdata = pd.Series()
         for definition in definitions:
 
-            
+            definition = list(definition) 
             if filetype == ".h5":
-                if definition[0].startswith("/"):
-                    definition[0] = definition[0][1:]
+                if not definition[0].startswith("/"):
+                    definition[0] = "/" + definition[0]
                 try:
                     # data = store.select_column(*definition)
                     if not definition[1]:
-                        tmpdata = hdftable.get_node("/" + definition[0])
+                        tmpdata = hdftable.get_node(definition[0])
                     else:
-                        tmpdata = hdftable.get_node("/" + definition[0]).col(definition[1])
+                        tmpdata = hdftable.get_node(definition[0]).col(definition[1])
                     if tmpdata.ndim == 2:
                         if data.empty:
                             data = pd.DataFrame()

@@ -120,6 +120,11 @@ class Dataset(object):
             for cat in self.categories:
                 cat.load_vardefs(vardefs)
 
+    @property
+    def variablenames(self):
+        return {cat.name : cat.variablenames for cat in self.categories]}
+
+
     #@GetTiming
     def read_variables(self, names=None):
         """

@@ -542,7 +542,6 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         try:
             import tqdm
             n_it = len(list(future_to_varname.keys()))
-            #bar = pyprind.ProgBar(n_it,monitor=False,bar_char='#',title=self.name)
             bar = tqdm.tqdm(total=n_it, leave=True, desc=self.name)
             progbar = True
         except ImportError:

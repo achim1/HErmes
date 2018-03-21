@@ -135,7 +135,8 @@ if no_parse_requirements:
                      'appdirs>=1.4.0',
                      'futures>=3.0.5',
                      'future>=0.16.0',
-                     'pyprind>=2.9.6']
+                     'tqdm>=4.19.5']
+                     #'pyprind>=2.9.6']
 
 
 

@@ -138,7 +138,8 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
     def distribution(self, varname, bins=None,\
                      color=None, alpha=0.5,\
                      fig=None, xlabel=None,
-                     style="line", log=False):
+                     style="line", log=False,
+                     figure_factory = None):
         """
         Plot the distribution of variable in the dataset
 
@@ -153,13 +154,18 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             xlabel (str): xlabel for the plot. If None, default is used
             style (str): Either "line" or "scatter"
             log (bool): Plot yaxis in log scale
+            figure_factory (func): Must return a single matplotlib.Figure, NOTE: figure_factory has priority over fig keyword
 
         Returns:
             matplotlib.figure.Figure
         """
 
+        if figure_factory is not None:
+            fig = figure_factory()
+
         if fig is None:
             fig = p.figure()
+        
 
         if self.get(varname).ndim != 1:
             Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\

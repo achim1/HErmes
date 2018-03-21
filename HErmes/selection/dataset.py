@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 
 from collections import OrderedDict
+from copy import deepcopy as copy
 
 from ..plotting import VariableDistributionPlot
 from ..utils.logger import Logger
@@ -374,11 +375,12 @@ class Dataset(object):
     def distribution(self,name,\
                      ratio=([],[]),
                      cumulative=True,
-                     #axes_locator=((0,"c"),(1,"r"),(2,"h")),
-                     #heights=(.4,.2,.2),
+                     log=False,
                      color_palette='dark',
                      normalized = False,
                      styles = dict(),
+                     style="classic",
+                     ylabel="rate/bin [1/s]",
                      axis_properties={
                          "top": {"type": "h", \
                                  "height": 0.4,
@@ -390,7 +392,8 @@ class Dataset(object):
                                     "height": 0.2,
                                     "index": 0}
                      },
-                     bins=None):
+                     bins=None,
+                     figure_factory=None):
         """
         One shot short-cut for one of the most used
         plots in eventselections
@@ -405,12 +408,42 @@ class Dataset(object):
             normalized (bool): Normalize the histogram by number of events
             styles (dict): plot styling options
             axis_props (dict): axis for the plots
-            bins (np.ndarray): binning, if None binning will be deduced from the varialbe definition
+            bins (np.ndarray): binning, if None binning will be deduced from the variable definition
+            figure_factory (func): factory function which return a matplotlib.Figure
+            style (string): TODO "modern" || "classic"
         Returns:
             HErmes.selection.variables.VariableDistributionPlot
         """
-        axes_locator = [(axis_properties[k]["index"], axis_properties[k]["type"]) for k in axis_properties]
-        heights = [axis_properties[k]["height"] for k in ("top", "center", "bottom")]
+        
+        
+        if (not cumulative) or ratio  == ([],[]):
+
+            # assuming a single cumulative axis
+            tmp_axis_properties = dict()
+            unassigned_height = 0
+
+            for key in axis_properties:
+                if ("c" == axis_properties[key]["type"]) and (not cumulative):
+                    unassigned_height += axis_properties[key]["height"]
+                    continue
+                if ("r" == axis_properties[key]["type"]) and (ratio == ([],[])):
+                    unassigned_height += axis_properties[key]["height"]
+                    continue
+                
+                tmpdict = copy(axis_properties[key])
+                tmpdict["index"] = tmpdict["index"] -1 - bool(ratio == ([],[]))
+                tmp_axis_properties.update({key : tmpdict})
+
+            n_plots = len(tmp_axis_properties.keys())
+            extra_height = unassigned_height/float(n_plots)        
+            for key in tmp_axis_properties:
+                tmp_axis_properties[key]["height"] += extra_height
+    
+        else:
+            tmp_axis_properties = copy(axis_properties)
+
+        axes_locator = [(tmp_axis_properties[k]["index"], tmp_axis_properties[k]["type"], tmp_axis_properties[k]["height"]) for k in tmp_axis_properties]
+        #heights = [axis_properties[k]["height"] for k in axis_properties]
         cuts = self.categories[0].cuts
         sparsest = self.get_sparsest_category()
 
@@ -443,7 +476,10 @@ class Dataset(object):
             plot.add_ratio(ratio[0],ratio[1],total_ratio=tratio,total_ratio_errors=tratio_err)
 
         plot.plot(axes_locator=axes_locator,\
-                  heights=heights, normalized=normalized)
+                  normalized=normalized,\
+                  figure_factory=figure_factory,\
+                  log=log,
+                  ylabel=ylabel)
         #plot.add_legend()
         #plot.canvas.save(savepath,savename,dpi=350)
         return plot

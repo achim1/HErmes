@@ -349,7 +349,8 @@ class VariableDistributionPlot(object):
     def _draw_distribution(self, ax, name,
                                  log=True,\
                                  cumulative=False,
-                                 normalized=False):
+                                 normalized=False, 
+                                 ylabel="rate/bin [1/s]"):
         """
         Paint the histograms!
         
@@ -370,7 +371,7 @@ class VariableDistributionPlot(object):
                                   "linewidth": 3
                                   }
                    }
-
+        log = False
         if "linestyle" in cfg: 
             color = cfg["linestyle"].pop('color')
             if isinstance(color, int):
@@ -422,11 +423,14 @@ class VariableDistributionPlot(object):
         if cumulative:
             ax.set_ylabel('fraction')
         else:
-            ax.set_ylabel('rate/bin [1/s]')
+            ax.set_ylabel(ylabel)
 
     def _draw_histratio(self, name, axes, ylim=(0.1,2.5)):
         """
         Plot one of the ratios
+        
+        Returns:
+            tuple (float,float) : the min and max of the ratio
         """
         ratio,total_ratio,total_ratio_errors,label = self.histratios[name]
         ratio.scatter(c="k", marker="o", markersize=3)
@@ -438,9 +442,24 @@ class VariableDistributionPlot(object):
             axes.fill_between(xs,total_ratio - total_ratio_errors,\
                               total_ratio + total_ratio_errors,\
                               facecolor="grey", alpha=0.3)
-        axes.set_ylim(ylim)
+        #axes.set_ylim(ylim)
         axes.set_ylabel(label)
         axes.grid(1)
+        if not ratio.y is None:
+            if not ratio.yerr is None:
+                ymin = min(ratio.y - ratio.yerr)
+                ymax = max(ratio.y + ratio.yerr)
+                ymin -= (0.1*ymin)
+                ymax += (0.1*ymax)
+                return ymin, ymax
+            else:
+                ymin = min(ratio.y)
+                ymax = max(ration.y)
+                ymin -= (0.1*ymin)
+                ymax += (0.1*ymax)
+                return ymin, ymax
+        else:
+            return 0,0
 
     def _locate_axes(self, combined_cumul, combined_ratio, combined_distro):
         axes_locator = []
@@ -471,14 +490,16 @@ class VariableDistributionPlot(object):
                     axes_locator +=[(x+ len(axes_locator),"h") for x  in range(len(self.histograms))]
         return axes_locator
 
-    def plot(self, heights=(.5, .2, .2),\
-             axes_locator=((0, "c"), (1, "r"), (2, "h")),\
+    def plot(self,
+             axes_locator=((0, "c",.2), (1, "r",.2), (2, "h",.5)),\
              combined_distro=True,\
              combined_ratio=True,\
              combined_cumul=True,
              normalized=True,
              log=True,
-             legendwidth = 1.5):
+             legendwidth = 1.5,
+             ylabel="rate/bin [1/s]",
+             figure_factory=None):
         """
         Create the plot
 
@@ -502,46 +523,67 @@ class VariableDistributionPlot(object):
             axes_locator = self._locate_axes(combined_cumul,combined_ratio,combined_distro)
 
         # calculate the amount of needed axes
-        assert len(axes_locator) == len(heights), "Need to specify exactly as many heights as plots you want to have"
+        # assert len(axes_locator) == len(heights), "Need to specify exactly as many heights as plots you want to have"
 
-        self.canvas = YStackedCanvas(subplot_yheights=heights)
+        heights = [k[2] for k in axes_locator]
+        self.canvas = YStackedCanvas(subplot_yheights=heights,\
+                                     figure_factory=figure_factory)
         
         cu_axes = [x for x in axes_locator if x[1] == "c"]
         h_axes = [x for x in axes_locator if x[1] == "h"]
         r_axes = [x for x in axes_locator if x[1] == "r"]
+
         maxheights = []
         minheights = []
         for ax in cu_axes:
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_cumul:
                 for k in list(self.cumuls.keys()):
-                    self._draw_distribution(cur_ax, k, cumulative=True,log=log)
+                    self._draw_distribution(cur_ax, k, cumulative=True,log=log, ylabel=ylabel)
                 break
             else:
                 k = self.cumuls[list(self.cumuls.keys())[ax[0]]]
-                self._draw_distribution(cur_ax,cumulative=True,log=log)
+                self._draw_distribution(cur_ax,cumulative=True,log=log, ylabel=ylabel)
 
 
         for ax in r_axes:
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_ratio:
                 for k in list(self.histratios.keys()):
-                    self._draw_histratio(k,cur_ax)
+                    ymin, ymax = self._draw_histratio(k,cur_ax)
+                    ymin -= (ymin*0.1)
+                    ymax += (ymax*0.1)
+                    cur_ax.set_ylim(ymin,ymax)
+
+                    # FIXME: good tick spacing
+                    #major_tick_space = 1
+                    #minor_tick_space = 0.1
+                    ## in case there are too many ticks
+                    #nticks = float(ymax - ymin)/major_tick_space
+                    #while nticks > 4:
+                    #    major_tick_space += 1 
+
+                    ##if ymax - ymin < 1:
+                    ##    major_tick_space =  
+                    #cur_ax.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(minor_tick_space))
                 break
             else:
                 k = self.histratios[list(self.histratios.keys())[ax[0]]]
-                self._draw_histratio(k,cur_ax)    
+                ymin, ymax = self._draw_histratio(k,cur_ax)    
+                ymin -= (ymin*0.1)
+                ymax += (ymax*0.1)
+                cur_ax.set_ylim(ymin,ymax)
 
         for ax in h_axes:
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_distro:
                 for k in list(self.histograms.keys()):
                     print("drawing..",k)
-                    self._draw_distribution(cur_ax,k,log=log, normalized=normalized)
+                    self._draw_distribution(cur_ax,k,log=log, normalized=normalized, ylabel=ylabel)
                 break
             else:
                 k = self.histograms[list(self.histograms.keys())[ax[0]]]
-                ymax, ymin = self._draw_distribution(cur_ax,k,log=log, normalized=normalized)
+                ymax, ymin = self._draw_distribution(cur_ax,k,log=log, normalized=normalized, ylabel=ylabel)
             cur_ax.set_ylim(ymin=ymin - 0.1*ymin,ymax=1.1*ymax)
             cur_ax.grid(True)
         lgax = self.canvas.select_axes(-1) # most upper one
@@ -570,38 +612,28 @@ class VariableDistributionPlot(object):
                 cur_ax = self.canvas.select_axes(ax[0])
                 self.indicate_cut(cur_ax, arrow=False)
         # cleanup
-        leftplotedge = n.inf
-        rightplotedge = -n.inf
-        minplotrange = n.inf
-        maxplotrange = -n.inf
-        for h in list(self.histograms.values()):
-            if not h.bincontent.any():
-                continue
-            if h.bincenters[h.bincontent > 0][0] < leftplotedge:
-                leftplotedge = h.bincenters[h.bincontent > 0][0]
-            if h.bincenters[h.bincontent > 0][-1] > rightplotedge:
-                rightplotedge = h.bincenters[h.bincontent > 0][-1]
-            if min(h.bincontent[h.bincontent > 0]) < minplotrange:
-                minplotrange = min(h.bincontent[h.bincontent > 0])
-            if max(h.bincontent[h.bincontent > 0]) > maxplotrange:
-                maxplotrange = max(h.bincontent[h.bincontent > 0])
-
+        leftplotedge, rightplotedge, minplotrange, maxplotrange = self.optimal_plotrange_histo(self.histograms.values())
+        maxplotrange += (maxplotrange*0.1)
+           
         if log:
-            maxplotrange *= 8
-        else:
-            maxplotrange *= 1.2
-        print (leftplotedge, rightplotedge)
-        #if n.isfinite(leftplotedge):
-        #    self.canvas.limit_xrange(xmin=leftplotedge)
-        #if n.isfinite(rightplotedge):
-        #    self.canvas.limit_xrange(xmax=rightplotedge)
-        for ax in h_axes:
-            self.canvas.select_axes(ax[0]).set_ylim(ymax=maxplotrange,ymin=minplotrange)
+            if maxplotrange < 1: 
+                minplotrange -= (minplotrange*0.01)
+            else:
+                minplotrange = 0 # will be switched to symlog by default
 
-        #if n.isfinite(minplotrange):
-        #    self.canvas.limit_yrange(ymin=minplotrange - 0.1*minplotrange)
-        #if n.isfinite(maxplotrange):
-        #    self.canvas.limit_yrange(ymax=maxplotrange)
+        for ax in h_axes:
+            self.canvas.select_axes(ax[0]).set_ylim(ymin=minplotrange, ymax=maxplotrange)
+            self.canvas.select_axes(ax[0]).set_xlim(xmin=leftplotedge, xmax=rightplotedge)
+            if log:
+                if maxplotrange < 1:
+                    self.canvas.select_axes(ax[0]).set_yscale("log")
+                else:
+                    self.canvas.select_axes(ax[0]).set_yscale("symlog")
+
+        for ax in cu_axes:
+            self.canvas.select_axes(ax[0]).set_xlim(xmin=leftplotedge, xmax=rightplotedge)
+        for ax in r_axes:
+            self.canvas.select_axes(ax[0]).set_xlim(xmin=leftplotedge, xmax=rightplotedge)
         self.canvas.eliminate_lower_yticks()
         # set the label on the lowest axes
         self.canvas.axes[0].set_xlabel(self.label)
@@ -621,6 +653,48 @@ class VariableDistributionPlot(object):
                                     labelbottom=False)
         for x in self.canvas.figure.axes:
             x.spines["right"].set_visible(True)
+
+        for ax in h_axes:
+            #self.canvas.select_axes(ax[0]).ticklabel_format(useOffset=False, style='plain', axis="y")
+            self.canvas.select_axes(ax[0]).get_yaxis().get_offset_text().set_x(-0.1)
+
+
+    @staticmethod
+    def optimal_plotrange_histo(histograms):
+        """
+        Get most suitable x and y limits for a bunc of histograms
+        
+        Args:
+            histograms (list(d.factory.hist1d)): The histograms in question
+
+        Returns:
+            tuple (float, float, float, float): xmin, xmax, ymin, ymax
+
+        """
+
+        leftplotedge = n.inf
+        rightplotedge = -n.inf
+        minplotrange = n.inf
+        maxplotrange = -n.inf
+        for h in histograms:
+            if not h.bincontent.any():
+                continue
+            if h.bincenters[h.bincontent > 0][0] < leftplotedge:
+                leftplotedge = h.bincenters[h.bincontent > 0][0]
+                leftplotedge -= h.binwidths[0]
+
+            if h.bincenters[h.bincontent > 0][-1] > rightplotedge:
+                rightplotedge = h.bincenters[h.bincontent > 0][-1]
+                rightplotedge += h.binwidths[0] 
+
+            if min(h.bincontent[h.bincontent > 0]) < minplotrange:
+                minplotrange = min(h.bincontent[h.bincontent > 0])
+                
+            if max(h.bincontent[h.bincontent > 0]) > maxplotrange:
+                maxplotrange = max(h.bincontent[h.bincontent > 0])
+
+        return leftplotedge, rightplotedge, minplotrange, maxplotrange
+
 
     def add_legend(self, **kwargs):
         """

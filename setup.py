@@ -117,10 +117,18 @@ def parse_requirements(req_file):
                 #reqs.append(data[0]) 
         return reqs
 
+no_parse_requirements = False
+
 try:
     requirements = parse_requirements("requirements.txt")
 except Exception as e:
-    print ("Failed parsing requiremnts, installing dummy requirements...")
+    no_parse_requirements = True
+
+if sys.version_info.major < 3:
+    no_parse_requirements = True 
+    
+if no_parse_requirements:
+    print ("Not parsing requiremnts.txt, installing requirements from list in setup.py...")
     requirements = ['numpy>=1.9.0',
                      'matplotlib>=1.5.0',
                      'pandas>=0.17.1',
@@ -128,6 +136,8 @@ except Exception as e:
                      'futures>=3.0.5',
                      'future>=0.16.0',
                      'pyprind>=2.9.6']
+
+
 
 #requirements.append("tables>=3.3.0") # problem with travis CI, removed from requirments.txt
 

@@ -31,7 +31,8 @@ class YStackedCanvas(object):
     def __init__(self, subplot_yheights=(.2,.2,.5),\
                        padding=(0.15, 0.05, 0.0, 0.1 ),\
                        space_between_plots=0,\
-                       figsize="auto"):
+                       figsize="auto",
+                       figure_factory=None):
         """
         Create a new canvas with multiple axes on top of each other.
         The height of the individual axes can be specified.
@@ -44,16 +45,19 @@ class YStackedCanvas(object):
             figsize (width, height) or str: The size of the figure (in inches). Keyword "auto" 
                                             means the plot figures it out by itself.
             space_between_plots (float): Distance between the subplots
-
+            figure_factory (func): Factory function must return matplotlib.Figure
         """
         assert sum(subplot_yheights) <= 1., "subplot_yheights must be in relative heights"
         assert len(padding) == 4, "Needs 4 values for padding (left, right, top, bottom)"
 
         self.axes = None
-        if figsize == "auto": # FIXME: something more clever should happen here
-            self.figure = p.figure(figsize=FIGSIZE_A4_SQUARE)
+        if figure_factory is None:
+            if figsize == "auto": # FIXME: something more clever should happen here
+                self.figure = p.figure(figsize=FIGSIZE_A4_SQUARE)
+            else:
+                self.figure = p.figure(figsize=figsize)
         else:
-            self.figure = p.figure(figsize=figsize)
+            self.figure = figure_factory()
 
         # self.create_top_stacked_axes(heights=axeslayout)
         left, right, top, bot = padding
@@ -170,6 +174,7 @@ class YStackedCanvas(object):
         Returns:
             matplotlib.axes.axes: The axes instance
         """
+        #print (axes)
         ax = self.axes[axes]
         p.sca(ax)
         return ax

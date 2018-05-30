@@ -229,10 +229,11 @@ class VariableDistributionPlot(object):
         if self.bins is None:
             self.bins = category.vardict[variable_name].bins
         self.name = variable_name
-        weights = category.weights
-        if len(weights) == 0:
-            weights = None
-
+        Logger.warning("Weighting is broken at the moment, FIXME!")
+        #weights = category.weights
+        #if len(weights) == 0:
+        #    weights = None
+        weights = None
         self.add_data(category.get(variable_name),\
                       category.name,\
                       self.bins, weights=weights,\

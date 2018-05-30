@@ -351,12 +351,12 @@ class Dataset(object):
     def combined_categorynames(self):
         return [cat.name for cat in self.combined_categories]
 
-    def get_sparsest_category(self, omit_zeros=True):
+    def get_sparsest_category(self, omit_empty_cat=True):
         """
         Find out which category of the dataset has the least statistical power
 
         Keyword Args:
-            omit_zeros (bool): if a category has no entries at all, omit
+            omit_empty_cat (bool): if a category has no entries at all, omit
         Returns:
             str: category name
         """
@@ -365,7 +365,7 @@ class Dataset(object):
         count = self.categories[0].raw_count
         for cat in self.categories:
             if cat.raw_count < count:
-                if (cat.raw_count == 0) and omit_zeros:
+                if (cat.raw_count == 0) and omit_empty_cat:
                     continue
                 count = cat.raw_count
                 name  = cat.name
@@ -466,7 +466,9 @@ class Dataset(object):
         Logger.warn("For variables with different lengths the weighting is broken. If weights, it will fail")
         for cat in [x for x in plotcategories if x.plot]:
             plot.add_variable(cat, name)
+            Logger.debug("Adding variable data {}".format(name))
             if cumulative:
+                Logger.debug("Adding variable data {} for cumulative plot".format(name))
                 plot.add_cumul(cat.name)
 
         if len(ratio[0]) and len(ratio[1]):

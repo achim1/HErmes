@@ -28,6 +28,8 @@ def opening_angle(reco_zen, reco_azi, true_zen, true_azi):
     c = np.cos
     
     # dot product
+    #print (c)
+    #print (reco_zen,true_zen, reco_azi, true_azi)
     cospsi = ((c(reco_zen)*c(true_zen)) + (sinisy(reco_zen,true_zen)*cosisy(reco_azi,true_azi)) + (sinisy(reco_zen,true_zen)*sinisy(reco_azi,true_azi)))
     psi = np.arccos(cospsi)
     psi = np.rad2deg(psi)

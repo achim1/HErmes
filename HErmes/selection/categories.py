@@ -17,6 +17,8 @@ import pylab as p
 import abc
 import concurrent.futures as fut
 import tables
+import matplotlib.colors as colors
+
 from copy import deepcopy
 
 from ..utils.files import harvest_files,DS_ID,EXP_RUN_ID
@@ -135,16 +137,92 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         assert len(selflen) == 1, "Different variable lengths for {}! {}".format(self.name,debug)
         return selflen[0]
 
+    def distribution2d(self, varnames,
+                       bins=None,
+                       figure_factory=None,
+                       fig=None,
+                       norm=False,
+                       log=True,
+                       cmap=p.get_cmap("Blues"),
+                       interpolation="gaussian",
+                       cblabel="events",
+                       weights=None,
+                       despine=False):
+        """
+        Draw a 2d distribution of 2 variables in the same category.
+
+        Args:
+            varnames (str,str):
+
+        Keyword Args:
+            bins (ndarray, ndarray) :
+            figure_factory:
+            fig:
+            norm:
+            log (bool):
+
+        Returns:
+            matplotlib.figure.Figure
+        """
+        sample = []
+
+        for varname in varnames:
+            var = self.get(varname)
+            if var.ndim != 1:
+                Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\
+                            Data shape is {}".format(self.get(varname).shape))
+                return fig
+            sample.append(var)
+        sample = tuple(sample)
+
+        if figure_factory is not None:
+            fig = figure_factory()
+
+        if fig is None:
+            fig = p.figure()
+
+        if bins is None:
+            bins = self.vardict[varnames[0]].bins, self.vardict[varnames[1]].bins
+
+        xlabel, ylabel=None, None
+        if xlabel is None:
+            xlabel = self.vardict[varnames[0]].label
+        if ylabel is None:
+            ylabel = self.vardict[varnames[1]].label
+
+        ax = fig.gca()
+        h2 = d.factory.hist2d(sample, bins, weights=weights)
+        minval, maxval = min(h2.bincontent[0]), max(h2.bincontent[0])
+        cmap.set_bad('w', 1)
+        if not norm:
+            h2.imshow(log=log, cmap=cmap, interpolation=interpolation, alpha=0.95, label='events')
+        else:
+            h2.imshow(log=log, cmap=cmap, interpolation=interpolation, alpha=0.95, label='events',
+                      norm=colors.LogNorm(minval, maxval))
+        cb = p.colorbar(drawedges=False, shrink=0.5, orientation='vertical', fraction=0.05)
+        cb.set_label(cblabel)
+        cb.ticklocation = 'left'
+        ax = fig.gca()
+        ax.grid(1)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        if despine:
+            sb.despine()
+        else:
+            ax.spines["top"].set_visible(True)
+            ax.spines["right"].set_visible(True)
+        return fig
+
     def distribution(self, varname, bins=None,\
                      color=None, alpha=0.5,\
                      fig=None, xlabel=None,
                      style="line", log=False,
                      figure_factory = None):
         """
-        Plot the distribution of variable in the dataset
+        Plot the distribution of variable in the category
 
         Args:
-            varname (str): The name of the variable in the
+            varname (str): The name of the variable in the catagory
 
         Keyword Args:
             bins (int/np.ndarray): Bins for the distribution
@@ -536,7 +614,11 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             # FIXME: Make it an option to not use
             # multi cpu readout!
             #self.vardict[varname].data = variables.harvest(self.files,self.vardict[varname].definitions)
-            future_to_varname[executor.submit(variables.harvest, self.files,self.vardict[varname].definitions)] = varname
+            future_to_varname[executor.submit(variables.harvest,
+                                              self.files,
+                                              self.vardict[varname].definitions,
+                                              nevents = self.vardict[varname].nevents,
+                                              reduce_dimension = self.vardict[varname].reduce_dimension)] = varname
 
         progbar = False
         try:

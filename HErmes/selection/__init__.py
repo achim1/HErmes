@@ -27,6 +27,7 @@ import os
 import os.path
 import inspect
 import importlib
+import re
 
 from ..utils.logger import Logger
 
@@ -66,11 +67,18 @@ def load_dataset(config, variables=None):
 
         if "file_regex" in thiscat:
             to_sanitize = thiscat["file_regex"]
+            pattern = re.compile(to_sanitize)
+            Logger.debug("Will look for files with pattern {}".format(pattern)) 
             def sanitizer(x):
-                if to_sanitize in x:
-                    return True
-                else: 
+                result = pattern.search(x)
+                if result is None:
                     return False
+                else:
+                    return True
+                #if to_sanitize in x:
+                #    return True
+                #else: 
+                #    return False
 
         if thiscat["datatype"] == "simulation":
             categories[cat] = c.Simulation(cat)

@@ -172,6 +172,8 @@ def harvest(filenames, definitions, **kwargs):
                                             reduce_dimension=reduce_dimension)
                 #tmpdata = rn.root2rec(filename, *definition)
                 #tmpdata = pd.Series(data)
+
+                #FIXME: not able to concat root files at the moment
                 return tmpdata
         if filetype == ".h5":
             hdftable.close()

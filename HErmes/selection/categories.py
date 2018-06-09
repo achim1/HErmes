@@ -215,7 +215,8 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
     def distribution(self, varname, bins=None,\
                      color=None, alpha=0.5,\
-                     fig=None, xlabel=None,
+                     fig=None, xlabel=None,\
+                     norm=False,\
                      style="line", log=False,
                      figure_factory = None):
         """
@@ -230,6 +231,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             alpha (float): 0-1 alpha value for histogram
             fig (matplotlib.figure.Figure): Canvas for plotting, if None an empty one will be created
             xlabel (str): xlabel for the plot. If None, default is used
+            norm (str) : "n" or "density" - make normed histogram
             style (str): Either "line" or "scatter"
             log (bool): Plot yaxis in log scale
             figure_factory (func): Must return a single matplotlib.Figure, NOTE: figure_factory has priority over fig keyword
@@ -263,6 +265,12 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         if (xlabel is None) or (not xlabel):
             xlabel = varname
         h = d.factory.hist1d(self.get(varname), bins)
+        if norm:
+            #assert ((norm == "n" or norm == "density"), "Horm has to be either n or denstiy")
+            if norm == "density":
+                h = h.normalized(density=True)
+            else:
+                h = h.normalized()
         if style == "line":
             h.line(filled=True, color=color, fc=color, alpha=alpha)  # hatch="//")
             h.line(color=color)

@@ -84,7 +84,7 @@ class full_install(install):
     def __init__(self, *args, **kwargs):
         #super(new_install, self).__init__(*args, **kwargs)
         install.__init__(self, *args, **kwargs)
-        atexit.register(_post_install)
+        #atexit.register(_post_install)
 
 
 # get_version and conditional adding of pytest-runner
@@ -163,7 +163,7 @@ setup(name='HErmes',
       install_requires=requirements, 
       setup_requires=setup_requires,
       license="GPL",
-    cmdclass={'install': full_install},
+      cmdclass={'install': full_install},
       platforms=["Ubuntu 14.04","Ubuntu 16.04", "Ubuntu 16.10", "SL6.1"],
       classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
@@ -183,9 +183,8 @@ setup(name='HErmes',
                 'HErmes.selection', 'HErmes.fitting',\
                 'HErmes.analysis'],
       #scripts=[],
-      package_data={'HErmes': [#'plotting/plotsconfig.yaml',\
-                                #'plotting/pyevseldefault.mplstyle',\
-                                #'plotting/pyevselpresent.mplstyle',\
+      package_data={'HErmes': [ 'plotting/HErmes-default.mplstyle',\
+                                'plotting/HErmes-present.mplstyle',\
                                 'utils/PATTERNS.cfg',\
                                 "icecube_goodies/geometry_ic86.h5"]}
       )

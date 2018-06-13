@@ -19,12 +19,18 @@ The HErmes modules provides the following submodules:
 
 """
 
-__version__ = '0.0.8'
+__version__ = '0.0.9dev'
 __all__ = ["fitting", "icecube_goodies", "utils",\
            "selection", "plotting", "analysis"]
+
+import os.path
 
 from . import utils
 loglevel = utils.logger.LOGLEVEL
 
+from . import plotting
+plotting.add_styles()
+
+# FIXME documentation
 def _hook():
     pass

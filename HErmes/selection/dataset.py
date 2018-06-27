@@ -12,6 +12,7 @@ from collections import OrderedDict
 from copy import deepcopy as copy
 
 from ..plotting import VariableDistributionPlot
+from ..utils import isnotebook
 from ..utils.logger import Logger
 from dashi.tinytable import TinyTable
 
@@ -136,9 +137,22 @@ class Dataset(object):
         Returns:
 
         """
+        progbar = False
+        try:
+            import tqdm
+            n_it = len(self.categories)
+            loader_string = "Loading dataset"
+            if isnotebook():
+                bar = tqdm.tqdm_notebook(total=n_it, desc=loader_string, leave=True)
+            else:
+                bar = tqdm.tqdm(total=n_it, desc=loader_string, leave=True)
+            progbar = True
+        except ImportError:
+            pass
         for cat in self.categories:
             Logger.debug("Reading variables for {}".format(cat))
             cat.read_variables(names=names)
+            if progbar: bar.update()
 
     def drop_empty_variables(self):
         """

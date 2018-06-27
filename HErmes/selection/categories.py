@@ -21,6 +21,7 @@ import matplotlib.colors as colors
 
 from copy import deepcopy
 
+from ..utils import isnotebook
 from ..utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from ..utils.logger import Logger
 from ..plotting.colors import get_color_palette
@@ -633,7 +634,10 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             import tqdm
             n_it = len(list(future_to_varname.keys()))
             #bar = pyprind.ProgBar(n_it,monitor=False,bar_char='#',title=self.name)
-            bar = tqdm.tqdm(total=n_it, leave=True, desc=self.name)
+            if isnotebook():
+                bar = tqdm.tqdm_notebook(total=n_it, desc=self.name, leave=False)
+            else:
+                bar = tqdm.tqdm(total=n_it, desc=self.name, leave=False)
             progbar = True
         except ImportError:
             pass

@@ -11,6 +11,9 @@ import resource
 from . import logger
 Logger = logger.Logger
 
+from . import files
+from . import itools
+
 ########################################################
 
 def timeit(func):

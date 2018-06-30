@@ -171,7 +171,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             var = self.get(varname)
             if var.ndim != 1:
                 Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\
-                            Data shape is {}".format(self.get(varname).shape))
+                                Data shape is {}".format(self.get(varname).shape))
                 return fig
             sample.append(var)
         sample = tuple(sample)
@@ -219,7 +219,9 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                      fig=None, xlabel=None,\
                      norm=False,\
                      style="line", log=False,
-                     figure_factory = None):
+                     transform=None,
+                     figure_factory=None,
+                     return_histo=False):
         """
         Plot the distribution of variable in the category
 
@@ -234,11 +236,13 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             xlabel (str): xlabel for the plot. If None, default is used
             norm (str) : "n" or "density" - make normed histogram
             style (str): Either "line" or "scatter"
+            transform (callable): Apply transformation to the data before plotting
             log (bool): Plot yaxis in log scale
             figure_factory (func): Must return a single matplotlib.Figure, NOTE: figure_factory has priority over fig keyword
-
+            return_histo (bool): Return the histogram instead of the figure. WARNING: changes return type!
         Returns:
-            matplotlib.figure.Figure
+            matplotlib.figure.Figure or dashi.histogram.hist1d
+
         """
 
         if figure_factory is not None:
@@ -246,7 +250,6 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
         if fig is None:
             fig = p.figure()
-        
 
         if self.get(varname).ndim != 1:
             Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\
@@ -257,7 +260,12 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         if bins is None:
             bins = self.vardict[varname].bins
         if bins is None:
-            bins = self.vardict[varname].calculate_fd_bins()
+            try:
+                bins = self.vardict[varname].calculate_fd_bins()
+            except Exception as e:
+                Logger.warn("Can not create Friedman Draconis bins {}".format(e))
+                Logger.warn("Will return 40 as last resort... Recommended to specify bins via the function parameter")
+                bins = 40
         palette = get_color_palette()
         if color is None:
             color=palette[0]
@@ -265,7 +273,11 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             xlabel = self.vardict[varname].label
         if (xlabel is None) or (not xlabel):
             xlabel = varname
-        h = d.factory.hist1d(self.get(varname), bins)
+        if transform is not None:
+            data = transform(self.get(varname))
+        else:
+            data = self.get(varname)
+        h = d.factory.hist1d(data, bins)
         if norm:
             #assert ((norm == "n" or norm == "density"), "Horm has to be either n or denstiy")
             if norm == "density":
@@ -286,7 +298,11 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         ax.set_xlim(xmin=min(h.binedges))
         if log:
             ax.semilogy(nonposy="clip")
+        if return_histo:
+            return h
         return fig
+
+############################################################################
 
     @property
     def raw_count(self):
@@ -583,12 +599,13 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         else:
             return self.vardict[varkey].data
 
-    def read_variables(self, names=None):
+    def read_variables(self, names=None, max_cpu_cores=MAX_CORES):
         """
         Harvest the variables in self.vardict
 
         Keyword Args:
             names (list): havest only these variables
+            max_cpu_cores (list): use a maximum of X cores of the cpu
         """
 
         assert self.files, "Need to assign some files before reading out variables"
@@ -597,7 +614,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             names = list(self.vardict.keys())
         compound_variables = [] #harvest them later
 
-        executor = fut.ProcessPoolExecutor(max_workers=MAX_CORES)
+        executor = fut.ProcessPoolExecutor(max_workers=max_cpu_cores)
         future_to_varname = {}
 
         # first read out variables,
@@ -628,6 +645,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                                               self.vardict[varname].definitions,
                                               nevents = self.vardict[varname].nevents,
                                               reduce_dimension = self.vardict[varname].reduce_dimension)] = varname
+                                              #transformation = self.vardict[varname].transform)] = varname
 
         progbar = False
         try:
@@ -649,7 +667,12 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             try:
                 data = future.result()
                 Logger.debug("Found {} entries ...".format(len(data)))
-                data = self.vardict[varname].transform(data)
+
+                # FIXME: check how different these two approaches really are
+                #        the second does not work for some vector data
+                #        from root files
+                data = data.map(self.vardict[varname].transform)
+                #data = self.vardict[varname].transform(data)
             except Exception as exc:
                 exc_caught += "Reading {} for {} generated an exception: {}\n".format(varname,self.name, exc)
                 data = pd.Series([])
@@ -942,8 +965,8 @@ class ReweightedSimulation(Simulation):
     def raw_count(self):
         return self.mother.raw_count
 
-    def read_variables(self,names=None):
-        return self.mother.read_variables(names=names)
+    def read_variables(self,names=None, max_cpu_cores=MAX_CORES):
+        return self.mother.read_variables(names=names, max_cpu_cores=max_cpu_cores)
 
     def read_mc_primary(self,energy_var=MC_P_EN,\
                        type_var=MC_P_TY,\

@@ -33,6 +33,20 @@ except ImportError:
 def extract_from_root(filename, definitions,
                       nevents=None,
                       reduce_dimension=None):
+    """
+    Use the uproot system to get information from rootfiles. Supports a basic tree of
+    primitive datatype like structure.
+
+    Args:
+        filename (str): datafile
+        defininitiions (list): tree and branch adresses
+
+    Keyword Args:
+        nevents (int): number of events to read out
+        reduce_dimension (int): If data is vector-type, reduce it by taking the n-th element
+    """
+
+    can_be_concatted = False
     file = ur.open(filename)
     success = False
     i=0
@@ -68,33 +82,46 @@ def extract_from_root(filename, definitions,
 
     if reduce_dimension is not None:
         if not multidim:
-            raise ValueError("Does not make sense to reduce scalar data!")
-        data = np.array([k[reduce_dimension] for k in data])
-        multidim = False
+            raise ValueError("Can not reduce scalar data!")
+        if isinstance(reduce_dimension, int):
+            data = np.array([k[reduce_dimension] for k in data])
+            multidim = False
+        else:
+            data = [[k[reduce_dimension[1]] for k in j] for j in data]
 
     if multidim:
         Logger.debug("Grabbing multidimensional data from root-tree for {}".format(definitions[i]))
-        #data = tree.pandas.df([definitions[i][1]])
+
         if nevents is None:
             data = branch.array() #this will be a jagged array now!
         else:
             data = branch.array(entrystop=nevents)
-        data.shape = (len(data),None)
+
+        tmpdata = [np.array(i) for i in data]
+        # the below might not be picklable (multiprocessing!)
+        #tmpdata = [i for i in data]
+        # FIXME: dataframe/series
+        # try to convert this to a pandas dataframe
+        #data = pd.DataFrame(tmpdata)
+        data = pd.Series(tmpdata)
+
+        can_be_concatted = True
+        #data.shape = (len(data),None)
         #data.ndim = 2
     else:
         Logger.debug("Grabbing scalar data from root-tree for {}".format(definitions[i]))
-        data = pd.Series(np.array(data))
-    return data
-    #print (data)
-    #print (data.ndim)
-    #if data.ndim == 1:
-    #    return pd.Series(data)
-    #if data.ndim == 2:
-    #    raise ValueError("..for now")
+        data = pd.Series(np.asarray(data))
+        can_be_concatted = True
+    return data, can_be_concatted
 
+################################################################
+# define a non-member function so that it can be used in a
+# multiprocessing approach
 def harvest(filenames, definitions, **kwargs):
     """
     Read variables from files into memory. Will be used by HErmes.selection.variables.Variable.harvest
+    This will be run multi-threaded. Keep that in mind, arguments have to be picklable,
+    also everything thing which is read out must be picklable. Lambda functions are NOT picklable
 
     Args:
         filenames (list): the files to extract the variables from.
@@ -125,7 +152,10 @@ def harvest(filenames, definitions, **kwargs):
     nevents = kwargs["nevents"] if "nevents" in kwargs else None
     fill_empty = kwargs["fill_empty"] if "fill_empty" in kwargs else False
     reduce_dimension = kwargs["reduce_dimension"] if "reduce_dimension" in kwargs else None
+    transform = kwargs["transformation"] if "transformation" in kwargs else None
+    concattable = True
     data = pd.Series()
+    #multidim_data = pd.DataFrame()
     for filename in filenames:
         filetype = f.strip_all_endings(filename)[1]
 
@@ -167,26 +197,22 @@ def harvest(filenames, definitions, **kwargs):
                     continue
 
             elif filetype == ".root":
-                tmpdata = extract_from_root(filename, definitions,
-                                            nevents=nevents,
-                                            reduce_dimension=reduce_dimension)
-                #tmpdata = rn.root2rec(filename, *definition)
-                #tmpdata = pd.Series(data)
-
-                #FIXME: not able to concat root files at the moment
-                return tmpdata
+                tmpdata, concattable = extract_from_root(filename, definitions,
+                                                         nevents=nevents,
+                                                         reduce_dimension=reduce_dimension)
         if filetype == ".h5":
             hdftable.close()
 
         #tmpdata = harvest_single_file(filename, filetype,definitions)
         # self.data = self.data.append(data.map(self.transform))
         # concat should be much faster
-        if "transformation" in kwargs:
-            transform = kwargs['transformation']
-            data = pd.concat([data, tmpdata.map(transform)])
-        else:
-            data = pd.concat([data, tmpdata])
+        if not concattable:
+            logger.warn("Data can not be concatted, keep that in mind!")
+            return tmpdata
+
+        data = pd.concat([data, tmpdata])
         del tmpdata
+    #print (data)
     return data
 
 ################################################################

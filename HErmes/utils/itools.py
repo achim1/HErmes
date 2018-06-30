@@ -5,6 +5,9 @@ from __future__ import division
 
 from builtins import range
 from past.utils import old_div
+
+import numpy as np
+
 from . import logger
 Logger = logger.Logger
 
@@ -38,4 +41,19 @@ def slicer(list_to_slice, slices):
         #if not thisslice: #Do not emit empty lists!
         yield thisslice
 
+#######################################################################
 
+def flatten(iterable_of_iterables):
+    """
+    Concat an iterable of iterables in a single iterable, chaining its elements
+
+    Args:
+        iterable_of_iterables (iterable): Currently supported is dimensionality of 2
+
+    Returns:
+        np.ndarray
+    """
+    newarray = np.array([])
+    for k in iterable_of_iterables:
+        newarray = np.hstack((newarray,np.asarray(k)))
+    return newarray

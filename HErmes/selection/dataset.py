@@ -128,14 +128,15 @@ class Dataset(object):
 
 
     #@GetTiming
-    def read_variables(self, names=None):
+    def read_variables(self, names=None, max_cpu_cores=categories.MAX_CORES):
         """
         Read out the variable for all categories
 
         Keyword Args:
             names (str): Readout only these variables if given
+            max_cpu_cores (int): Maximum number of cpu cores which will be used
         Returns:
-
+            None
         """
         progbar = False
         try:
@@ -151,7 +152,7 @@ class Dataset(object):
             pass
         for cat in self.categories:
             Logger.debug("Reading variables for {}".format(cat))
-            cat.read_variables(names=names)
+            cat.read_variables(names=names, max_cpu_cores=max_cpu_cores)
             if progbar: bar.update()
 
     def drop_empty_variables(self):

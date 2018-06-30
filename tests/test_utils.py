@@ -75,4 +75,8 @@ def test_check_hdf_integrity(prepare_testtable):
     files.check_hdf_integrity([str(prepare_testtable.realpath())] )
     files.check_hdf_integrity([str(prepare_testtable.realpath())], checkfor="energy")
 
-
+def test_flatten():
+    data = [[1,3,4],[5,6,7],[8,9,10]]
+    flattened = itools.flatten(data)
+    assert flattened.ndim == 1
+    assert len(flattened) == 9

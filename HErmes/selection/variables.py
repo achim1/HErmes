@@ -218,8 +218,8 @@ def harvest(filenames, definitions, **kwargs):
 ################################################################
 
 def freedman_diaconis_bins(data,leftedge,\
-                         rightedge,minbins=20,\
-                         maxbins=70,fallbackbins=DEFAULT_BINS):
+                           rightedge,minbins=20,\
+                           maxbins=70,fallbackbins=DEFAULT_BINS):
     """
     Get a number of bins for a histogram
     following Freedman/Diaconis
@@ -243,19 +243,19 @@ def freedman_diaconis_bins(data,leftedge,\
         n_data      = len(data)
         h           = (2*(q3-q1))/(n_data**1./3)
         bins = (rightedge - leftedge)/h
+
+
+        if not n.isfinite(bins):
+            Logger.warn("Calculate Freedman-Draconis bins failed, calculated nan bins, returning fallback")
+            bins = fallbackbins
+
+        if bins < minbins:
+            bins = minbins
+        if bins > maxbins:
+            bins = maxbins
     except Exception as e:
         Logger.warn("Calculate Freedman-Draconis bins failed {0}".format( e.__repr__()))
         bins = fallbackbins
-
-    if not n.isfinite(bins):
-        Logger.warn("Calculate Freedman-Draconis bins failed, calculated nan bins, returning fallback")
-        bins = fallbackbins
-
-    if bins < minbins:
-        bins = minbins
-    if bins > maxbins:
-        bins = maxbins
-
     return bins
 
 #############################################################

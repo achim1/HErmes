@@ -391,6 +391,7 @@ class Dataset(object):
                      ratio=([],[]),
                      cumulative=True,
                      log=False,
+                     transform=None,
                      color_palette='dark',
                      normalized = False,
                      styles = dict(),
@@ -421,6 +422,7 @@ class Dataset(object):
             ratio (list): A ratio plot of these categories will be crated
             color_palette (str): A predifined color palette (from seaborn or HErmes.plotting.colors) 
             normalized (bool): Normalize the histogram by number of events
+            transform (callable): Apply this transformation before plotting
             styles (dict): plot styling options
             axis_props (dict): axis for the plots
             bins (np.ndarray): binning, if None binning will be deduced from the variable definition
@@ -480,7 +482,7 @@ class Dataset(object):
 
         Logger.warn("For variables with different lengths the weighting is broken. If weights, it will fail")
         for cat in [x for x in plotcategories if x.plot]:
-            plot.add_variable(cat, name)
+            plot.add_variable(cat, name, transform=transform)
             Logger.debug("Adding variable data {}".format(name))
             if cumulative:
                 Logger.debug("Adding variable data {} for cumulative plot".format(name))

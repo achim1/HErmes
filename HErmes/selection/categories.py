@@ -118,8 +118,12 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         #FIXME: deal with pandas DataFrames more reliably
         #FIXME: HACK
         debug = []
+
         for v in list(self.vardict.keys()):
             variable = self.get(v)
+            if not hasattr(variable, "shape"):
+                variable = np.asarray(variable)
+                
             #print v, variable.shape
             if len(variable.shape) == 2:
                 vlen = variable.shape[0]
@@ -148,22 +152,28 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                        interpolation="gaussian",
                        cblabel="events",
                        weights=None,
-                       despine=False):
+                       despine=False,
+                       return_histo=False):
         """
         Draw a 2d distribution of 2 variables in the same category.
-
         Args:
-            varnames (str,str):
+            varnames (tuple(str,str)): The names of the variable in the catagory
 
         Keyword Args:
-            bins (ndarray, ndarray) :
-            figure_factory:
-            fig:
-            norm:
-            log (bool):
-
+            bins (tuple(int/np.ndarray)): Bins for the distribution
+            cmap : A colormap
+            // alpha (float): 0-1 alpha value for histogram
+            fig (matplotlib.figure.Figure): Canvas for plotting, if None an empty one will be created
+            // xlabel (str): xlabel for the plot. If None, default is used
+            norm (str) : "n" or "density" - make normed histogram
+            // style (str): Either "line" or "scatter"
+            transform (callable): Apply transformation to the data before plotting
+            log (bool): Plot yaxis in log scale
+            figure_factory (func): Must return a single matplotlib.Figure, NOTE: figure_factory has priority over fig keyword
+            return_histo (bool): Return the histogram instead of the figure. WARNING: changes return type!
         Returns:
-            matplotlib.figure.Figure
+            matplotlib.figure.Figure or dashi.histogram.hist1d
+
         """
         sample = []
 
@@ -173,8 +183,9 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                 Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\
                                 Data shape is {}".format(self.get(varname).shape))
                 return fig
-            sample.append(var)
+            sample.append(np.asarray(var))
         sample = tuple(sample)
+
 
         if figure_factory is not None:
             fig = figure_factory()
@@ -185,7 +196,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         if bins is None:
             bins = self.vardict[varnames[0]].bins, self.vardict[varnames[1]].bins
 
-        xlabel, ylabel=None, None
+        xlabel, ylabel= None, None
         if xlabel is None:
             xlabel = self.vardict[varnames[0]].label
         if ylabel is None:
@@ -212,6 +223,8 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         else:
             ax.spines["top"].set_visible(True)
             ax.spines["right"].set_visible(True)
+        if return_histo:
+            return h2
         return fig
 
     def distribution(self, varname, bins=None,\

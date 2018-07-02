@@ -215,13 +215,16 @@ class VariableDistributionPlot(object):
         self.label = label
         self.name = name
 
-    def add_variable(self, category, variable_name):
+    def add_variable(self, category, variable_name, transform=None):
         """
         Convenience interface if data is sorted in categories already
 
         Args:
-           category (pyevsel.variables.category.Category): Get variable from this category
-           variable_name (string): The name of the variable
+            category (pyevsel.variables.category.Category): Get variable from this category
+            variable_name (string): The name of the variable
+
+        Keyword Args:
+            transform (callable): Apply transformation todata
 
         """
         if category.plot_options:
@@ -234,7 +237,8 @@ class VariableDistributionPlot(object):
         #if len(weights) == 0:
         #    weights = None
         weights = None
-        self.add_data(category.get(variable_name),\
+        if transform is None: transform = lambda x : x
+        self.add_data(transform(category.get(variable_name)),\
                       category.name,\
                       self.bins, weights=weights,\
                       label=category.vardict[variable_name].label)

@@ -397,17 +397,7 @@ class Dataset(object):
                      styles = dict(),
                      style="classic",
                      ylabel="rate/bin [1/s]",
-                     axis_properties={
-                         "top": {"type": "h", \
-                                 "height": 0.4,
-                                 "index": 2},
-                         "center": {"type": "r", \
-                                    "height": 0.2,
-                                    "index": 1},
-                         "bottom": {"type": "c", \
-                                    "height": 0.2,
-                                    "index": 0}
-                     },
+                     axis_properties=None,
                      bins=None,
                      figure_factory=None):
         """
@@ -424,42 +414,100 @@ class Dataset(object):
             normalized (bool): Normalize the histogram by number of events
             transform (callable): Apply this transformation before plotting
             styles (dict): plot styling options
-            axis_props (dict): axis for the plots
             bins (np.ndarray): binning, if None binning will be deduced from the variable definition
             figure_factory (func): factory function which return a matplotlib.Figure
-            style (string): TODO "modern" || "classic"
+            style (string): TODO "modern" || "classic" || "modern-cumul" || "classic-cumul"
+            axis_properties (dict): Manually define a plot layout with up to three axes.
+                                    For example, it can look like this:
+                                    {
+                                        "top": {"type": "h", # histogram
+                                                "height": 0.4, # height in percent
+                                                "index": 2}, # used internally
+                                        "center": {"type": "r", # ratio plot
+                                                    "height": 0.2,
+                                                    "index": 1},
+                                        "bottom": { "type": "c", # cumulative histogram
+                                                    "height": 0.2,
+                                                    "index": 0}
+                                    }
+
+
         Returns:
             HErmes.selection.variables.VariableDistributionPlot
         """
         
         
-        if (not cumulative) or ratio  == ([],[]):
+        # if (not cumulative) or ratio  == ([],[]):
+        #
+        #     # assuming a single cumulative axis
+        #     tmp_axis_properties = dict()
+        #     unassigned_height = 0
+        #
+        #     for key in axis_properties:
+        #         if ("c" == axis_properties[key]["type"]) and (not cumulative):
+        #             unassigned_height += axis_properties[key]["height"]
+        #             continue
+        #         if ("r" == axis_properties[key]["type"]) and (ratio == ([],[])):
+        #             unassigned_height += axis_properties[key]["height"]
+        #             continue
+        #
+        #         tmpdict = copy(axis_properties[key])
+        #         tmpdict["index"] = tmpdict["index"] -1 - bool(ratio == ([],[]))
+        #         tmp_axis_properties.update({key : tmpdict})
+        #
+        #     n_plots = len(tmp_axis_properties.keys())
+        #     extra_height = unassigned_height/float(n_plots)
+        #     for key in tmp_axis_properties:
+        #         tmp_axis_properties[key]["height"] += extra_height
+        #
+        # else:
+        #     tmp_axis_properties = copy(axis_properties)
 
-            # assuming a single cumulative axis
-            tmp_axis_properties = dict()
-            unassigned_height = 0
-
-            for key in axis_properties:
-                if ("c" == axis_properties[key]["type"]) and (not cumulative):
-                    unassigned_height += axis_properties[key]["height"]
-                    continue
-                if ("r" == axis_properties[key]["type"]) and (ratio == ([],[])):
-                    unassigned_height += axis_properties[key]["height"]
-                    continue
-                
-                tmpdict = copy(axis_properties[key])
-                tmpdict["index"] = tmpdict["index"] -1 - bool(ratio == ([],[]))
-                tmp_axis_properties.update({key : tmpdict})
-
-            n_plots = len(tmp_axis_properties.keys())
-            extra_height = unassigned_height/float(n_plots)        
-            for key in tmp_axis_properties:
-                tmp_axis_properties[key]["height"] += extra_height
-    
-        else:
+        if axis_properties is not None:
             tmp_axis_properties = copy(axis_properties)
 
-        axes_locator = [(tmp_axis_properties[k]["index"], tmp_axis_properties[k]["type"], tmp_axis_properties[k]["height"]) for k in tmp_axis_properties]
+        else:
+            # always have the histogram, but add
+            # cumulative or ratio plot
+            if cumulative and ratio != ([],[]):
+                tmp_axis_properties = {\
+                    "top": {"type": "h", \
+                            "height": 0.4, \
+                            "index": 2},\
+                    "center": {"type": "r",\
+                               "height": 0.2,\
+                               "index": 1},\
+                    "bottom": {"type": "c", \
+                               "height": 0.2,\
+                               "index": 0}\
+                    }
+            elif cumulative:
+                tmp_axis_properties = { \
+                    "top": {"type": "h", \
+                            "height": 0.6, \
+                            "index": 1}, \
+                    "bottom": {"type": "c", \
+                               "height": 0.4, \
+                               "index": 0} \
+                    }
+            elif ratio != ([],[]):
+                tmp_axis_properties = { \
+                    "top": {"type": "h", \
+                            "height": 0.6, \
+                            "index": 1}, \
+                    "bottom": {"type": "r", \
+                               "height": 0.4, \
+                               "index": 0} \
+                    }
+            else:
+                tmp_axis_properties = { \
+                    "top": {"type": "h", \
+                            "height": 0.95, \
+                            "index": 0}, \
+                    }
+        axes_locator = [(tmp_axis_properties[k]["index"], tmp_axis_properties[k]["type"], tmp_axis_properties[k]["height"])\
+                        for k in tmp_axis_properties]
+        #print (axes_locator)
         #heights = [axis_properties[k]["height"] for k in axis_properties]
         cuts = self.categories[0].cuts
         sparsest = self.get_sparsest_category()

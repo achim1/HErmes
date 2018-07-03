@@ -139,7 +139,6 @@ def meshgrid(xs, ys):
     zs = np.zeros([xlen, ylen])
     return allx, ally, zs
 
-
 ###############################################
 
 class VariableDistributionPlot(object):
@@ -525,7 +524,9 @@ class VariableDistributionPlot(object):
         Logger.info("Found {} ratios".format(len(self.histratios)))
         Logger.info("Found {} cumulative distributions".format(len(self.cumuls)))
         if not axes_locator:
-            axes_locator = self._locate_axes(combined_cumul,combined_ratio,combined_distro)
+            axes_locator = self._locate_axes(combined_cumul,\
+                                             combined_ratio,\
+                                             combined_distro)
 
         # calculate the amount of needed axes
         # assert len(axes_locator) == len(heights), "Need to specify exactly as many heights as plots you want to have"
@@ -583,7 +584,7 @@ class VariableDistributionPlot(object):
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_distro:
                 for k in list(self.histograms.keys()):
-                    print("drawing..",k)
+                    Logger.debug("drawing..{}".format(k))
                     self._draw_distribution(cur_ax,k,log=log, normalized=normalized, ylabel=ylabel)
                 break
             else:

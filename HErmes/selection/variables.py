@@ -357,8 +357,14 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
     def data(self):
         if isinstance(self._data, pd.DataFrame):
             return self._data.as_matrix()
-        else:
+        if not hasattr(self._data, "shape"):
+            Logger.warning("Something's wrong, this should be array data!")
+            Logger.warning("Seeeing {} data".format(type(self._data)))
+            Logger.warning("Attempting to fix!")
+            self._data = np.asarray(self._data)
             return self._data
+
+        return self._data
 
 ############################################
 

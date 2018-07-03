@@ -106,7 +106,8 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
     def __len__(self):
         """
-        Return the longest variable element
+        Return the longest variable element. If a cut is applied, it returns
+        the *current* length of the variable data (after the cut!)
         FIXME: introduce check?
         """
         #lengths = np.array([len(self.vardict[v].data) for v in list(self.vardict.keys())])
@@ -120,10 +121,12 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         debug = []
 
         for v in list(self.vardict.keys()):
+            # if there is a cut applied, this is the
+            # cutted array
             variable = self.get(v)
             if not hasattr(variable, "shape"):
                 variable = np.asarray(variable)
-                
+
             #print v, variable.shape
             if len(variable.shape) == 2:
                 vlen = variable.shape[0]
@@ -179,6 +182,10 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
         for varname in varnames:
             var = self.get(varname)
+
+            # XXX HACK
+            if not hasattr(var, "ndim"):
+                var = np.asarray(var)
             if var.ndim != 1:
                 Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\
                                 Data shape is {}".format(self.get(varname).shape))
@@ -411,7 +418,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
                 else:
                     assert len(mask) == len(op(s, value)),\
-                        "Cutting fails due to different varialbe lengths for {}".format(varname)
+                        "Cutting fails due to different variable lengths for {}".format(varname)
                     mask = np.logical_and(mask, op(s,value))
 
         if inplace:
@@ -463,7 +470,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         Logger.info("Found {} variables".format(len(all_vars)))
         for v in all_vars:
             if v.name in self.vardict:
-                Logger.debug("Variable {} already defined,skipping!".format(v.name))
+                Logger.warn("Variable {} already defined,skipping!".format(v.name))
                 continue
             self.add_variable(v)
 
@@ -604,6 +611,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             uncut (bool): never return cutted values
         """
 
+
         if varkey not in self.vardict:
             raise KeyError("{} not found!".format(varkey))
 
@@ -719,6 +727,9 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
     @property
     def weights(self):
+        if self._weights is None: # create on the fly
+            return np.ones(len(self))
+
         if len(self.cutmask):
             return self._weights[self.cutmask]
         else:

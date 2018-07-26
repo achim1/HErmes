@@ -72,6 +72,18 @@ class Dataset(object):
             for name in list(kwargs['combined_categories'].keys()):
                 self.combined_categories.append(categories.CombinedCategory(name,kwargs['combined_categories'][name]))
 
+    def set_default_plotstyles(self, styledict):
+        """
+        Define a standard for each category how 
+        it should appear in plots
+
+        Args:
+            styledict (dict)
+        """
+        self.default_plotstyles = styledict
+        for cat in self.categorynames:
+            self[cat].add_plotoptions(styledict[cat])
+
     def add_variable(self, variable):
         """
         Add a variable to this category

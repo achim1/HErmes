@@ -238,6 +238,8 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                      color=None, alpha=0.5,\
                      fig=None, xlabel=None,\
                      norm=False,\
+                     filled=None,\
+                     legend=True,\
                      style="line", log=False,
                      transform=None,
                      figure_factory=None,
@@ -256,6 +258,8 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             xlabel (str): xlabel for the plot. If None, default is used
             norm (str) : "n" or "density" - make normed histogram
             style (str): Either "line" or "scatter"
+            filled (bool): Draw filled histogram
+            legend (bool): if available, plot a legend
             transform (callable): Apply transformation to the data before plotting
             log (bool): Plot yaxis in log scale
             figure_factory (func): Must return a single matplotlib.Figure, NOTE: figure_factory has priority over fig keyword
@@ -287,8 +291,29 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                 Logger.warn("Will return 40 as last resort... Recommended to specify bins via the function parameter")
                 bins = 40
         palette = get_color_palette()
+        plotdict = False
         if color is None:
             color=palette[0]
+        if "linestyle" in self.plot_options:
+            plotdict = deepcopy(self.plot_options["linestyle"])
+        if "scatterstyle" in self.plot_options:
+            plotdict = deepcopy(self.plot_options["scatterstyle"])
+        if "label" in self.plot_options:
+            plotdict["label"] = deepcopy(self.plot_options["label"])
+        if not plotdict and ((style == "line") or (style is None)):
+            plotdict = {"color" : color,
+                        "filled": True,
+                        "alpha" : 1,
+                        "linewidth": 3,
+                        "linestyle": "solid",
+                        "fc"    : color} 
+        if not plotdict and (style == "scatter"):
+            plotdict = {"color": "k",
+                        "linewidth": 3,
+                        "alpha": 1,
+                        "marker": "o",
+                        "markersize": 4}
+        plotdict["color"] = palette[plotdict["color"]]
         if xlabel is None:
             xlabel = self.vardict[varname].label
         if (xlabel is None) or (not xlabel):
@@ -297,6 +322,8 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             data = transform(self.get(varname))
         else:
             data = self.get(varname)
+
+        # FIXME weights!!
         h = d.factory.hist1d(data, bins)
         if norm:
             #assert ((norm == "n" or norm == "density"), "Horm has to be either n or denstiy")
@@ -304,11 +331,32 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                 h = h.normalized(density=True)
             else:
                 h = h.normalized()
+        if style is None:
+            try:
+                style = self.plot_options["histotype"]
+            except KeyError:
+                Logger.warn("Can not derive plot style. Falling back to line plot!")
+                style = "line"
+
         if style == "line":
-            h.line(filled=True, color=color, fc=color, alpha=alpha)  # hatch="//")
-            h.line(color=color)
+            # FIXME always fill histos for now
+            if filled is not None:
+                plotdict["filled"] = filled
+            plotdict["alpha"] = alpha
+            h.line(**plotdict)
+            if "filled" in plotdict:
+                if plotdict["filled"]:
+                    plotdict["filled"] = False
+                    plotdict["label"] = "_nolegend_"
+                    h.line(**plotdict)
+    
+            #h.line(filled=True,
+            #       color=color,
+            #       fc=color,
+            #       alpha=alpha)  # hatch="//")
+            #h.line(color=color)
         elif style == "scatter":
-            h.scatter()
+            h.scatter(**plotdict)
 
         else:
             raise ValueError("Can not understand style {}. Has to be either 'line' or 'scatter'".format(style))
@@ -317,7 +365,10 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         ax.set_ylim(ymin=0)
         ax.set_xlim(xmin=min(h.binedges))
         if log:
-            ax.semilogy(nonposy="clip")
+            #ax.semilogy(nonposy="clip")
+            ax.set_yscale("symlog")
+        if ("label" in plotdict) and legend:
+            ax.legend()
         if return_histo:
             return h
         return fig

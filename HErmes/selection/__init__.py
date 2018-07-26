@@ -175,5 +175,5 @@ def load_dataset(config, variables=None, max_cpu_cores=c.MAX_CORES):
     for k in cfg["categories"]:
         if "plotting" in cfg["categories"][k]:
             plot_dict[k] = cfg["categories"][k]["plotting"]
-    dataset.default_plotstyles = plot_dict
+    dataset.set_default_plotstyles(plot_dict)
     return dataset

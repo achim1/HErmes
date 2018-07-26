@@ -685,10 +685,12 @@ class VariableDistributionPlot(object):
             cur_ax.set_ylim(ymin=ymin - 0.1*ymin,ymax=1.1*ymax)
             cur_ax.grid(True)
         lgax = self.canvas.select_axes(-1) # most upper one
+        ncol = 2 if len(self.histograms) <= 4 else 3 
+        
         legend_kwargs = {"bbox_to_anchor": [0., 1.0, 1., .102],
                          "loc": 3,
                          "frameon": True,
-                         "ncol": 3,
+                         "ncol": ncol,
                          "framealpha": 1.,
                          "borderaxespad": 0,
                          "mode": "expand",

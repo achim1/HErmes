@@ -211,16 +211,33 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
         ax = fig.gca()
         h2 = d.factory.hist2d(sample, bins, weights=weights)
-        minval, maxval = min(h2.bincontent[0]), max(h2.bincontent[0])
         cmap.set_bad('w', 1)
         if not norm:
-            h2.imshow(log=log, cmap=cmap, interpolation=interpolation, alpha=0.95, label='events')
+            #h2.imshow(log=log, cmap=cmap, interpolation=interpolation, alpha=0.95, label='events')
+            norm = None
         else:
+            h2 = h2.normalized()
+            minval, maxval = min(h2.bincontent.flatten()), max(h2.bincontent.flatten())
+            #norm=colors.SymLogNorm(linthresh=0.1, linscale=0.1, vmin=minval, vmax = maxval)
+            norm=None
+        try:
             h2.imshow(log=log, cmap=cmap, interpolation=interpolation, alpha=0.95, label='events',
-                      norm=colors.LogNorm(minval, maxval))
-        cb = p.colorbar(drawedges=False, shrink=0.5, orientation='vertical', fraction=0.05)
-        cb.set_label(cblabel)
-        cb.ticklocation = 'left'
+                      norm=norm)
+            cb = p.colorbar(drawedges=False, shrink=0.5, orientation='vertical', fraction=0.05)
+            cb.set_label(cblabel)
+            cb.ticklocation = 'left'
+        except Exception as e:
+            Logger.warning("Exception encountered when creating colorbar! {}".format(e))
+            Logger.warning("Creation of colorbar failed with min {:4.2e} and max {:4.2e}".format(minval, maxval))
+            Logger.warning("Will try again without using normalization for colorbar...")
+            #norm=colors.Normalize(minval, maxval)
+            h2.imshow(log=log, cmap=cmap, interpolation=interpolation,
+                  alpha=0.95, label='events')
+            cb = p.colorbar(drawedges=False, shrink=0.5, orientation='vertical', fraction=0.05)
+            cb.set_label(cblabel)
+            cb.ticklocation = 'left'
+
+    
         ax = fig.gca()
         ax.grid(1)
         ax.set_xlabel(xlabel)
@@ -242,6 +259,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                      legend=True,\
                      style="line", log=False,
                      transform=None,
+                     extra_weights=None,
                      figure_factory=None,
                      return_histo=False):
         """
@@ -262,6 +280,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             legend (bool): if available, plot a legend
             transform (callable): Apply transformation to the data before plotting
             log (bool): Plot yaxis in log scale
+            extra_weights (numpy.ndarray): Use this for weighting. Will overwrite any other weights in the dataset
             figure_factory (func): Must return a single matplotlib.Figure, NOTE: figure_factory has priority over fig keyword
             return_histo (bool): Return the histogram instead of the figure. WARNING: changes return type!
         Returns:
@@ -324,7 +343,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             data = self.get(varname)
 
         # FIXME weights!!
-        h = d.factory.hist1d(data, bins)
+        h = d.factory.hist1d(data, bins, weights=extra_weights)
         if norm:
             #assert ((norm == "n" or norm == "density"), "Horm has to be either n or denstiy")
             if norm == "density":

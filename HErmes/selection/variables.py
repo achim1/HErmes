@@ -54,8 +54,13 @@ def extract_from_root(filename, definitions,
     # it will most likely work only with TTrees
     while not success:
         try:
-            tree = file[definitions[i][0]]
-            branch = file[definitions[i][0]].get(definitions[i][1])
+            tree = file.get(definitions[i][0])
+            branch = tree
+            for address in definitions[i][1:]:
+                branch = branch.get(address)
+
+            #tree = file[definitions[i][0]]
+            #branch = file[definitions[i][0]].get(definitions[i][1])
             success = True
         except KeyError as e:
             Logger.warning("Can not find address {}".format(definitions[i]))
@@ -394,7 +399,7 @@ class Variable(AbstractBaseVariable):
         AbstractBaseVariable.__init__(self)
 
         if definitions is not None:
-            assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions {}!".format(definitions)
+            #assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions {}!".format(definitions)
             self.defsize = len(definitions[0])
             assert not (False in [len(x) == self.defsize for x in definitions]), "All definitions must have the same length!"
         else:

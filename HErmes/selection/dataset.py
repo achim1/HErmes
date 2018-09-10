@@ -410,6 +410,7 @@ class Dataset(object):
                      style="classic",
                      ylabel="rate/bin [1/s]",
                      axis_properties=None,
+                     ratiolabel="data/$\Sigma$ bg",
                      bins=None,
                      figure_factory=None):
         """
@@ -426,6 +427,8 @@ class Dataset(object):
             normalized (bool): Normalize the histogram by number of events
             transform (callable): Apply this transformation before plotting
             styles (dict): plot styling options
+            ylabel (str): general label for y-axis
+            ratiolabel (str): different label for the ratio part of the plot
             bins (np.ndarray): binning, if None binning will be deduced from the variable definition
             figure_factory (func): factory function which return a matplotlib.Figure
             style (string): TODO "modern" || "classic" || "modern-cumul" || "classic-cumul"
@@ -552,7 +555,10 @@ class Dataset(object):
             tratio,tratio_err = self.calc_ratio(nominator=ratio[0],\
                                                 denominator=ratio[1])
 
-            plot.add_ratio(ratio[0],ratio[1],total_ratio=tratio,total_ratio_errors=tratio_err)
+            plot.add_ratio(ratio[0],ratio[1],\
+                           total_ratio=tratio,\
+                           label=ratiolabel,
+                           total_ratio_errors=tratio_err)
 
         plot.plot(axes_locator=axes_locator,\
                   normalized=normalized,\

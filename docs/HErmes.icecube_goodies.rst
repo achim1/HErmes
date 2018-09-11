@@ -1,35 +1,35 @@
-HErmes\.icecube\_goodies package
-================================
+HErmes.icecube\_goodies package
+===============================
 
 Submodules
 ----------
 
-HErmes\.icecube\_goodies\.conversions module
---------------------------------------------
+HErmes.icecube\_goodies.conversions module
+------------------------------------------
 
 .. automodule:: HErmes.icecube_goodies.conversions
     :members:
     :undoc-members:
     :show-inheritance:
 
-HErmes\.icecube\_goodies\.fluxes module
----------------------------------------
+HErmes.icecube\_goodies.fluxes module
+-------------------------------------
 
 .. automodule:: HErmes.icecube_goodies.fluxes
     :members:
     :undoc-members:
     :show-inheritance:
 
-HErmes\.icecube\_goodies\.helpers module
-----------------------------------------
+HErmes.icecube\_goodies.helpers module
+--------------------------------------
 
 .. automodule:: HErmes.icecube_goodies.helpers
     :members:
     :undoc-members:
     :show-inheritance:
 
-HErmes\.icecube\_goodies\.weighting module
-------------------------------------------
+HErmes.icecube\_goodies.weighting module
+----------------------------------------
 
 .. automodule:: HErmes.icecube_goodies.weighting
     :members:

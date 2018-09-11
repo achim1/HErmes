@@ -20,7 +20,7 @@ def construct_slices(name, bins):
     l_binedges = bins[:-1]
     r_binedges = bins[1:]
     cuts = [[(name, ">", i), (name, "<=", j)] for i, j in zip(l_binedges, r_binedges)]
-    labels = ["{:4.2f}".format(i) for i in bins]
+    labels = ["{:4.2f} - {:4.2f}".format(i, j) for i,j in zip(l_binedges, r_binedges)]
     return labels, cuts
 
 

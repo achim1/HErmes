@@ -38,7 +38,6 @@ def slicer(list_to_slice, slices):
         lower_bound = index*maxslice
         upper_bound = lower_bound + maxslice
         thisslice = list_to_slice[lower_bound:upper_bound]
-        #if not thisslice: #Do not emit empty lists!
         yield thisslice
 
 #######################################################################

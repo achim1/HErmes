@@ -72,5 +72,5 @@ class PowerLawFlux(object):
 class Constant(object):
 
     @staticmethod
-    def idendity(x):
+    def identity(x):
         return np.ones(len(x))

@@ -26,6 +26,7 @@ MOCK_MODULES = ['scipy',\
                 'matplotlib.pyplot',\
                 'pylab',\
                 'matplotlib.style',\
+                'matplotlib.style.core',\
                 'matplotlib.ticker',\
                 'matplotlib.pylab',\
                 'scipy.interpolate',\

@@ -1,35 +1,35 @@
-HErmes\.plotting package
-========================
+HErmes.plotting package
+=======================
 
 Submodules
 ----------
 
-HErmes\.plotting\.canvases module
----------------------------------
+HErmes.plotting.canvases module
+-------------------------------
 
 .. automodule:: HErmes.plotting.canvases
     :members:
     :undoc-members:
     :show-inheritance:
 
-HErmes\.plotting\.colors module
--------------------------------
+HErmes.plotting.colors module
+-----------------------------
 
 .. automodule:: HErmes.plotting.colors
     :members:
     :undoc-members:
     :show-inheritance:
 
-HErmes\.plotting\.layout module
--------------------------------
+HErmes.plotting.layout module
+-----------------------------
 
 .. automodule:: HErmes.plotting.layout
     :members:
     :undoc-members:
     :show-inheritance:
 
-HErmes\.plotting\.plotting module
----------------------------------
+HErmes.plotting.plotting module
+-------------------------------
 
 .. automodule:: HErmes.plotting.plotting
     :members:

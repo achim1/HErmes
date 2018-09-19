@@ -367,7 +367,6 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
             Logger.warning("Seeeing {} data".format(type(self._data)))
             Logger.warning("Attempting to fix!")
             self._data = np.asarray(self._data)
-            return self._data
 
         return self._data
 

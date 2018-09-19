@@ -306,15 +306,19 @@ class VariableDistributionPlot(object):
         self.label = label
         self.name = name
 
-    def add_variable(self, category, variable_name, transform=None):
+    def add_variable(self, category,
+                     variable_name,
+                     external_weights=None,
+                     transform=None):
         """
         Convenience interface if data is sorted in categories already
 
         Args:
-            category (pyevsel.variables.category.Category): Get variable from this category
+            category (HErmese.variables.category.Category): Get variable from this category
             variable_name (string): The name of the variable
 
         Keyword Args:
+            external_weights (np.ndarray): Supply an array for weighting. This will OVERIDE ANY INTERNAL WEIGHTING MECHANISM and use the supplied weights.
             transform (callable): Apply transformation todata
 
         """
@@ -323,11 +327,14 @@ class VariableDistributionPlot(object):
         if self.bins is None:
             self.bins = category.vardict[variable_name].bins
         self.name = variable_name
-        Logger.warning("Weighting is broken at the moment, FIXME!")
-        #weights = category.weights
-        #if len(weights) == 0:
-        #    weights = None
-        weights = None
+        if external_weights is None:
+            Logger.warning("Internal weighting mechanism is broken at the moment, FIXME!")
+            #weights = category.weights
+            #if len(weights) == 0:
+            #    weights = None
+            weights = None
+        else:
+            weights = external_weights
         if transform is None: transform = lambda x : x
         self.add_data(transform(category.get(variable_name)),\
                       category.name,\

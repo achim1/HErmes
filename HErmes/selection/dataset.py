@@ -138,6 +138,9 @@ class Dataset(object):
     def variablenames(self):
         return {cat.name : cat.variablenames for cat in self.categories}
 
+    @property
+    def files(self):
+        return {cat.name : cat.files for cat in self.categories}
 
     #@GetTiming
     def read_variables(self, names=None, max_cpu_cores=categories.MAX_CORES):
@@ -412,6 +415,7 @@ class Dataset(object):
                      axis_properties=None,
                      ratiolabel="data/$\Sigma$ bg",
                      bins=None,
+                     external_weights=None,
                      figure_factory=None):
         """
         One shot short-cut for one of the most used
@@ -432,6 +436,8 @@ class Dataset(object):
             bins (np.ndarray): binning, if None binning will be deduced from the variable definition
             figure_factory (func): factory function which return a matplotlib.Figure
             style (string): TODO "modern" || "classic" || "modern-cumul" || "classic-cumul"
+            external_weights (dict): supply external weights - this will OVERIDE ANY INTERNALLY CALCULATED WEIGHTS and use the supplied weights instead.
+                                     must be in the form { "categoryname" : weights}
             axis_properties (dict): Manually define a plot layout with up to three axes.
                                     For example, it can look like this:
                                     {
@@ -545,7 +551,11 @@ class Dataset(object):
 
         Logger.warn("For variables with different lengths the weighting is broken. If weights, it will fail")
         for cat in [x for x in plotcategories if x.plot]:
-            plot.add_variable(cat, name, transform=transform)
+            if external_weights is None:
+                weights = None
+            else:
+                weights = external_weights[cat.name]
+            plot.add_variable(cat, name, transform=transform, external_weights=weights)
             Logger.debug("Adding variable data {}".format(name))
             if cumulative:
                 Logger.debug("Adding variable data {} for cumulative plot".format(name))

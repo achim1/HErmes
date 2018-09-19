@@ -478,13 +478,24 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                 
                 # special treatement if variable
                 # is an array
-                if self[varname].ndim == 2:
-                    Logger.warning("Cut on array variable can be only applied inline!")
+                if (self[varname].ndim == 2) or (len(self[varname].shape) == 2):
+                    Lgger.warning("Cut on array variable can be only applied inline!")
                     Logger.warning("Conditions can not be applied to array variable!")
                     for i, k in enumerate(s):
                         mask =  op(s[i],value) 
                         s[i] = cut_with_nans(s[i], mask)
                     self.vardict[varname]._data = s
+                # in the case of a jagged array, it will be recognized as 
+                # one dimensional.
+                # However, the entries of the array are iterables
+                elif hasattr(self.vardict[varname]._data[0],"__iter__"):
+                    Logger.warning("Cut on jagged array! Can only be applied inline!")
+                    Logger.warning("Conditions can not be applied to array variable!")
+                    for i, k in enumerate(s):
+                        mask =  op(s[i],value) 
+                        s[i] = cut_with_nans(s[i], mask)
+                    self.vardict[varname]._data = s
+                    
 
                 else:
                     assert len(mask) == len(op(s, value)),\
@@ -668,6 +679,9 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                         if isinstance(n, tables.Group):
                             tablenames.append("Group (unknown name): {}".format(n.__members__))
                     t.close()
+            else:
+                Logger.info("Can not peek into rootfiles at the moment")
+
         return tablenames
 
     def get(self, varkey, uncut=False):

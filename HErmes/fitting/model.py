@@ -1,12 +1,13 @@
 """
 Provide a simple, easy to use model for fitting data and especially
-distributions
+distributions. The model is capable of having "components", which can
+be defined and fitted individually.
 """
+
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import absolute_import
-
 
 from future import standard_library
 standard_library.install_aliases()
@@ -152,7 +153,14 @@ def create_minuit_pardict(fn, startparams, errors, limits, errordef):
 
 class Model(object):
     """
-    Model data with a parametrized prediction
+    Describe data with a prediction. The Model class allows to set a function
+    for data prediction, and fit it to the data by the means of a chi2 fit.
+    It is possible to use a collection of functions to describe a complex model,
+    e.g Gaussian + some exponential tail.
+    The individual models can be fitted independently, which results in sum_i n_i de
+    degrees of freedom for i models with n_i parameters each, or alternatively they c
+    can be coupled and share parameters, which results in sum_i n_i - n_ij degrees of
+    freedom where n_ij is a shared parameters.
     """
 
     def __init__(self, func,\
@@ -161,13 +169,22 @@ class Model(object):
                  errors=(10.,),
                  func_norm=1):
         """
-        Initialize a new model
-
-
         Args:
-            func: the function to predict the data
-            startparams (tuple): A set of startparameters.
-            norm: multiply the result of func when evaluated with norm
+            func (fnc): The function which shall model the data.
+                        It has to be of the form f(x, par1, par2, ...).
+                        Only 1d fits are supported, and "x" must be the
+                        first argument.
+        Keyword Args:
+            Will be passed to iminuit:    
+                startparams (tuple): A set of startparameters. 1 start parameter
+                                     per function parameter. A good choice of 
+                                     start parameters helps the fit a lot.
+                limits (tuple): individual limit min/max for each parameter
+                                1 tuple (min/max) per parameter
+                errors (tuple): One value per parameter, giving an 1sigma error
+                                estimate
+            Additional keywords:
+                func_norm (float): multiply the result of func when evaluated with norm
         """
 
         # if no startparams are given, construct 
@@ -448,7 +465,7 @@ class Model(object):
                     use_minuit=True,\
                     errors=None,\
                     limits=None,\
-                    errordef=1000,\
+                    errordef=1,\
                     **kwargs):
         """
         Apply this model to data
@@ -459,7 +476,7 @@ class Model(object):
             use_minuit (bool): use minuit for fitting
             errors (list): errors for minuit, see miniuit manual
             limits (list of tuples): limits for minuit, see minuit manual
-            errordef (int) : convergence criterion, see minuit manual
+            errordef (int) : typically 1 for chi2 fit and 0.5 for llh fit 
             **kwargs: will be passed on to scipy.optimize.curvefit
 
         Returns:
@@ -537,6 +554,7 @@ class Model(object):
                     ylabel="normed bincount",\
                     xlabel="Q [C]", fig=None,\
                     log=True,\
+                    figure_factory=None,\
                     axes_range="auto",
                     model_alpha=.3,\
                     add_parameter_text=((r"$\mu_{{SPE}}$& {:4.2e}\\",0),),
@@ -553,6 +571,7 @@ class Model(object):
                                 for the model
             ylabel (str): label for yaxis
             log (bool): plot in log scale
+            figure_factory (fnc): Use to generate the figure
             axes_range (str): the "field of view" to show
             fig (pylab.figure): A figure instance
             add_parameter_text (tuple): Display a parameter in the table on the plot
@@ -577,10 +596,15 @@ class Model(object):
             ax.set_ylim(ymin, ymax)
             return ax
 
+        if figure_factory is not None:
+            fig = figure_factory()
 
-        if fig is None:
+        elif fig is None:
             fig = p.figure()
+
         ax = fig.gca()
+
+
         if self.distribution is not None:
             self.distribution.__getattribute__(histostyle)(color=datacolor)
         else:

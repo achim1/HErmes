@@ -599,6 +599,7 @@ class VariableDistributionPlot(object):
              combined_ratio=True,\
              combined_cumul=True,
              normalized=True,
+             style="classic",\
              log=True,
              legendwidth = 1.5,
              ylabel="rate/bin [1/s]",
@@ -612,7 +613,8 @@ class VariableDistributionPlot(object):
             combined_distro:
             combined_ratio:
             combined_cumul:
-            log:
+            log (bool):
+            style (str): Apply a simple style to the plot. Options are "modern" or "classic"
             normalized (bool):
 
         Returns:
@@ -693,23 +695,27 @@ class VariableDistributionPlot(object):
             cur_ax.grid(True)
         lgax = self.canvas.select_axes(-1) # most upper one
         ncol = 2 if len(self.histograms) <= 4 else 3 
-        
-        legend_kwargs = {"bbox_to_anchor": [0., 1.0, 1., .102],
-                         "loc": 3,
-                         "frameon": True,
-                         "ncol": ncol,
-                         "framealpha": 1.,
-                         "borderaxespad": 0,
-                         "mode": "expand",
-                         "handlelength": 2,
-                         "numpoints": 1}
-        lg = lgax.legend(**legend_kwargs)
-        if lg is not None:
-            lg.get_frame().set_linewidth(legendwidth)
-            lg.get_frame().set_edgecolor("k")
-        else:
-            Logger.warn("Can not set legendwidth!")       
- 
+        if style == "classic":
+            # draw the legend in the box above the plot
+            legend_kwargs = {"bbox_to_anchor": [0., 1.0, 1., .102],
+                             "loc": 3,
+                             "frameon": True,
+                             "ncol": ncol,
+                             "framealpha": 1.,
+                             "borderaxespad": 0,
+                             "mode": "expand",
+                             "handlelength": 2,
+                             "numpoints": 1}
+            lg = lgax.legend(**legend_kwargs)
+            if lg is not None:
+                lg.get_frame().set_linewidth(legendwidth)
+                lg.get_frame().set_edgecolor("k")
+            else:
+                Logger.warn("Can not set legendwidth!")       
+        if style == "modern":
+            # be more casual
+            lgax.legend() 
+
         # plot the cuts
         if self.cuts:
             for ax in h_axes:
@@ -720,7 +726,12 @@ class VariableDistributionPlot(object):
                 self.indicate_cut(cur_ax, arrow=False)
         # cleanup
         leftplotedge, rightplotedge, minplotrange, maxplotrange = self.optimal_plotrange_histo(self.histograms.values())
-        maxplotrange += (maxplotrange*0.1)
+        if minplotrange == maxplotrange:
+            DEBUG("Detected histogram with most likely a single bin!")
+            DEBUG("Adjusting plotrange")
+            
+        else: 
+            maxplotrange += (maxplotrange*0.1)
            
         if log:
             if maxplotrange < 1: 
@@ -765,6 +776,10 @@ class VariableDistributionPlot(object):
             #self.canvas.select_axes(ax[0]).ticklabel_format(useOffset=False, style='plain', axis="y")
             self.canvas.select_axes(ax[0]).get_yaxis().get_offset_text().set_x(-0.1)
 
+        if ((len(h_axes) == 1) and (style == "modern")):
+            self.canvas.select_axes(-1).spines["top"].set_visible(False)
+            self.canvas.select_axes(-1).spines["right"].set_visible(False)
+
 
     @staticmethod
     def optimal_plotrange_histo(histograms):
@@ -799,7 +814,7 @@ class VariableDistributionPlot(object):
                 
             if max(h.bincontent[h.bincontent > 0]) > maxplotrange:
                 maxplotrange = max(h.bincontent[h.bincontent > 0])
-
+ 
         return leftplotedge, rightplotedge, minplotrange, maxplotrange
 
 

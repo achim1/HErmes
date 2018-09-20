@@ -573,7 +573,8 @@ class Dataset(object):
         plot.plot(axes_locator=axes_locator,\
                   normalized=normalized,\
                   figure_factory=figure_factory,\
-                  log=log,
+                  log=log,\
+                  style=style,\
                   ylabel=ylabel)
         #plot.add_legend()
         #plot.canvas.save(savepath,savename,dpi=350)

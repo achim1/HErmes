@@ -551,10 +551,12 @@ class Dataset(object):
 
         Logger.warn("For variables with different lengths the weighting is broken. If weights, it will fail")
         for cat in [x for x in plotcategories if x.plot]:
-            if external_weights is None:
-                weights = None
-            else:
+            if external_weights is not None:
                 weights = external_weights[cat.name]
+            elif cat.weights is not None:
+                weights = cat.weights
+            else:
+                weights = None
             plot.add_variable(cat, name, transform=transform, external_weights=weights)
             Logger.debug("Adding variable data {}".format(name))
             if cumulative:

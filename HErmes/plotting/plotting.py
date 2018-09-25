@@ -18,6 +18,7 @@ import matplotlib.ticker
 from .colors import get_color_palette
 from .canvases import YStackedCanvas
 from ..utils.logger import Logger
+from ..utils.itools import flatten
 
 d.visual()
 
@@ -282,8 +283,8 @@ class VariableDistributionPlot(object):
         self.cuts.append(cut)
 
     def add_data(self, variable_data,\
-                      name, bins=None,\
-                      weights=None, label=''):
+                 name, bins=None,\
+                 weights=None, label=''):
         """
         Histogram the added data and store internally
         
@@ -336,11 +337,30 @@ class VariableDistributionPlot(object):
         else:
             weights = external_weights
         if transform is None: transform = lambda x : x
-        self.add_data(transform(category.get(variable_name)),\
+        data = category.get(variable_name)
+        #print (variable_name)
+        #print (data)
+        #print (data[0])
+        # FIXME: check this
+        # check pandas series and 
+        # numpy arrya difference
+        try:
+            data = data.as_matrix()
+        except:
+            pass
+        # hack for applying the weights
+        if hasattr(data[0],"__iter__"):
+            if weights is not None:
+                Logger.warning("Multi array data for {} detected. Trying to apply weights".format(variable_name))
+                tmpweights = np.array([weights[i]*np.ones(len(data[i])) for i in range(len(data))])
+                Logger.warning("Weights broken, assuming flatten as transformation")
+                weights = flatten(tmpweights)
+
+        self.add_data(transform(data),\
                       category.name,\
                       self.bins, weights=weights,\
                       label=category.vardict[variable_name].label)
-
+        
     def add_cumul(self, name):
         """
         Add a cumulative distribution to the plto
@@ -349,7 +369,6 @@ class VariableDistributionPlot(object):
             name (str): the name of the category
         """
         assert name in self.histograms, "Need to add data first"
-
         self.cumuls[name] = self.histograms[name].normalized()
 
     def indicate_cut(self, ax, arrow=True):
@@ -727,8 +746,8 @@ class VariableDistributionPlot(object):
         # cleanup
         leftplotedge, rightplotedge, minplotrange, maxplotrange = self.optimal_plotrange_histo(self.histograms.values())
         if minplotrange == maxplotrange:
-            DEBUG("Detected histogram with most likely a single bin!")
-            DEBUG("Adjusting plotrange")
+            Logger.debug("Detected histogram with most likely a single bin!")
+            Logger.debug("Adjusting plotrange")
             
         else: 
             maxplotrange += (maxplotrange*0.1)

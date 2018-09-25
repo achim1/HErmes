@@ -193,7 +193,6 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             sample.append(np.asarray(var))
         sample = tuple(sample)
 
-
         if figure_factory is not None:
             fig = figure_factory()
 
@@ -459,7 +458,6 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             if cut.condition is None:
                 continue
 
-
             for varname,(op,value) in cut:
                 s = self.get(varname)
                 cond_mask = np.logical_and(cond_mask, op(s,value) )
@@ -475,27 +473,27 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                 continue
             for varname, (op,value) in cut:
                 s = self.get(varname)
-                
+                Logger.debug("Cutting on {}".format(varname))
                 # special treatement if variable
                 # is an array
                 if (self[varname].ndim == 2) or (len(self[varname].shape) == 2):
-                    Lgger.warning("Cut on array variable can be only applied inline!")
+                    Lgger.warning("Cut on array variable {} can be only applied inline!".format(varname))
                     Logger.warning("Conditions can not be applied to array variable!")
                     for i, k in enumerate(s):
-                        mask =  op(s[i],value) 
-                        s[i] = cut_with_nans(s[i], mask)
+                        tmpmask =  op(s[i],value) 
+                        s[i] = cut_with_nans(s[i], tmpmask)
                     self.vardict[varname]._data = s
                 # in the case of a jagged array, it will be recognized as 
                 # one dimensional.
                 # However, the entries of the array are iterables
                 elif hasattr(self.vardict[varname]._data[0],"__iter__"):
-                    Logger.warning("Cut on jagged array! Can only be applied inline!")
+                    Logger.warning("Cut on jagged array! Can only be applied inplace!")
                     Logger.warning("Conditions can not be applied to array variable!")
                     for i, k in enumerate(s):
-                        mask =  op(s[i],value) 
-                        s[i] = cut_with_nans(s[i], mask)
+                        tmpmask =  op(s[i],value) 
+                        s[i] = cut_with_nans(s[i], tmpmask)
                     self.vardict[varname]._data = s
-                    
+                    #inplace = True        
 
                 else:
                     assert len(mask) == len(op(s, value)),\
@@ -504,12 +502,15 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
         if inplace:
             for k in list(self.vardict.keys()):
-                if self.vardict[varname].ndim != 2:
+                if self.vardict[k].ndim != 2:
                     self.vardict[k]._data = self.vardict[k].data[mask]
-        elif self.vardict[varname].ndim != 2:
-            self.cutmask = np.array(mask, dtype=bool)
         else:
-            pass
+            # multidim variables are cut inline anyway
+            self.cutmask = np.array(mask, dtype=bool)
+        #elif self.vardict[varname].ndim != 2:
+        #    self.cutmask = np.array(mask, dtype=bool)
+        #else:
+        #    pass
 
     def undo_cuts(self):
         """
@@ -694,7 +695,6 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         Keyword Args:
             uncut (bool): never return cutted values
         """
-
 
         if varkey not in self.vardict:
             raise KeyError("{} not found!".format(varkey))
@@ -975,24 +975,63 @@ class Simulation(AbstractBaseCategory):
         Returns:
             np.ndarray
         """
-        if self.weightvarname is None:
-            Logger.warn("Have to specify which variable to use for weighting! Set weightvarname first!")
-            self._weights = None
-            return
 
-        #weights = [self.vardict[v] for v in self.vardict if self.vardict[v].role == v.ROLES.WEIGHT]
-        #weight_vars = [v for v in weights if v.name == self.weightvarname]
-        #if len(weight_vars) != 1:
-        #    Logger.warn("Can not calculate weights, {} weight variables found!".format(len(weight_vars)))
+        if model is None:
+            Logger.info("No model given, will attempt automatic weighting")
+            Logger.info("Will deduce weights from variable roles")
+            fluxvarname = None
+            generatorvarname = None
+            for var in self.variablenames:
+                if self.vardict[var].role == self.vardict[var].ROLES.FLUXWEIGHT:
+                    if fluxvarname is not None:
+                        raise ValueError("Fluxweights already found with {}. Definitiion must be unique. Can not set {}"\
+                                         .format(fluxvarname, var))
+                    fluxvarname = var
+                    Logger.info("Found fluxweights {}".format(fluxvarname))
+                if self.vardict[var].role == self.vardict[var].ROLES.GENERATORWEIGHT:
+                    if generatorvarname is not None:
+                        raise ValueError("Fluxweights already found with {}. Definitiion must be unique. Can not set {}"\
+                                         .format(generatorvarname, var))
+                    generatorvarname = var
+                    Logger.info("Found generator weight {}".format(generatorweight))
+
+            if fluxvarname is None:
+                Logger.warning("Can not find fluxweigths, assuming unity")
+                fluxweights = np.ones(self.raw_count)
+            else:
+                fluxweights = self.get(fluxvarname)
+
+            if generatorvarname is None:
+                Logger.warning("Can not find generatorweights, assuming unity")
+                generatorweights = np.ones(self.raw_count)
+            else:
+                generatorweights = self.get(generatorvarname)
+
+            self._weights = fluxweights/generatorweights
+        else:
+            Logger.warning("Model currently not supported")
+            self._weights = None
+        return
+
+        #FIXME
+        #if self.weightvarname is None:
+        #    Logger.warn("Have to specify which variable to use for weighting! Set weightvarname first!")
         #    self._weights = None
         #    return
-        if model is None:
-            self._weights = self.vardict[self.weightvarname].data
-        else:
-            model_args = [self.get(v) for v in model_args]
-            target_flux = model(*model_args)
-            self._weights = target_flux/self.vardict[self.weightvarname].data
-
+        #
+        ##weights = [self.vardict[v] for v in self.vardict if self.vardict[v].role == v.ROLES.WEIGHT]
+        ##weight_vars = [v for v in weights if v.name == self.weightvarname]
+        ##if len(weight_vars) != 1:
+        ##    Logger.warn("Can not calculate weights, {} weight variables found!".format(len(weight_vars)))
+        ##    self._weights = None
+        ##    return
+        #if model is None:
+        #    self._weights = self.vardict[self.weightvarname].data
+        #else:
+        #    model_args = [self.get(v) for v in model_args]
+        #    target_flux = model(*model_args)
+        #    self._weights = target_flux/self.vardict[self.weightvarname].data
+        #
 
     # def get_weights(self, model=None, model_kwargs = None):
     #     """

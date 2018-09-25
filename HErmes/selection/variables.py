@@ -278,6 +278,7 @@ class VariableRole(enum.Enum):
     EVENTID         = 50
     STARTIME        = 60
     ENDTIME         = 70
+    FLUXWEIGHT      = 80
 
 
 
@@ -413,6 +414,7 @@ class Variable(AbstractBaseVariable):
         self._data       = pd.Series()
         self.nevents     = nevents
         self.reduce_dimension = reduce_dimension
+        self._role = role
 
         #if self.defsize  == 1:
         #    self.data    = pd.DataFrame()

@@ -155,6 +155,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                        interpolation="gaussian",
                        cblabel="events",
                        weights=None,
+                       transform=(None,None),
                        despine=False,
                        return_histo=False):
         """
@@ -172,6 +173,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             // style (str): Either "line" or "scatter"
             transform (callable): Apply transformation to the data before plotting
             log (bool): Plot yaxis in log scale
+            transform (tuple): Two functions which shall transform sample 1 and 2 respectively
             figure_factory (func): Must return a single matplotlib.Figure, NOTE: figure_factory has priority over fig keyword
             return_histo (bool): Return the histogram instead of the figure. WARNING: changes return type!
         Returns:
@@ -180,19 +182,22 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         """
         sample = []
 
-        for varname in varnames:
+        for var_k,varname in enumerate(varnames):
             var = self.get(varname)
 
             # XXX HACK
+            # FIXME: This doesn't really work...
             if not hasattr(var, "ndim"):
                 var = np.asarray(var)
             if var.ndim != 1:
                 Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\
                                 Data shape is {}".format(self.get(varname).shape))
                 return fig
-            sample.append(np.asarray(var))
+            if transform[var_k] is not None:
+                sample.append(np.asarray(transform[var_k](np.asarray(var))))
+            else:
+                sample.append(np.asarray(var))
         sample = tuple(sample)
-
         if figure_factory is not None:
             fig = figure_factory()
 

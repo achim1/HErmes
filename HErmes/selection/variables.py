@@ -10,17 +10,20 @@ import pandas as pd
 import tables
 import abc
 import enum
-
+import array
+import numbers
 from ..utils import files as f
 from ..utils.logger import Logger
 from future.utils import with_metaclass
-
+from copy import deepcopy as copy
 DEFAULT_BINS = 70
 
 REGISTERED_FILEEXTENSIONS = [".h5"]
 
 try:
     import uproot as ur
+    import uproot_methods.classes.TVector3 as TVector3
+    import uproot_methods.classes.TLorentzVector as TLorentzVector
     REGISTERED_FILEEXTENSIONS.append(".root")
 
 except ImportError:
@@ -32,6 +35,7 @@ except ImportError:
 # multiprocessing approach
 def extract_from_root(filename, definitions,
                       nevents=None,
+                      dtype=np.float64,
                       reduce_dimension=None):
     """
     Use the uproot system to get information from rootfiles. Supports a basic tree of
@@ -44,23 +48,25 @@ def extract_from_root(filename, definitions,
     Keyword Args:
         nevents (int): number of events to read out
         reduce_dimension (int): If data is vector-type, reduce it by taking the n-th element
+        dtype (np.dtyoe):  A numpy datatype, default double (np.float64) - use smaller dtypes to 
+                           save memory
     """
 
     can_be_concatted = False
-    file = ur.open(filename)
+    rootfile = ur.open(filename)
     success = False
     i=0
     branch = None
     # it will most likely work only with TTrees
     while not success:
         try:
-            tree = file.get(definitions[i][0])
+            tree = rootfile.get(definitions[i][0])
             branch = tree
             for address in definitions[i][1:]:
                 branch = branch.get(address)
 
             #tree = file[definitions[i][0]]
-            #branch = file[definitions[i][0]].get(definitions[i][1])
+            #branch = rootfile[definitions[i][0]].get(definitions[i][1])
             success = True
         except KeyError as e:
             Logger.warning("Can not find address {}".format(definitions[i]))
@@ -70,7 +76,7 @@ def extract_from_root(filename, definitions,
             break
     Logger.debug("Found valid definitions {}".format(definitions[i]))
 
-    #FiXME make logger.critical end program!
+    ##FiXME make logger.critical end program!
     if nevents is not None:
         data = branch.array(entrystop=nevents)
     else:
@@ -81,41 +87,83 @@ def extract_from_root(filename, definitions,
     try:
         len(data[0])
         multidim = True
-        Logger.debug("Assuming array data {}".format(definitions[i]))
     except TypeError:
         Logger.debug("Assuming scalar data {}".format(definitions[i]))
+
+    if multidim:
+        Logger.debug("Inspecting data...")
+        tmp_lengths = set([len(k) for k in data])
+        Logger.debug("Found {}".format(tmp_lengths))
+        firstlen = list(tmp_lengths)[0]
+        if (len(tmp_lengths) == 1) and (firstlen == 1):
+            multidim = False
+            Logger.debug("Found data containing iterables of size 1... flattening!")
+            del tmp_lengths
+            if dtype != np.float64:
+                tmpdata = array.array("f",[])
+            else:
+                tmpdata = array.array("d",[])
+            if isinstance(data[0][0], numbers.Number):
+                [tmpdata.append(dtype(k)) for k in data]
+                #tmpdata = np.asarray([k[0] for k in data])
+                #multidim = True
+                data = tmpdata
+                del tmpdata 
+            else:
+                Logger.info("Is multidim data")
+                multidim = True
+        else:
+            del tmp_lengths
+            multidim = True
+            Logger.debug("Assuming array data {}".format(definitions[i]))
 
     if reduce_dimension is not None:
         if not multidim:
             raise ValueError("Can not reduce scalar data!")
         if isinstance(reduce_dimension, int):
-            data = np.array([k[reduce_dimension] for k in data])
+            data = np.array([k[reduce_dimension] for k in data], dtype=dtype)
             multidim = False
         else:
             data = [[k[reduce_dimension[1]] for k in j] for j in data]
-
     if multidim:
         Logger.debug("Grabbing multidimensional data from root-tree for {}".format(definitions[i]))
-
+        del data
         if nevents is None:
             data = branch.array() #this will be a jagged array now!
         else:
             data = branch.array(entrystop=nevents)
-
-        tmpdata = [np.array(i) for i in data]
+        del branch
+        if (len(data[0])):
+            if isinstance(data[0][0], TVector3.TVector3):
+                Logger.info("Found TVector3 data, treating appropriatly")
+                data =  pd.Series([np.array([i.x,i.y,i.z], dtype=dtype) for i in data])
+            if isinstance(data[0][0], TLorentzVector.TLorentzVector):
+                Logger.info("Found TLorentzVector data, treating appropriatly")
+                data =  pd.Series([np.array([i.x,i.y,i.z,i.t], dtype=dtype) for i in data])
+        else: # probably number then    
+            data = pd.Series([np.asarray(i,dtype=dtype) for i in data])
+    
         # the below might not be picklable (multiprocessing!)
         #tmpdata = [i for i in data]
         # FIXME: dataframe/series
         # try to convert this to a pandas dataframe
         #data = pd.DataFrame(tmpdata)
-        data = pd.Series(tmpdata)
-
         can_be_concatted = True
-        #data.shape = (len(data),None)
-        #data.ndim = 2
+        data.multidim = True
     else:
         Logger.debug("Grabbing scalar data from root-tree for {}".format(definitions[i]))
-        data = pd.Series(np.asarray(data))
+        # convert in cases of TVector3/TLorentzVector
+
+        if isinstance(data[0], TVector3.TVector3):
+            data =  pd.Series([np.array([i.x,i.y,i.z], dtype=dtype) for i in data])
+        elif isinstance(data[0], TLorentzVector.TLorentzVector):
+            Logger.debug("Found TLorentzVector")
+            data =  pd.Series([np.array([i.x,i.y,i.z, i.t], dtype=dtype) for i in data])
+        else:
+            try:
+                data = pd.Series(np.asarray(data,dtype=dtype))
+            except TypeError: # data consist of some object
+                data = pd.Series(np.asarray(data)) 
         can_be_concatted = True
     return data, can_be_concatted
 
@@ -147,8 +195,8 @@ def harvest(filenames, definitions, **kwargs):
                                             using the index given by reduce_dimension.
                                             E.g. in case of a TVector3, and we want to have onlz
                                             x, that would be 0, y -> 1 and z -> 2.
-
-        FIXME: Not implemented yet! precision (int): Precision in bit
+        dtype (np.dtype) : datatype to cast to (default np.float64, but can be used
+                           to reduce memory footprint.
 
     Returns:
         pd.Series or pd.DataFrame
@@ -158,6 +206,8 @@ def harvest(filenames, definitions, **kwargs):
     fill_empty = kwargs["fill_empty"] if "fill_empty" in kwargs else False
     reduce_dimension = kwargs["reduce_dimension"] if "reduce_dimension" in kwargs else None
     transform = kwargs["transformation"] if "transformation" in kwargs else None
+    dtype = kwargs["dtype"] if "dtype" in kwargs else np.float64
+
     concattable = True
     data = pd.Series()
     #multidim_data = pd.DataFrame()
@@ -191,9 +241,9 @@ def harvest(filenames, definitions, **kwargs):
                     if tmpdata.ndim == 2:
                         if data.empty:
                             data = pd.DataFrame()
-                        tmpdata = pd.DataFrame(tmpdata, dtype=n.float32)
+                        tmpdata = pd.DataFrame(tmpdata, dtype=dtype)
                     else:
-                        tmpdata = pd.Series(tmpdata, dtype=n.float32)
+                        tmpdata = pd.Series(tmpdata, dtype=dtype)
 
                     Logger.debug("Found {} entries in table for {}{}".format(len(tmpdata),definition[0],definition[1]))
                     break
@@ -204,6 +254,7 @@ def harvest(filenames, definitions, **kwargs):
             elif filetype == ".root":
                 tmpdata, concattable = extract_from_root(filename, definitions,
                                                          nevents=nevents,
+                                                         dtype=dtype,
                                                          reduce_dimension=reduce_dimension)
         if filetype == ".h5":
             hdftable.close()
@@ -216,8 +267,8 @@ def harvest(filenames, definitions, **kwargs):
             return tmpdata
 
         data = pd.concat([data, tmpdata])
+
         del tmpdata
-    #print (data)
     return data
 
 ################################################################
@@ -357,6 +408,9 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
 
     @property
     def ndim(self):
+        if hasattr(self._data, "multidim"):
+            if self._data.multidim == True:
+                return 2
         return self._data.ndim
 
     @property

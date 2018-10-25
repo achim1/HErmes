@@ -28,6 +28,7 @@ import os.path
 import inspect
 import importlib
 import re
+import numpy as np
 
 from ..utils.logger import Logger
 
@@ -36,7 +37,10 @@ from . import dataset as ds
 from ..icecube_goodies import weighting as wgt
 from ..analysis import fluxes as fluxes
 
-def load_dataset(config, variables=None, max_cpu_cores=c.MAX_CORES):
+def load_dataset(config,
+                 variables=None,
+                 max_cpu_cores=c.MAX_CORES,
+                 dtype=np.float64):
     """
     Read a json configuration file and load a dataset populated
     with variables from the files given in the configuration file.
@@ -47,6 +51,9 @@ def load_dataset(config, variables=None, max_cpu_cores=c.MAX_CORES):
     Keyword Args:
         variables (list): list of strings of variable names to read out
         max_cpu_cores (int): maximum number of cpu ucores to use for variable readout
+        dtype (np.dtype): cast to the given datatype. By default it will be always double
+                          (which is np.float64), however ofthen times it is advisable
+                          to downcast to a less precise type to save memory.
     Returns:
         HErmes.selection.dataset.Dataset
 
@@ -167,7 +174,7 @@ def load_dataset(config, variables=None, max_cpu_cores=c.MAX_CORES):
                          combined_categories=combined_categories)
 
     dataset.load_vardefs(vardefs)
-    dataset.read_variables(names=variables, max_cpu_cores=max_cpu_cores)
+    dataset.read_variables(names=variables, max_cpu_cores=max_cpu_cores, dtype=dtype)
     #dataset.set_weightfunction(weightfunctions)
     #dataset.get_weights(models=models)
     dataset.calculate_weights(model=models, model_args=model_args)

@@ -709,13 +709,14 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         else:
             return self.vardict[varkey].data
 
-    def read_variables(self, names=None, max_cpu_cores=MAX_CORES):
+    def read_variables(self, names=None, max_cpu_cores=MAX_CORES, dtype=np.float64):
         """
         Harvest the variables in self.vardict
 
         Keyword Args:
             names (list): havest only these variables
             max_cpu_cores (list): use a maximum of X cores of the cpu
+            dtype (np.dtype) : Cast to this datatype (defalut np.float64)
         """
 
         assert self.files, "Need to assign some files before reading out variables"
@@ -750,10 +751,11 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             # FIXME: Make it an option to not use
             # multi cpu readout!
             #self.vardict[varname].data = variables.harvest(self.files,self.vardict[varname].definitions)
-            future_to_varname[executor.submit(variables.harvest,
-                                              self.files,
-                                              self.vardict[varname].definitions,
-                                              nevents = self.vardict[varname].nevents,
+            future_to_varname[executor.submit(variables.harvest,\
+                                              self.files,\
+                                              self.vardict[varname].definitions,\
+                                              nevents = self.vardict[varname].nevents,\
+                                              dtype = dtype,\
                                               reduce_dimension = self.vardict[varname].reduce_dimension)] = varname
                                               #transformation = self.vardict[varname].transform)] = varname
 
@@ -776,16 +778,16 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             Logger.debug("Reading {} finished".format(varname))
             try:
                 data = future.result()
-                Logger.debug("Found {} entries ...".format(len(data)))
+                Logger.debug("Found {} entries for {}".format(len(data), varname))
+            except Exception as exc:
+                exc_caught += "Reading {} for {} generated an exception: {} - {}\n".format(varname,self.name,type(exc), exc)
+                data = pd.Series([])
 
                 # FIXME: check how different these two approaches really are
                 #        the second does not work for some vector data
                 #        from root files
-                data = data.map(self.vardict[varname].transform)
-                #data = self.vardict[varname].transform(data)
-            except Exception as exc:
-                exc_caught += "Reading {} for {} generated an exception: {}\n".format(varname,self.name, exc)
-                data = pd.Series([])
+            data = data.map(self.vardict[varname].transform)
+            #data = self.vardict[varname].transform(data)
 
             self.vardict[varname]._data = data
             self.vardict[varname].declare_harvested()

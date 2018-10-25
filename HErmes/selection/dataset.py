@@ -143,13 +143,16 @@ class Dataset(object):
         return {cat.name : cat.files for cat in self.categories}
 
     #@GetTiming
-    def read_variables(self, names=None, max_cpu_cores=categories.MAX_CORES):
+    def read_variables(self, names=None,
+                             max_cpu_cores=categories.MAX_CORES,
+                             dtype=np.float64):
         """
         Read out the variable for all categories
 
         Keyword Args:
             names (str): Readout only these variables if given
             max_cpu_cores (int): Maximum number of cpu cores which will be used
+            dtype (np.dtype) : Cast to the given datatype (default is np.flaot64)
         Returns:
             None
         """
@@ -167,7 +170,7 @@ class Dataset(object):
             pass
         for cat in self.categories:
             Logger.debug("Reading variables for {}".format(cat))
-            cat.read_variables(names=names, max_cpu_cores=max_cpu_cores)
+            cat.read_variables(names=names, max_cpu_cores=max_cpu_cores, dtype=dtype)
             if progbar: bar.update()
 
     def drop_empty_variables(self):

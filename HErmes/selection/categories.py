@@ -157,6 +157,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                        weights=None,
                        transform=(None,None),
                        despine=False,
+                       alpha=0.95, 
                        return_histo=False):
         """
         Draw a 2d distribution of 2 variables in the same category.
@@ -172,6 +173,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             norm (str) : "n" or "density" - make normed histogram
             // style (str): Either "line" or "scatter"
             transform (callable): Apply transformation to the data before plotting
+            alpha (float) : 0-1, transparency of the histogram
             log (bool): Plot yaxis in log scale
             transform (tuple): Two functions which shall transform sample 1 and 2 respectively
             figure_factory (func): Must return a single matplotlib.Figure, NOTE: figure_factory has priority over fig keyword
@@ -184,19 +186,29 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
         for var_k,varname in enumerate(varnames):
             var = self.get(varname)
-
-            # XXX HACK
-            # FIXME: This doesn't really work...
-            if not hasattr(var, "ndim"):
-                var = np.asarray(var)
-            if var.ndim != 1:
-                Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\
-                                Data shape is {}".format(self.get(varname).shape))
-                return fig
+            if not isinstance(var, np.ndarray):
+                var = var.as_matrix()
             if transform[var_k] is not None:
-                sample.append(np.asarray(transform[var_k](np.asarray(var))))
-            else:
-                sample.append(np.asarray(var))
+                var = transform[var_k](var)
+            sample.append(var)
+            
+
+#            # XXX HACK
+#            # FIXME: This doesn't really work...
+#            if not hasattr(var, "ndim"):
+#                var = np.asarray(var)
+#            if var.ndim != 1:
+#                Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\
+#                                Data shape is {}".format(self.get(varname).shape))
+#                return fig
+#
+#            # not sure why this is necessary - maybe for 2d arrays_
+#            # FIXME
+#            if transform[var_k] is not None:
+#                sample.append(np.asarray(transform[var_k](np.asarray(var))))
+#            else:
+#                sample.append(np.asarray(var))
+
         sample = tuple(sample)
         if figure_factory is not None:
             fig = figure_factory()
@@ -225,14 +237,15 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             #norm=colors.SymLogNorm(linthresh=0.1, linscale=0.1, vmin=minval, vmax = maxval)
             norm=None
         try:
-            h2.imshow(log=log, cmap=cmap, interpolation=interpolation, alpha=0.95, label='events',
+            h2.imshow(log=log, cmap=cmap,
+                      interpolation=interpolation, alpha=alpha, label='events',
                       norm=norm)
             cb = p.colorbar(drawedges=False, shrink=0.5, orientation='vertical', fraction=0.05)
             cb.set_label(cblabel)
             cb.ticklocation = 'left'
         except Exception as e:
             Logger.warning("Exception encountered when creating colorbar! {}".format(e))
-            Logger.warning("Creation of colorbar failed with min {:4.2e} and max {:4.2e}".format(minval, maxval))
+            #Logger.warning("Creation of colorbar failed with min {:4.2e} and max {:4.2e}".format(minval, maxval))
             Logger.warning("Will try again without using normalization for colorbar...")
             #norm=colors.Normalize(minval, maxval)
             h2.imshow(log=log, cmap=cmap, interpolation=interpolation,

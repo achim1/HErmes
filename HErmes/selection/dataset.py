@@ -410,6 +410,7 @@ class Dataset(object):
                      cumulative=True,
                      log=False,
                      transform=None,
+                     disable_weights=False,
                      color_palette='dark',
                      normalized = False,
                      styles = dict(),
@@ -433,6 +434,7 @@ class Dataset(object):
             color_palette (str): A predifined color palette (from seaborn or HErmes.plotting.colors) 
             normalized (bool): Normalize the histogram by number of events
             transform (callable): Apply this transformation before plotting
+            disable_weights (bool): Disable all weighting to avoid problems with uneven sized arrays
             styles (dict): plot styling options
             ylabel (str): general label for y-axis
             ratiolabel (str): different label for the ratio part of the plot
@@ -556,12 +558,13 @@ class Dataset(object):
         for cat in [x for x in plotcategories if x.plot]:
             if external_weights is not None:
                 weights = external_weights[cat.name]
-            elif cat.weights is not None:
+            elif ((cat.weights is not None) and (not disable_weights)):
                 weights = cat.weights
+                Logger.debug("Found {} weights".format(len(weights)))
             else:
                 weights = None
-            plot.add_variable(cat, name, transform=transform, external_weights=weights)
             Logger.debug("Adding variable data {}".format(name))
+            plot.add_variable(cat, name, transform=transform, external_weights=weights)
             if cumulative:
                 Logger.debug("Adding variable data {} for cumulative plot".format(name))
                 plot.add_cumul(cat.name)

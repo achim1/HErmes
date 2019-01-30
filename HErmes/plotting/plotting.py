@@ -303,6 +303,7 @@ class VariableDistributionPlot(object):
         if weights is None:
             self.histograms[name] = d.factory.hist1d(variable_data, bins)
         else:
+            Logger.debug("Found {} weights and {} data points".format(len(weights), len(variable_data)))
             self.histograms[name] = d.factory.hist1d(variable_data, bins, weights=weights)
         self.label = label
         self.name = name

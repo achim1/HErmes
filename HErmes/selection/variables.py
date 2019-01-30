@@ -161,9 +161,11 @@ def extract_from_root(filename, definitions,
             data =  pd.Series([np.array([i.x,i.y,i.z, i.t], dtype=dtype) for i in data])
         else:
             try:
-                data = pd.Series(np.asarray(data,dtype=dtype))
+                #FIXME: why is that asarray needed?
+                #data = pd.Series(np.asarray(data,dtype=dtype))
+                data = pd.Series(data,dtype=dtype)
             except TypeError: # data consist of some object
-                data = pd.Series(np.asarray(data)) 
+                data = pd.Series(data) 
         can_be_concatted = True
     return data, can_be_concatted
 
@@ -262,9 +264,18 @@ def harvest(filenames, definitions, **kwargs):
         #tmpdata = harvest_single_file(filename, filetype,definitions)
         # self.data = self.data.append(data.map(self.transform))
         # concat should be much faster
+        if not True in [isinstance(tmpdata, k) for k in [pd.Series, pd.Panel, pd.DataFrame] ]:
+            concattable = False
+
         if not concattable:
-            logger.warn("Data can not be concatted, keep that in mind!")
-            return tmpdata
+            Logger.warn("Data {} can not be concatted, keep that in mind!".format(definitions))
+            try:
+                tmpdata = pd.Series(tmpdata)
+                #return tmpdata
+            except:
+                tmpdata = [k for k in tmpdata]
+                tmpdata = pd.Series(tmpdata)
+                #return tmpdata
 
         data = pd.concat([data, tmpdata])
 

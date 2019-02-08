@@ -754,6 +754,8 @@ class VariableDistributionPlot(object):
             maxplotrange += (maxplotrange*0.1)
            
         if log:
+            maxplotrange = 10**(np.log10(maxplotrange) + 1)
+
             if maxplotrange < 1: 
                 minplotrange -= (minplotrange*0.01)
             else:

@@ -43,7 +43,7 @@ def extract_from_root(filename, definitions,
 
     Args:
         filename (str): datafile
-        defininitiions (list): tree and branch adresses
+        definitiions (list): tree and branch adresses
 
     Keyword Args:
         nevents (int): number of events to read out
@@ -63,6 +63,7 @@ def extract_from_root(filename, definitions,
             tree = rootfile.get(definitions[i][0])
             branch = tree
             for address in definitions[i][1:]:
+                Logger.debug("Searching for address {}".format(address))
                 branch = branch.get(address)
 
             #tree = file[definitions[i][0]]
@@ -155,6 +156,7 @@ def extract_from_root(filename, definitions,
         # convert in cases of TVector3/TLorentzVector
 
         if isinstance(data[0], TVector3.TVector3):
+            Logger.debug("Found TVector3")
             data =  pd.Series([np.array([i.x,i.y,i.z], dtype=dtype) for i in data])
         elif isinstance(data[0], TLorentzVector.TLorentzVector):
             Logger.debug("Found TLorentzVector")
@@ -166,6 +168,7 @@ def extract_from_root(filename, definitions,
                 data = pd.Series(data,dtype=dtype)
             except TypeError: # data consist of some object
                 data = pd.Series(data) 
+        Logger.debug("Got {} elements for {}".format(len(data), definitions[i]))
         can_be_concatted = True
     return data, can_be_concatted
 

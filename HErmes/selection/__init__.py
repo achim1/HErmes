@@ -27,6 +27,7 @@ import os
 import os.path
 import inspect
 import importlib
+import re
 
 from ..utils.logger import Logger
 
@@ -35,7 +36,7 @@ from . import dataset as ds
 from ..icecube_goodies import weighting as wgt
 from ..analysis import fluxes as fluxes
 
-def load_dataset(config, variables=None):
+def load_dataset(config, variables=None, max_cpu_cores=c.MAX_CORES):
     """
     Read a json configuration file and load a dataset populated
     with variables from the files given in the configuration file.
@@ -45,7 +46,7 @@ def load_dataset(config, variables=None):
 
     Keyword Args:
         variables (list): list of strings of variable names to read out
-
+        max_cpu_cores (int): maximum number of cpu ucores to use for variable readout
     Returns:
         HErmes.selection.dataset.Dataset
 
@@ -66,11 +67,18 @@ def load_dataset(config, variables=None):
 
         if "file_regex" in thiscat:
             to_sanitize = thiscat["file_regex"]
+            pattern = re.compile(to_sanitize)
+            Logger.debug("Will look for files with pattern {}".format(pattern)) 
             def sanitizer(x):
-                if to_sanitize in x:
-                    return True
-                else: 
+                result = pattern.search(x)
+                if result is None:
                     return False
+                else:
+                    return True
+                #if to_sanitize in x:
+                #    return True
+                #else: 
+                #    return False
 
         if thiscat["datatype"] == "simulation":
             categories[cat] = c.Simulation(cat)
@@ -159,7 +167,7 @@ def load_dataset(config, variables=None):
                          combined_categories=combined_categories)
 
     dataset.load_vardefs(vardefs)
-    dataset.read_variables(names=variables)
+    dataset.read_variables(names=variables, max_cpu_cores=max_cpu_cores)
     #dataset.set_weightfunction(weightfunctions)
     #dataset.get_weights(models=models)
     dataset.calculate_weights(model=models, model_args=model_args)
@@ -167,5 +175,5 @@ def load_dataset(config, variables=None):
     for k in cfg["categories"]:
         if "plotting" in cfg["categories"][k]:
             plot_dict[k] = cfg["categories"][k]["plotting"]
-    dataset.default_plotstyles = plot_dict
+    dataset.set_default_plotstyles(plot_dict)
     return dataset

@@ -1,6 +1,6 @@
 import pytest
 
-from HErmes.utils import logger, files, itools, timeit
+from HErmes.utils import logger, files, itools, timeit, isnotebook
 
 from fixturefactory import prepare_testtable
 # helper functions generating test data
@@ -40,6 +40,7 @@ def test_slicer(prepare_test_data_for_slicer):
         
     assert result == desired_result
 
+
 # test logger
 def test_logger(prepare_test_data_for_logger):
     import logging
@@ -66,9 +67,16 @@ def test_timit():
 
     sleeper()
 
+def test_isnotebook():
+    assert (isnotebook() == False)
+
 def test_check_hdf_integrity(prepare_testtable):
 
     files.check_hdf_integrity([str(prepare_testtable.realpath())] )
     files.check_hdf_integrity([str(prepare_testtable.realpath())], checkfor="energy")
 
-
+def test_flatten():
+    data = [[1,3,4],[5,6,7],[8,9,10]]
+    flattened = itools.flatten(data)
+    assert flattened.ndim == 1
+    assert len(flattened) == 9

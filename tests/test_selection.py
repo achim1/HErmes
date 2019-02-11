@@ -335,7 +335,7 @@ def test_dataset(prepare_testtable, prepare_sparser_testtable):
 
     sparsest = data.get_sparsest_category()
     assert sparsest == "nu" 
-    sparsest = data.get_sparsest_category(omit_zeros=False)
+    sparsest = data.get_sparsest_category(omit_empty_cat=False)
     assert sparsest == "nu" 
     allenergy = data.get_variable("energy")
     assert isinstance(allenergy, pd.DataFrame) 

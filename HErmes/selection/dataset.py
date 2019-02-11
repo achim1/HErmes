@@ -12,6 +12,7 @@ from collections import OrderedDict
 from copy import deepcopy as copy
 
 from ..plotting import VariableDistributionPlot
+from ..utils import isnotebook
 from ..utils.logger import Logger
 from dashi.tinytable import TinyTable
 
@@ -71,6 +72,18 @@ class Dataset(object):
             for name in list(kwargs['combined_categories'].keys()):
                 self.combined_categories.append(categories.CombinedCategory(name,kwargs['combined_categories'][name]))
 
+    def set_default_plotstyles(self, styledict):
+        """
+        Define a standard for each category how 
+        it should appear in plots
+
+        Args:
+            styledict (dict)
+        """
+        self.default_plotstyles = styledict
+        for cat in self.categorynames:
+            self[cat].add_plotoptions(styledict[cat])
+
     def add_variable(self, variable):
         """
         Add a variable to this category
@@ -127,18 +140,32 @@ class Dataset(object):
 
 
     #@GetTiming
-    def read_variables(self, names=None):
+    def read_variables(self, names=None, max_cpu_cores=categories.MAX_CORES):
         """
         Read out the variable for all categories
 
         Keyword Args:
             names (str): Readout only these variables if given
+            max_cpu_cores (int): Maximum number of cpu cores which will be used
         Returns:
-
+            None
         """
+        progbar = False
+        try:
+            import tqdm
+            n_it = len(self.categories)
+            loader_string = "Loading dataset"
+            if isnotebook():
+                bar = tqdm.tqdm_notebook(total=n_it, desc=loader_string, leave=True)
+            else:
+                bar = tqdm.tqdm(total=n_it, desc=loader_string, leave=True)
+            progbar = True
+        except ImportError:
+            pass
         for cat in self.categories:
             Logger.debug("Reading variables for {}".format(cat))
-            cat.read_variables(names=names)
+            cat.read_variables(names=names, max_cpu_cores=max_cpu_cores)
+            if progbar: bar.update()
 
     def drop_empty_variables(self):
         """
@@ -351,12 +378,12 @@ class Dataset(object):
     def combined_categorynames(self):
         return [cat.name for cat in self.combined_categories]
 
-    def get_sparsest_category(self, omit_zeros=True):
+    def get_sparsest_category(self, omit_empty_cat=True):
         """
         Find out which category of the dataset has the least statistical power
 
         Keyword Args:
-            omit_zeros (bool): if a category has no entries at all, omit
+            omit_empty_cat (bool): if a category has no entries at all, omit
         Returns:
             str: category name
         """
@@ -365,7 +392,7 @@ class Dataset(object):
         count = self.categories[0].raw_count
         for cat in self.categories:
             if cat.raw_count < count:
-                if (cat.raw_count == 0) and omit_zeros:
+                if (cat.raw_count == 0) and omit_empty_cat:
                     continue
                 count = cat.raw_count
                 name  = cat.name
@@ -376,22 +403,14 @@ class Dataset(object):
                      ratio=([],[]),
                      cumulative=True,
                      log=False,
+                     transform=None,
                      color_palette='dark',
                      normalized = False,
                      styles = dict(),
                      style="classic",
                      ylabel="rate/bin [1/s]",
-                     axis_properties={
-                         "top": {"type": "h", \
-                                 "height": 0.4,
-                                 "index": 2},
-                         "center": {"type": "r", \
-                                    "height": 0.2,
-                                    "index": 1},
-                         "bottom": {"type": "c", \
-                                    "height": 0.2,
-                                    "index": 0}
-                     },
+                     axis_properties=None,
+                     ratiolabel="data/$\Sigma$ bg",
                      bins=None,
                      figure_factory=None):
         """
@@ -406,43 +425,104 @@ class Dataset(object):
             ratio (list): A ratio plot of these categories will be crated
             color_palette (str): A predifined color palette (from seaborn or HErmes.plotting.colors) 
             normalized (bool): Normalize the histogram by number of events
+            transform (callable): Apply this transformation before plotting
             styles (dict): plot styling options
-            axis_props (dict): axis for the plots
+            ylabel (str): general label for y-axis
+            ratiolabel (str): different label for the ratio part of the plot
             bins (np.ndarray): binning, if None binning will be deduced from the variable definition
             figure_factory (func): factory function which return a matplotlib.Figure
-            style (string): TODO "modern" || "classic"
+            style (string): TODO "modern" || "classic" || "modern-cumul" || "classic-cumul"
+            axis_properties (dict): Manually define a plot layout with up to three axes.
+                                    For example, it can look like this:
+                                    {
+                                        "top": {"type": "h", # histogram
+                                                "height": 0.4, # height in percent
+                                                "index": 2}, # used internally
+                                        "center": {"type": "r", # ratio plot
+                                                    "height": 0.2,
+                                                    "index": 1},
+                                        "bottom": { "type": "c", # cumulative histogram
+                                                    "height": 0.2,
+                                                    "index": 0}
+                                    }
+
+
         Returns:
             HErmes.selection.variables.VariableDistributionPlot
         """
         
         
-        if (not cumulative) or ratio  == ([],[]):
+        # if (not cumulative) or ratio  == ([],[]):
+        #
+        #     # assuming a single cumulative axis
+        #     tmp_axis_properties = dict()
+        #     unassigned_height = 0
+        #
+        #     for key in axis_properties:
+        #         if ("c" == axis_properties[key]["type"]) and (not cumulative):
+        #             unassigned_height += axis_properties[key]["height"]
+        #             continue
+        #         if ("r" == axis_properties[key]["type"]) and (ratio == ([],[])):
+        #             unassigned_height += axis_properties[key]["height"]
+        #             continue
+        #
+        #         tmpdict = copy(axis_properties[key])
+        #         tmpdict["index"] = tmpdict["index"] -1 - bool(ratio == ([],[]))
+        #         tmp_axis_properties.update({key : tmpdict})
+        #
+        #     n_plots = len(tmp_axis_properties.keys())
+        #     extra_height = unassigned_height/float(n_plots)
+        #     for key in tmp_axis_properties:
+        #         tmp_axis_properties[key]["height"] += extra_height
+        #
+        # else:
+        #     tmp_axis_properties = copy(axis_properties)
 
-            # assuming a single cumulative axis
-            tmp_axis_properties = dict()
-            unassigned_height = 0
-
-            for key in axis_properties:
-                if ("c" == axis_properties[key]["type"]) and (not cumulative):
-                    unassigned_height += axis_properties[key]["height"]
-                    continue
-                if ("r" == axis_properties[key]["type"]) and (ratio == ([],[])):
-                    unassigned_height += axis_properties[key]["height"]
-                    continue
-                
-                tmpdict = copy(axis_properties[key])
-                tmpdict["index"] = tmpdict["index"] -1 - bool(ratio == ([],[]))
-                tmp_axis_properties.update({key : tmpdict})
-
-            n_plots = len(tmp_axis_properties.keys())
-            extra_height = unassigned_height/float(n_plots)        
-            for key in tmp_axis_properties:
-                tmp_axis_properties[key]["height"] += extra_height
-    
-        else:
+        if axis_properties is not None:
             tmp_axis_properties = copy(axis_properties)
 
-        axes_locator = [(tmp_axis_properties[k]["index"], tmp_axis_properties[k]["type"], tmp_axis_properties[k]["height"]) for k in tmp_axis_properties]
+        else:
+            # always have the histogram, but add
+            # cumulative or ratio plot
+            if cumulative and ratio != ([],[]):
+                tmp_axis_properties = {\
+                    "top": {"type": "h", \
+                            "height": 0.4, \
+                            "index": 2},\
+                    "center": {"type": "r",\
+                               "height": 0.2,\
+                               "index": 1},\
+                    "bottom": {"type": "c", \
+                               "height": 0.2,\
+                               "index": 0}\
+                    }
+            elif cumulative:
+                tmp_axis_properties = { \
+                    "top": {"type": "h", \
+                            "height": 0.6, \
+                            "index": 1}, \
+                    "bottom": {"type": "c", \
+                               "height": 0.4, \
+                               "index": 0} \
+                    }
+            elif ratio != ([],[]):
+                tmp_axis_properties = { \
+                    "top": {"type": "h", \
+                            "height": 0.6, \
+                            "index": 1}, \
+                    "bottom": {"type": "r", \
+                               "height": 0.4, \
+                               "index": 0} \
+                    }
+            else:
+                tmp_axis_properties = { \
+                    "top": {"type": "h", \
+                            "height": 0.95, \
+                            "index": 0}, \
+                    }
+        axes_locator = [(tmp_axis_properties[k]["index"], tmp_axis_properties[k]["type"], tmp_axis_properties[k]["height"])\
+                        for k in tmp_axis_properties]
+        #print (axes_locator)
         #heights = [axis_properties[k]["height"] for k in axis_properties]
         cuts = self.categories[0].cuts
         sparsest = self.get_sparsest_category()
@@ -465,15 +545,20 @@ class Dataset(object):
 
         Logger.warn("For variables with different lengths the weighting is broken. If weights, it will fail")
         for cat in [x for x in plotcategories if x.plot]:
-            plot.add_variable(cat, name)
+            plot.add_variable(cat, name, transform=transform)
+            Logger.debug("Adding variable data {}".format(name))
             if cumulative:
+                Logger.debug("Adding variable data {} for cumulative plot".format(name))
                 plot.add_cumul(cat.name)
 
         if len(ratio[0]) and len(ratio[1]):
             tratio,tratio_err = self.calc_ratio(nominator=ratio[0],\
                                                 denominator=ratio[1])
 
-            plot.add_ratio(ratio[0],ratio[1],total_ratio=tratio,total_ratio_errors=tratio_err)
+            plot.add_ratio(ratio[0],ratio[1],\
+                           total_ratio=tratio,\
+                           label=ratiolabel,
+                           total_ratio_errors=tratio_err)
 
         plot.plot(axes_locator=axes_locator,\
                   normalized=normalized,\

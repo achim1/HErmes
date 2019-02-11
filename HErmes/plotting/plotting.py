@@ -139,6 +139,97 @@ def meshgrid(xs, ys):
     zs = np.zeros([xlen, ylen])
     return allx, ally, zs
 
+###############################################
+
+def line_plot(quantities,
+              bins=None,
+              xlabel='',
+              add_ratio=None,
+              ratiolabel='',
+              colors=None,
+              figure_factory=None):
+    """
+    Args:
+        quantities:
+
+    Keyword Args:
+        bins:
+        xlabel:
+        add_ratio (tuple): (["data1"],["data2"])
+        ratiolabel (str):
+        colors:
+        figure_factory (callable): Factory function returning matpltolib.Figure
+
+    Returns:
+
+    """
+    # FIXME XXX under development
+    raise NotImplementedError
+
+    if add_ratio is not None:
+        canvas = YStackedCanvas(subplot_yheights=(0.2, 0.7),
+                                space_between_plots=0.0)
+        ax0 = canvas.select_axes(-1)
+        data = np.array(quantities[add_ratio[0]]) / np.array(quantities[add_ratio[1]])
+        data = data * 100
+        thebins = np.array(bins[add_ratio[0]])
+        bin_size = abs(thebins[1] - thebins[0]) / 2 * np.ones(len(thebins))
+        thebins = thebins + bin_size
+        ax0.plot(thebins, data, color='gray')
+        ax0.scatter(thebins, data, marker='o', s=50, color='gray')
+        ax0.grid(1)
+        ax0.set_ylabel(ratiolabel)
+        ax0.spines['top'].set_visible(False)
+        ax0.spines['bottom'].set_visible(False)
+        ax0.spines['right'].set_visible(False)
+        ax = canvas.select_axes(0)
+        lgax = ax0
+    else:
+        if figure_factory is None:
+            fig = p.figure()
+        else:
+            fig = figure_factory()
+        ax = fig.gca()
+        lgax = ax
+
+    for reconame in quantities:
+        thebins = np.array(bins[reconame])
+        bin_size = abs(thebins[1] - thebins[0]) / 2 * np.ones(len(thebins))
+        thebins = thebins + bin_size
+        label = reconame.replace('-', '')
+        if colors is not None:
+            ax.plot(thebins, quantities[reconame], label=label, color=colors[reconame])
+            ax.scatter(thebins, quantities[reconame], marker='o', s=50, c=colors[reconame])
+        else:
+            ax.plot(thebins, quantities[reconame], label=label)
+            ax.scatter(thebins, quantities[reconame], marker='o', s=50)
+
+    legend_kwargs = {'bbox_to_anchor': [0.0, 1.0, 1.0, 0.102],'loc': 3,
+       'frameon': False,
+       'ncol': 2,
+       'borderaxespad': 0,
+       'mode': 'expand',
+       'handlelength': 2,
+       'numpoints': 1
+       }
+    if len(quantities.keys()) == 3:
+        legend_kwargs['ncol'] = 3
+    ax.grid(1)
+    ax.set_ylabel('$\\cos(\\Psi)$')
+    ax.set_xlabel(xlabel)
+    sb.despine()
+    if add_ratio:
+        ax.spines['top'].set_visible(False)
+        ax0.spines['bottom'].set_visible(False)
+        ax0.spines['left'].set_visible(False)
+        legend_kwargs['bbox_to_anchor'] = [0, 1.3, 1.0, 0.102]
+        ax.legend(**legend_kwargs)
+        p.subplots_adjust(hspace=0.2)
+        return canvas.figure
+    ax.legend(**legend_kwargs)
+    return fig
+
+
 
 ###############################################
 
@@ -215,13 +306,16 @@ class VariableDistributionPlot(object):
         self.label = label
         self.name = name
 
-    def add_variable(self, category, variable_name):
+    def add_variable(self, category, variable_name, transform=None):
         """
         Convenience interface if data is sorted in categories already
 
         Args:
-           category (pyevsel.variables.category.Category): Get variable from this category
-           variable_name (string): The name of the variable
+            category (pyevsel.variables.category.Category): Get variable from this category
+            variable_name (string): The name of the variable
+
+        Keyword Args:
+            transform (callable): Apply transformation todata
 
         """
         if category.plot_options:
@@ -229,11 +323,13 @@ class VariableDistributionPlot(object):
         if self.bins is None:
             self.bins = category.vardict[variable_name].bins
         self.name = variable_name
-        weights = category.weights
-        if len(weights) == 0:
-            weights = None
-
-        self.add_data(category.get(variable_name),\
+        Logger.warning("Weighting is broken at the moment, FIXME!")
+        #weights = category.weights
+        #if len(weights) == 0:
+        #    weights = None
+        weights = None
+        if transform is None: transform = lambda x : x
+        self.add_data(transform(category.get(variable_name)),\
                       category.name,\
                       self.bins, weights=weights,\
                       label=category.vardict[variable_name].label)
@@ -520,7 +616,9 @@ class VariableDistributionPlot(object):
         Logger.info("Found {} ratios".format(len(self.histratios)))
         Logger.info("Found {} cumulative distributions".format(len(self.cumuls)))
         if not axes_locator:
-            axes_locator = self._locate_axes(combined_cumul,combined_ratio,combined_distro)
+            axes_locator = self._locate_axes(combined_cumul,\
+                                             combined_ratio,\
+                                             combined_distro)
 
         # calculate the amount of needed axes
         # assert len(axes_locator) == len(heights), "Need to specify exactly as many heights as plots you want to have"
@@ -578,7 +676,7 @@ class VariableDistributionPlot(object):
             cur_ax = self.canvas.select_axes(ax[0])
             if combined_distro:
                 for k in list(self.histograms.keys()):
-                    print("drawing..",k)
+                    Logger.debug("drawing..{}".format(k))
                     self._draw_distribution(cur_ax,k,log=log, normalized=normalized, ylabel=ylabel)
                 break
             else:
@@ -587,10 +685,12 @@ class VariableDistributionPlot(object):
             cur_ax.set_ylim(ymin=ymin - 0.1*ymin,ymax=1.1*ymax)
             cur_ax.grid(True)
         lgax = self.canvas.select_axes(-1) # most upper one
+        ncol = 2 if len(self.histograms) <= 4 else 3 
+        
         legend_kwargs = {"bbox_to_anchor": [0., 1.0, 1., .102],
                          "loc": 3,
                          "frameon": True,
-                         "ncol": 3,
+                         "ncol": ncol,
                          "framealpha": 1.,
                          "borderaxespad": 0,
                          "mode": "expand",

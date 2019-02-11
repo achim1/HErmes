@@ -3,7 +3,8 @@ Container classes for variables
 """
 
 from builtins import object
-import numpy as n
+import numpy as n # remove that in the future
+import numpy as np
 import os
 import pandas as pd
 import tables
@@ -16,24 +17,116 @@ from future.utils import with_metaclass
 
 DEFAULT_BINS = 70
 
-# FIXME: add root support!
-# REGISTERED_FILEEXTENSIONS = [".h5", ".root"]
 REGISTERED_FILEEXTENSIONS = [".h5"]
 
 try:
     import uproot as ur
+    REGISTERED_FILEEXTENSIONS.append(".root")
+
 except ImportError:
     Logger.warning("No uproot found, root support is limited!")
-    if ".root" in REGISTERED_FILEEXTENSIONS:
-        REGISTERED_FILEEXTENSIONS.remove(".root")
+
 
 ################################################################
 # define a non-member function so that it can be used in a
 # multiprocessing approach
+def extract_from_root(filename, definitions,
+                      nevents=None,
+                      reduce_dimension=None):
+    """
+    Use the uproot system to get information from rootfiles. Supports a basic tree of
+    primitive datatype like structure.
 
+    Args:
+        filename (str): datafile
+        defininitiions (list): tree and branch adresses
+
+    Keyword Args:
+        nevents (int): number of events to read out
+        reduce_dimension (int): If data is vector-type, reduce it by taking the n-th element
+    """
+
+    can_be_concatted = False
+    file = ur.open(filename)
+    success = False
+    i=0
+    branch = None
+    # it will most likely work only with TTrees
+    while not success:
+        try:
+            tree = file.get(definitions[i][0])
+            branch = tree
+            for address in definitions[i][1:]:
+                branch = branch.get(address)
+
+            #tree = file[definitions[i][0]]
+            #branch = file[definitions[i][0]].get(definitions[i][1])
+            success = True
+        except KeyError as e:
+            Logger.warning("Can not find address {}".format(definitions[i]))
+            i+=1
+        except IndexError:
+            Logger.critical("None of the provided keys could be found {}".format(definitions))
+            break
+    Logger.debug("Found valid definitions {}".format(definitions[i]))
+
+    #FiXME make logger.critical end program!
+    if nevents is not None:
+        data = branch.array(entrystop=nevents)
+    else:
+        data = branch.array()
+
+    # check for dimensionality
+    multidim = False
+    try:
+        len(data[0])
+        multidim = True
+        Logger.debug("Assuming array data {}".format(definitions[i]))
+    except TypeError:
+        Logger.debug("Assuming scalar data {}".format(definitions[i]))
+
+    if reduce_dimension is not None:
+        if not multidim:
+            raise ValueError("Can not reduce scalar data!")
+        if isinstance(reduce_dimension, int):
+            data = np.array([k[reduce_dimension] for k in data])
+            multidim = False
+        else:
+            data = [[k[reduce_dimension[1]] for k in j] for j in data]
+
+    if multidim:
+        Logger.debug("Grabbing multidimensional data from root-tree for {}".format(definitions[i]))
+
+        if nevents is None:
+            data = branch.array() #this will be a jagged array now!
+        else:
+            data = branch.array(entrystop=nevents)
+
+        tmpdata = [np.array(i) for i in data]
+        # the below might not be picklable (multiprocessing!)
+        #tmpdata = [i for i in data]
+        # FIXME: dataframe/series
+        # try to convert this to a pandas dataframe
+        #data = pd.DataFrame(tmpdata)
+        data = pd.Series(tmpdata)
+
+        can_be_concatted = True
+        #data.shape = (len(data),None)
+        #data.ndim = 2
+    else:
+        Logger.debug("Grabbing scalar data from root-tree for {}".format(definitions[i]))
+        data = pd.Series(np.asarray(data))
+        can_be_concatted = True
+    return data, can_be_concatted
+
+################################################################
+# define a non-member function so that it can be used in a
+# multiprocessing approach
 def harvest(filenames, definitions, **kwargs):
     """
     Read variables from files into memory. Will be used by HErmes.selection.variables.Variable.harvest
+    This will be run multi-threaded. Keep that in mind, arguments have to be picklable,
+    also everything thing which is read out must be picklable. Lambda functions are NOT picklable
 
     Args:
         filenames (list): the files to extract the variables from.
@@ -49,7 +142,11 @@ def harvest(filenames, definitions, **kwargs):
                                transformation will be applied, e.g. the log
                                to the energy.
         fill_empty (bool): Fill empty fields with zeros
-
+        nevents (int): ROOT only - read out only nevents from the files
+        reduce_dimension (str): ROOT only - multidimensional data can be reduced by only
+                                            using the index given by reduce_dimension.
+                                            E.g. in case of a TVector3, and we want to have onlz
+                                            x, that would be 0, y -> 1 and z -> 2.
 
         FIXME: Not implemented yet! precision (int): Precision in bit
 
@@ -57,8 +154,13 @@ def harvest(filenames, definitions, **kwargs):
         pd.Series or pd.DataFrame
     """
 
+    nevents = kwargs["nevents"] if "nevents" in kwargs else None
     fill_empty = kwargs["fill_empty"] if "fill_empty" in kwargs else False
+    reduce_dimension = kwargs["reduce_dimension"] if "reduce_dimension" in kwargs else None
+    transform = kwargs["transformation"] if "transformation" in kwargs else None
+    concattable = True
     data = pd.Series()
+    #multidim_data = pd.DataFrame()
     for filename in filenames:
         filetype = f.strip_all_endings(filename)[1]
 
@@ -100,27 +202,29 @@ def harvest(filenames, definitions, **kwargs):
                     continue
 
             elif filetype == ".root":
-                tmpdata = rn.root2rec(filename, *definition)
-                tmpdata = pd.Series(data)
+                tmpdata, concattable = extract_from_root(filename, definitions,
+                                                         nevents=nevents,
+                                                         reduce_dimension=reduce_dimension)
         if filetype == ".h5":
             hdftable.close()
 
         #tmpdata = harvest_single_file(filename, filetype,definitions)
         # self.data = self.data.append(data.map(self.transform))
         # concat should be much faster
-        if "transformation" in kwargs:
-            transform = kwargs['transformation']
-            data = pd.concat([data, tmpdata.map(transform)])
-        else:
-            data = pd.concat([data, tmpdata])
+        if not concattable:
+            logger.warn("Data can not be concatted, keep that in mind!")
+            return tmpdata
+
+        data = pd.concat([data, tmpdata])
         del tmpdata
+    #print (data)
     return data
 
 ################################################################
 
 def freedman_diaconis_bins(data,leftedge,\
-                         rightedge,minbins=20,\
-                         maxbins=70,fallbackbins=DEFAULT_BINS):
+                           rightedge,minbins=20,\
+                           maxbins=70,fallbackbins=DEFAULT_BINS):
     """
     Get a number of bins for a histogram
     following Freedman/Diaconis
@@ -144,19 +248,19 @@ def freedman_diaconis_bins(data,leftedge,\
         n_data      = len(data)
         h           = (2*(q3-q1))/(n_data**1./3)
         bins = (rightedge - leftedge)/h
+
+
+        if not n.isfinite(bins):
+            Logger.warn("Calculate Freedman-Draconis bins failed, calculated nan bins, returning fallback")
+            bins = fallbackbins
+
+        if bins < minbins:
+            bins = minbins
+        if bins > maxbins:
+            bins = maxbins
     except Exception as e:
         Logger.warn("Calculate Freedman-Draconis bins failed {0}".format( e.__repr__()))
         bins = fallbackbins
-
-    if not n.isfinite(bins):
-        Logger.warn("Calculate Freedman-Draconis bins failed, calculated nan bins, returning fallback")
-        bins = fallbackbins
-
-    if bins < minbins:
-        bins = minbins
-    if bins > maxbins:
-        bins = maxbins
-
     return bins
 
 #############################################################
@@ -258,8 +362,14 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
     def data(self):
         if isinstance(self._data, pd.DataFrame):
             return self._data.as_matrix()
-        else:
+        if not hasattr(self._data, "shape"):
+            Logger.warning("Something's wrong, this should be array data!")
+            Logger.warning("Seeeing {} data".format(type(self._data)))
+            Logger.warning("Attempting to fix!")
+            self._data = np.asarray(self._data)
             return self._data
+
+        return self._data
 
 ############################################
 
@@ -270,7 +380,9 @@ class Variable(AbstractBaseVariable):
 
     def __init__(self, name, definitions=None,\
                  bins=None, label="", transform=lambda x: x,
-                 role=VariableRole.SCALAR):
+                 role=VariableRole.SCALAR,
+                 nevents=None,
+                 reduce_dimension=None):
         """
         Args:
             name (str): An unique identifier
@@ -281,11 +393,13 @@ class Variable(AbstractBaseVariable):
             label (str): used for plotting and as a label in tables
             transform (func): apply to each member of the underlying data at readout
             role (HErmes.selection.variables.VariableRole): The role the variable is playing. In most cases the default is the best choice
+            nevents (int): number of events to read in (ROOT only right now!)
+            reduce_dimension (int): in case of multidimensionality, take only the the given index of the array (ROOT only right now)
         """
         AbstractBaseVariable.__init__(self)
 
         if definitions is not None:
-            assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions {}!".format(definitions)
+            #assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions {}!".format(definitions)
             self.defsize = len(definitions[0])
             assert not (False in [len(x) == self.defsize for x in definitions]), "All definitions must have the same length!"
         else:
@@ -298,6 +412,9 @@ class Variable(AbstractBaseVariable):
         self.transform   = transform
         self.definitions = definitions
         self._data       = pd.Series()
+        self.nevents     = nevents
+        self.reduce_dimension = reduce_dimension
+
         #if self.defsize  == 1:
         #    self.data    = pd.DataFrame()
         #if self.defsize  == 2:
@@ -326,7 +443,7 @@ class CompoundVariable(AbstractBaseVariable):
                  role=VariableRole.SCALAR):
         """
         Args:
-            name (str): An unique identifier for the new category.
+            name (str): An unique identifier for the new variable.
 
         Keyword Args:
             variables (list): A list of variables used to calculate the new variable.

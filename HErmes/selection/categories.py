@@ -17,8 +17,11 @@ import pylab as p
 import abc
 import concurrent.futures as fut
 import tables
+import matplotlib.colors as colors
+
 from copy import deepcopy
 
+from ..utils import isnotebook
 from ..utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from ..utils.logger import Logger
 from ..plotting.colors import get_color_palette
@@ -103,7 +106,8 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
     def __len__(self):
         """
-        Return the longest variable element
+        Return the longest variable element. If a cut is applied, it returns
+        the *current* length of the variable data (after the cut!)
         FIXME: introduce check?
         """
         #lengths = np.array([len(self.vardict[v].data) for v in list(self.vardict.keys())])
@@ -115,8 +119,14 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         #FIXME: deal with pandas DataFrames more reliably
         #FIXME: HACK
         debug = []
+
         for v in list(self.vardict.keys()):
+            # if there is a cut applied, this is the
+            # cutted array
             variable = self.get(v)
+            if not hasattr(variable, "shape"):
+                variable = np.asarray(variable)
+
             #print v, variable.shape
             if len(variable.shape) == 2:
                 vlen = variable.shape[0]
@@ -135,16 +145,128 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         assert len(selflen) == 1, "Different variable lengths for {}! {}".format(self.name,debug)
         return selflen[0]
 
+    def distribution2d(self, varnames,
+                       bins=None,
+                       figure_factory=None,
+                       fig=None,
+                       norm=False,
+                       log=True,
+                       cmap=p.get_cmap("Blues"),
+                       interpolation="gaussian",
+                       cblabel="events",
+                       weights=None,
+                       despine=False,
+                       return_histo=False):
+        """
+        Draw a 2d distribution of 2 variables in the same category.
+        Args:
+            varnames (tuple(str,str)): The names of the variable in the catagory
+
+        Keyword Args:
+            bins (tuple(int/np.ndarray)): Bins for the distribution
+            cmap : A colormap
+            // alpha (float): 0-1 alpha value for histogram
+            fig (matplotlib.figure.Figure): Canvas for plotting, if None an empty one will be created
+            // xlabel (str): xlabel for the plot. If None, default is used
+            norm (str) : "n" or "density" - make normed histogram
+            // style (str): Either "line" or "scatter"
+            transform (callable): Apply transformation to the data before plotting
+            log (bool): Plot yaxis in log scale
+            figure_factory (func): Must return a single matplotlib.Figure, NOTE: figure_factory has priority over fig keyword
+            return_histo (bool): Return the histogram instead of the figure. WARNING: changes return type!
+        Returns:
+            matplotlib.figure.Figure or dashi.histogram.hist1d
+
+        """
+        sample = []
+
+        for varname in varnames:
+            var = self.get(varname)
+
+            # XXX HACK
+            if not hasattr(var, "ndim"):
+                var = np.asarray(var)
+            if var.ndim != 1:
+                Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\
+                                Data shape is {}".format(self.get(varname).shape))
+                return fig
+            sample.append(np.asarray(var))
+        sample = tuple(sample)
+
+
+        if figure_factory is not None:
+            fig = figure_factory()
+
+        if fig is None:
+            fig = p.figure()
+
+        if bins is None:
+            bins = self.vardict[varnames[0]].bins, self.vardict[varnames[1]].bins
+
+        xlabel, ylabel= None, None
+        if xlabel is None:
+            xlabel = self.vardict[varnames[0]].label
+        if ylabel is None:
+            ylabel = self.vardict[varnames[1]].label
+
+        ax = fig.gca()
+        h2 = d.factory.hist2d(sample, bins, weights=weights)
+        cmap.set_bad('w', 1)
+        if not norm:
+            #h2.imshow(log=log, cmap=cmap, interpolation=interpolation, alpha=0.95, label='events')
+            norm = None
+        else:
+            h2 = h2.normalized()
+            minval, maxval = min(h2.bincontent.flatten()), max(h2.bincontent.flatten())
+            #norm=colors.SymLogNorm(linthresh=0.1, linscale=0.1, vmin=minval, vmax = maxval)
+            norm=None
+        try:
+            h2.imshow(log=log, cmap=cmap, interpolation=interpolation, alpha=0.95, label='events',
+                      norm=norm)
+            cb = p.colorbar(drawedges=False, shrink=0.5, orientation='vertical', fraction=0.05)
+            cb.set_label(cblabel)
+            cb.ticklocation = 'left'
+        except Exception as e:
+            Logger.warning("Exception encountered when creating colorbar! {}".format(e))
+            Logger.warning("Creation of colorbar failed with min {:4.2e} and max {:4.2e}".format(minval, maxval))
+            Logger.warning("Will try again without using normalization for colorbar...")
+            #norm=colors.Normalize(minval, maxval)
+            h2.imshow(log=log, cmap=cmap, interpolation=interpolation,
+                  alpha=0.95, label='events')
+            cb = p.colorbar(drawedges=False, shrink=0.5, orientation='vertical', fraction=0.05)
+            cb.set_label(cblabel)
+            cb.ticklocation = 'left'
+
+    
+        ax = fig.gca()
+        ax.grid(1)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        if despine:
+            sb.despine()
+        else:
+            ax.spines["top"].set_visible(True)
+            ax.spines["right"].set_visible(True)
+        if return_histo:
+            return h2
+        return fig
+
     def distribution(self, varname, bins=None,\
                      color=None, alpha=0.5,\
-                     fig=None, xlabel=None,
+                     fig=None, xlabel=None,\
+                     norm=False,\
+                     filled=None,\
+                     legend=True,\
                      style="line", log=False,
-                     figure_factory = None):
+                     transform=None,
+                     extra_weights=None,
+                     figure_factory=None,
+                     return_histo=False):
         """
-        Plot the distribution of variable in the dataset
+        Plot the distribution of variable in the category
 
         Args:
-            varname (str): The name of the variable in the
+            varname (str): The name of the variable in the catagory
 
         Keyword Args:
             bins (int/np.ndarray): Bins for the distribution
@@ -152,12 +274,18 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             alpha (float): 0-1 alpha value for histogram
             fig (matplotlib.figure.Figure): Canvas for plotting, if None an empty one will be created
             xlabel (str): xlabel for the plot. If None, default is used
+            norm (str) : "n" or "density" - make normed histogram
             style (str): Either "line" or "scatter"
+            filled (bool): Draw filled histogram
+            legend (bool): if available, plot a legend
+            transform (callable): Apply transformation to the data before plotting
             log (bool): Plot yaxis in log scale
+            extra_weights (numpy.ndarray): Use this for weighting. Will overwrite any other weights in the dataset
             figure_factory (func): Must return a single matplotlib.Figure, NOTE: figure_factory has priority over fig keyword
-
+            return_histo (bool): Return the histogram instead of the figure. WARNING: changes return type!
         Returns:
-            matplotlib.figure.Figure
+            matplotlib.figure.Figure or dashi.histogram.hist1d
+
         """
 
         if figure_factory is not None:
@@ -165,7 +293,6 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
         if fig is None:
             fig = p.figure()
-        
 
         if self.get(varname).ndim != 1:
             Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\
@@ -176,20 +303,79 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         if bins is None:
             bins = self.vardict[varname].bins
         if bins is None:
-            bins = self.vardict[varname].calculate_fd_bins()
+            try:
+                bins = self.vardict[varname].calculate_fd_bins()
+            except Exception as e:
+                Logger.warn("Can not create Friedman Draconis bins {}".format(e))
+                Logger.warn("Will return 40 as last resort... Recommended to specify bins via the function parameter")
+                bins = 40
         palette = get_color_palette()
+        plotdict = False
         if color is None:
             color=palette[0]
+        if "linestyle" in self.plot_options:
+            plotdict = deepcopy(self.plot_options["linestyle"])
+        if "scatterstyle" in self.plot_options:
+            plotdict = deepcopy(self.plot_options["scatterstyle"])
+        if "label" in self.plot_options:
+            plotdict["label"] = deepcopy(self.plot_options["label"])
+        if not plotdict and ((style == "line") or (style is None)):
+            plotdict = {"color" : color,
+                        "filled": True,
+                        "alpha" : 1,
+                        "linewidth": 3,
+                        "linestyle": "solid",
+                        "fc"    : color} 
+        if not plotdict and (style == "scatter"):
+            plotdict = {"color": "k",
+                        "linewidth": 3,
+                        "alpha": 1,
+                        "marker": "o",
+                        "markersize": 4}
+        plotdict["color"] = palette[plotdict["color"]]
         if xlabel is None:
             xlabel = self.vardict[varname].label
         if (xlabel is None) or (not xlabel):
             xlabel = varname
-        h = d.factory.hist1d(self.get(varname), bins)
+        if transform is not None:
+            data = transform(self.get(varname))
+        else:
+            data = self.get(varname)
+
+        # FIXME weights!!
+        h = d.factory.hist1d(data, bins, weights=extra_weights)
+        if norm:
+            #assert ((norm == "n" or norm == "density"), "Horm has to be either n or denstiy")
+            if norm == "density":
+                h = h.normalized(density=True)
+            else:
+                h = h.normalized()
+        if style is None:
+            try:
+                style = self.plot_options["histotype"]
+            except KeyError:
+                Logger.warn("Can not derive plot style. Falling back to line plot!")
+                style = "line"
+
         if style == "line":
-            h.line(filled=True, color=color, fc=color, alpha=alpha)  # hatch="//")
-            h.line(color=color)
+            # FIXME always fill histos for now
+            if filled is not None:
+                plotdict["filled"] = filled
+            plotdict["alpha"] = alpha
+            h.line(**plotdict)
+            if "filled" in plotdict:
+                if plotdict["filled"]:
+                    plotdict["filled"] = False
+                    plotdict["label"] = "_nolegend_"
+                    h.line(**plotdict)
+    
+            #h.line(filled=True,
+            #       color=color,
+            #       fc=color,
+            #       alpha=alpha)  # hatch="//")
+            #h.line(color=color)
         elif style == "scatter":
-            h.scatter()
+            h.scatter(**plotdict)
 
         else:
             raise ValueError("Can not understand style {}. Has to be either 'line' or 'scatter'".format(style))
@@ -198,8 +384,15 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         ax.set_ylim(ymin=0)
         ax.set_xlim(xmin=min(h.binedges))
         if log:
-            ax.semilogy(nonposy="clip")
+            #ax.semilogy(nonposy="clip")
+            ax.set_yscale("symlog")
+        if ("label" in plotdict) and legend:
+            ax.legend()
+        if return_histo:
+            return h
         return fig
+
+############################################################################
 
     @property
     def raw_count(self):
@@ -295,7 +488,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
                 else:
                     assert len(mask) == len(op(s, value)),\
-                        "Cutting fails due to different varialbe lengths for {}".format(varname)
+                        "Cutting fails due to different variable lengths for {}".format(varname)
                     mask = np.logical_and(mask, op(s,value))
 
         if inplace:
@@ -347,7 +540,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         Logger.info("Found {} variables".format(len(all_vars)))
         for v in all_vars:
             if v.name in self.vardict:
-                Logger.debug("Variable {} already defined,skipping!".format(v.name))
+                Logger.warn("Variable {} already defined,skipping!".format(v.name))
                 continue
             self.add_variable(v)
 
@@ -488,6 +681,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             uncut (bool): never return cutted values
         """
 
+
         if varkey not in self.vardict:
             raise KeyError("{} not found!".format(varkey))
 
@@ -496,12 +690,13 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         else:
             return self.vardict[varkey].data
 
-    def read_variables(self, names=None):
+    def read_variables(self, names=None, max_cpu_cores=MAX_CORES):
         """
         Harvest the variables in self.vardict
 
         Keyword Args:
             names (list): havest only these variables
+            max_cpu_cores (list): use a maximum of X cores of the cpu
         """
 
         assert self.files, "Need to assign some files before reading out variables"
@@ -510,7 +705,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             names = list(self.vardict.keys())
         compound_variables = [] #harvest them later
 
-        executor = fut.ProcessPoolExecutor(max_workers=MAX_CORES)
+        executor = fut.ProcessPoolExecutor(max_workers=max_cpu_cores)
         future_to_varname = {}
 
         # first read out variables,
@@ -536,13 +731,22 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             # FIXME: Make it an option to not use
             # multi cpu readout!
             #self.vardict[varname].data = variables.harvest(self.files,self.vardict[varname].definitions)
-            future_to_varname[executor.submit(variables.harvest, self.files,self.vardict[varname].definitions)] = varname
+            future_to_varname[executor.submit(variables.harvest,
+                                              self.files,
+                                              self.vardict[varname].definitions,
+                                              nevents = self.vardict[varname].nevents,
+                                              reduce_dimension = self.vardict[varname].reduce_dimension)] = varname
+                                              #transformation = self.vardict[varname].transform)] = varname
 
         progbar = False
         try:
             import tqdm
             n_it = len(list(future_to_varname.keys()))
-            bar = tqdm.tqdm(total=n_it, leave=True, desc=self.name)
+            #bar = pyprind.ProgBar(n_it,monitor=False,bar_char='#',title=self.name)
+            if isnotebook():
+                bar = tqdm.tqdm_notebook(total=n_it, desc=self.name, leave=False)
+            else:
+                bar = tqdm.tqdm(total=n_it, desc=self.name, leave=False)
             progbar = True
         except ImportError:
             pass
@@ -554,7 +758,12 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             try:
                 data = future.result()
                 Logger.debug("Found {} entries ...".format(len(data)))
-                data = self.vardict[varname].transform(data)
+
+                # FIXME: check how different these two approaches really are
+                #        the second does not work for some vector data
+                #        from root files
+                data = data.map(self.vardict[varname].transform)
+                #data = self.vardict[varname].transform(data)
             except Exception as exc:
                 exc_caught += "Reading {} for {} generated an exception: {}\n".format(varname,self.name, exc)
                 data = pd.Series([])
@@ -588,6 +797,9 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
     @property
     def weights(self):
+        if self._weights is None: # create on the fly
+            return np.ones(len(self))
+
         if len(self.cutmask):
             return self._weights[self.cutmask]
         else:
@@ -847,8 +1059,8 @@ class ReweightedSimulation(Simulation):
     def raw_count(self):
         return self.mother.raw_count
 
-    def read_variables(self,names=None):
-        return self.mother.read_variables(names=names)
+    def read_variables(self,names=None, max_cpu_cores=MAX_CORES):
+        return self.mother.read_variables(names=names, max_cpu_cores=max_cpu_cores)
 
     def read_mc_primary(self,energy_var=MC_P_EN,\
                        type_var=MC_P_TY,\

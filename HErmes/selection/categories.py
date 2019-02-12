@@ -505,14 +505,17 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                 # one dimensional.
                 # However, the entries of the array are iterables
                 elif hasattr(self.vardict[varname]._data[0],"__iter__"):
-                    Logger.warning("Cut on jagged array for variable {}! Can only be applied inplace!".format(varname))
-                    Logger.warning("Conditions can not be applied to array variable!")
-                    for i, k in enumerate(s):
-                        tmpmask =  op(s[i],value) 
-                        s[i] = cut_with_nans(s[i], tmpmask)
-                    self.vardict[varname]._data = s
+                    #Logger.warning("Cut on jagged array for variable {}! Can only be applied inplace!".format(varname))
+                    Logger.warning("Conditions can not be applied to array variable! However, this will happen in a future version...")
+                    Logger.warning("Cut on jagged array for varialbe {} is currently an experimental feature".format(varname))
+                    #for i, k in enumerate(s):
+                    #    tmpmask =  op(s[i],value) 
+                    #    s[i] = cut_with_nans(s[i], tmpmask)
+                    #self.vardict[varname]._data = s
                     #inplace = True        
-
+                    assert len(mask) == len(op(s, value)),\
+                        "Cutting fails due to different variable lengths for {}".format(varname)
+                    mask = np.logical_and(mask, op(s, value))
                 else:
                     assert len(mask) == len(op(s, value)),\
                         "Cutting fails due to different variable lengths for {}".format(varname)

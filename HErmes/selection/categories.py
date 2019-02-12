@@ -505,7 +505,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                 # one dimensional.
                 # However, the entries of the array are iterables
                 elif hasattr(self.vardict[varname]._data[0],"__iter__"):
-                    Logger.warning("Cut on jagged array! Can only be applied inplace!")
+                    Logger.warning("Cut on jagged array for variable {}! Can only be applied inplace!".format(varname))
                     Logger.warning("Conditions can not be applied to array variable!")
                     for i, k in enumerate(s):
                         tmpmask =  op(s[i],value) 

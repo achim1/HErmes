@@ -420,6 +420,7 @@ class Dataset(object):
                      ratiolabel="data/$\Sigma$ bg",
                      bins=None,
                      external_weights=None,
+                     savepath=None,
                      figure_factory=None):
         """
         One shot short-cut for one of the most used
@@ -441,6 +442,7 @@ class Dataset(object):
             bins (np.ndarray): binning, if None binning will be deduced from the variable definition
             figure_factory (func): factory function which return a matplotlib.Figure
             style (string): TODO "modern" || "classic" || "modern-cumul" || "classic-cumul"
+            savepath (string): Save the canvas at given path. None means it will not be saved.
             external_weights (dict): supply external weights - this will OVERIDE ANY INTERNALLY CALCULATED WEIGHTS and use the supplied weights instead.
                                      must be in the form { "categoryname" : weights}
             axis_properties (dict): Manually define a plot layout with up to three axes.
@@ -586,6 +588,8 @@ class Dataset(object):
                   ylabel=ylabel)
         #plot.add_legend()
         #plot.canvas.save(savepath,savename,dpi=350)
+        if savepath is not None:
+            plot.canvas.save(savepath, name)
         return plot
 
     @property

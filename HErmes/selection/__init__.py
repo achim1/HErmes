@@ -40,6 +40,7 @@ from ..analysis import fluxes as fluxes
 def load_dataset(config,
                  variables=None,
                  max_cpu_cores=c.MAX_CORES,
+                 only_nfiles=None,
                  dtype=np.float64):
     """
     Read a json configuration file and load a dataset populated
@@ -49,11 +50,12 @@ def load_dataset(config,
         config (str/dict): json style config file or dict
 
     Keyword Args:
-        variables (list): list of strings of variable names to read out
+        variables (list)   : list of strings of variable names to read out
         max_cpu_cores (int): maximum number of cpu ucores to use for variable readout
-        dtype (np.dtype): cast to the given datatype. By default it will be always double
-                          (which is np.float64), however ofthen times it is advisable
-                          to downcast to a less precise type to save memory.
+        only_nfiles (int)  : readout only 'only_nfiles' 
+        dtype (np.dtype)   : cast to the given datatype. By default it will be always double
+                             (which is np.float64), however ofthen times it is advisable
+                             to downcast to a less precise type to save memory.
     Returns:
         HErmes.selection.dataset.Dataset
 
@@ -93,14 +95,16 @@ def load_dataset(config,
             # convert to int
             datasets = {}
             if "datasets" in thiscat:
-                datasets = {int(x): int(thiscat['datasets'][x]) for x in thiscat['datasets']}
-
+                #datasets = {int(x): int(thiscat['datasets'][x]) for x in thiscat['datasets']}
+                datasets = {x: int(thiscat['datasets'][x]) for x in thiscat['datasets']}
+                
             
             categories[cat].get_files(os.path.join(files_basepath,\
                                                    thiscat['subpath']),\
                                                    prefix=thiscat["file_prefix"],\
                                                    datasets=datasets,\
                                                    sanitizer=sanitizer,\
+                                                   only_nfiles=only_nfiles,\
                                                    ending=thiscat["file_type"])
 
             #weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]]

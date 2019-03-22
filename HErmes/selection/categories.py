@@ -640,10 +640,13 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
         force = False
         append = False
+        only_nfiles = None
         if "force" in kwargs:
             force = kwargs.pop("force")
         if "append" in kwargs:
             append = kwargs.pop("append")
+        if "only_nfiles" in kwargs:
+            only_nfiles = kwargs.pop("only_nfiles")
         if self.harvested:
             Logger.info("Variables have already been harvested!\
                          if you really want to reload the filelist,\
@@ -659,11 +662,13 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         datasets = {}
         if "datasets" in kwargs:
             datasets = kwargs["datasets"]
+            Logger.debug("Found datasets".format(datasets))
             self.datasets = kwargs.pop("datasets")
 
         if datasets:
             filtered_files = []
             files = harvest_files(*args, **kwargs)
+            Logger.debug("Found {} files, will start filtering...".format(len(files)))
             datasets = [self._ds_regexp(x) for x in files]
             assert len(datasets) == len(files)
 
@@ -673,6 +678,9 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             files = filtered_files
         else:
             files = harvest_files(*args, **kwargs)
+
+        if only_nfiles is not None:
+            files = files[:only_nfiles]
 
         if append:
             self.files += files

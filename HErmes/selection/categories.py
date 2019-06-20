@@ -515,11 +515,19 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                     #inplace = True        
                     assert len(mask) == len(op(s, value)),\
                         "Cutting fails due to different variable lengths for {}".format(varname)
-                    mask = np.logical_and(mask, op(s, value))
+                    if cut.type == 'OR':
+                        Logger.warning("'OR' cut is still experimental!")
+                        mask = np.logical_or(mask, op(s, value))
+                    else:
+                        mask = np.logical_and(mask, op(s, value))
                 else:
                     assert len(mask) == len(op(s, value)),\
                         "Cutting fails due to different variable lengths for {}".format(varname)
-                    mask = np.logical_and(mask, op(s,value))
+                    if cut.type == 'OR':
+                        Logger.warning("'OR' cut is still experimental!")
+                        mask = np.logical_or(mask, op(s, value))
+                    else:
+                        mask = np.logical_and(mask, op(s,value))
 
         if inplace:
             for k in list(self.vardict.keys()):

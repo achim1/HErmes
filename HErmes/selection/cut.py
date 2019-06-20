@@ -12,9 +12,10 @@ from collections import defaultdict
 from copy import deepcopy as copy
 import operator
 operator_lookup = {\
-    ">" : operator.gt,\
+    ">"  : operator.gt,\
     "==" : operator.eq,\
-    "<" : operator.lt,\
+    "!=" : operator.ne,\
+    "<"  : operator.lt,\
     ">=" : operator.ge,\
     "<=" : operator.le\
     }

@@ -25,7 +25,7 @@ class ColorDict(dict):
 
 seaborn_loaded = False
 try:
-    import seaborn.apionly as sb
+    import seaborn as sb
 
     seaborn_loaded = True
     Logger.debug("Seaborn found!")

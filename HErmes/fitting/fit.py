@@ -20,7 +20,7 @@ from copy import deepcopy as copy
 from collections import namedtuple
 
 import scipy.optimize as optimize
-import seaborn.apionly as sb
+import seaborn as sb
 import dashi as d
 
 d.visual()

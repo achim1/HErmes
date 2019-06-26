@@ -348,7 +348,6 @@ class Dataset(object):
 
         Args:
             cut (HErmes.selection.variables.cut.Cut): Append this cut to the internal cutlist
-
         """
         for cat in self.categories:
             cat.add_cut(cut)

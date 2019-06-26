@@ -466,7 +466,10 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         """
         self.undo_cuts()
         mask = np.ones(self.raw_count)
-        
+        if self.cuts[0].type == 'OR':
+            Logger.warning("'OR' type cut is experimental!")
+            mask = np.zeros(self.raw_count)
+
         # only apply the condition to the mask
         # created for the cut with the condition
         # not the others
@@ -486,9 +489,16 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         for m in cond_masks:
             mask = np.logical_and(mask,m)
 
+        # only for non-conditional cuts
         for cut in self.cuts:
             if cut.condition is not None:
                 continue
+
+            thiscutmask = np.ones(self.raw_count)
+            if cut.type == 'OR':
+                Logger.warning("'OR' type cut is experimental!")
+                thiscutmask = np.zeros(self.raw_count)
+            
             for varname, (op,value) in cut:
                 s = self.get(varname)
                 Logger.debug("Cutting on {}".format(varname))
@@ -517,18 +527,21 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                         "Cutting fails due to different variable lengths for {}".format(varname)
                     if cut.type == 'OR':
                         Logger.warning("'OR' cut is still experimental!")
-                        mask = np.logical_or(mask, op(s, value))
+                        thiscutmask = np.logical_or(thiscutmask, op(s, value))
                     else:
-                        mask = np.logical_and(mask, op(s, value))
+                        thiscutmask = np.logical_and(thiscutmask, op(s, value))
                 else:
                     assert len(mask) == len(op(s, value)),\
                         "Cutting fails due to different variable lengths for {}".format(varname)
                     if cut.type == 'OR':
                         Logger.warning("'OR' cut is still experimental!")
-                        mask = np.logical_or(mask, op(s, value))
+                        thiscutmask = np.logical_or(thiscutmask, op(s, value))
                     else:
-                        mask = np.logical_and(mask, op(s,value))
-
+                        thiscutmask = np.logical_and(thiscutmask, op(s,value))
+            if not mask.any():
+                mask = np.logical_or(thiscutmask, mask)
+            else:
+                mask = np.logical_and(thiscutmask, mask)
         if inplace:
             for k in list(self.vardict.keys()):
                 if self.vardict[k].ndim != 2:

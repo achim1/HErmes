@@ -469,7 +469,8 @@ class Variable(AbstractBaseVariable):
         if definitions is not None:
             #assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions {}!".format(definitions)
             self.defsize = len(definitions[0])
-            assert not (False in [len(x) == self.defsize for x in definitions]), "All definitions must have the same length!"
+            #FIXME : not sure how important this is right now
+            #assert not (False in [len(x) == self.defsize for x in definitions]), "All definitions must have the same length!"
         else:
             self.defsize = 0
 

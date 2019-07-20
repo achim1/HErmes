@@ -29,7 +29,6 @@ from . import utils
 loglevel = utils.logger.LOGLEVEL
 
 from . import plotting
-plotting.add_styles()
 
 # FIXME documentation
 def _hook():

@@ -13,7 +13,7 @@ import enum
 import array
 import numbers
 from ..utils import files as f
-from ..utils.logger import Logger
+from ..utils import Logger
 from future.utils import with_metaclass
 from copy import deepcopy as copy
 DEFAULT_BINS = 70

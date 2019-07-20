@@ -30,7 +30,7 @@ import importlib
 import re
 import numpy as np
 
-from ..utils.logger import Logger
+from ..utils import Logger
 
 from . import categories as c
 from . import dataset as ds

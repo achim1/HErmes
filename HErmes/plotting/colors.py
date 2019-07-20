@@ -6,7 +6,7 @@ Color management - provide a nice color scheme even if seaborn is not available
 
 from builtins import zip
 from builtins import range
-from ..utils.logger import Logger
+from ..utils import Logger
 
 
 class ColorDict(dict):

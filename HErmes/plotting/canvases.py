@@ -7,7 +7,7 @@ import os.path
 import pylab as p
 import tempfile
 
-from HErmes.utils.logger import Logger
+from ..utils import Logger
 try:
     from IPython.core.display import Image
 except ImportError:

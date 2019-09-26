@@ -258,7 +258,10 @@ class VariableDistributionPlot(object):
         self.plotratio = False
         self.plotcumul = False
         self.canvas = None
-        self.label = ''
+        if (xlabel is None):
+            self.label = ''
+        else:
+            self.label = xlabel
         self.name = ''
         self.bins = bins
         if cuts is None:

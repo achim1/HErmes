@@ -12,7 +12,7 @@ try:
 except ImportError:
     print ("WARNING: module icecube not found!")
 
-from ..utils.logger import Logger
+from ..utils import Logger
 from ..selection.magic_keywords import  MC_P_EN,\
                             MC_P_TY,\
                             MC_P_ZE,\

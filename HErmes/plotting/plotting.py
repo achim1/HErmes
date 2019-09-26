@@ -17,8 +17,8 @@ import matplotlib.ticker
 
 from .colors import get_color_palette
 from .canvases import YStackedCanvas
-from ..utils.logger import Logger
-from ..utils.itools import flatten
+from ..utils import Logger
+from ..utils import flatten
 
 d.visual()
 

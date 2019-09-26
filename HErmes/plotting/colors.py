@@ -6,7 +6,7 @@ Color management - provide a nice color scheme even if seaborn is not available
 
 from builtins import zip
 from builtins import range
-from ..utils.logger import Logger
+from ..utils import Logger
 
 
 class ColorDict(dict):
@@ -51,10 +51,13 @@ def get_color_palette(name="dark"):
         color_palette[1] = (0.3333333333333333, 0.6588235294117647, 0.40784313725490196)
         color_palette[2] = (0.7686274509803922, 0.3058823529411765, 0.3215686274509804)
         color_palette[3] = (0.5058823529411764, 0.4470588235294118, 0.6980392156862745)
+        color_palette[4] = (0.23529411764705882, 0.23529411764705882, 0.23529411764705882),            
+        color_palette[5] = (0.7215686274509804, 0.5215686274509804, 0.0392156862745098),
+        color_palette[6] = (0.0, 0.38823529411764707, 0.4549019607843137)
         color_palette['prohibited'] = 'grey'
     else:
         color_palette = ColorDict()
-        color_palette.update(dict(list(zip(list(range(6)),sb.color_palette(name)))))
+        color_palette.update(dict(list(zip(list(range(9)),sb.color_palette(name)))))
         color_palette['prohibited'] = sb.color_palette("deep")[3]
     return color_palette
     

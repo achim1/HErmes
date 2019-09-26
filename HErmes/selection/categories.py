@@ -23,7 +23,7 @@ from copy import deepcopy
 
 from ..utils import isnotebook
 from ..utils.files import harvest_files,DS_ID,EXP_RUN_ID
-from ..utils.logger import Logger
+from ..utils import Logger
 from ..plotting.colors import get_color_palette
 
 from .magic_keywords import MC_P_EN,\
@@ -321,7 +321,10 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             bins = self.vardict[varname].bins
         if bins is None:
             try:
-                bins = self.vardict[varname].calculate_fd_bins()
+                if len(self.cutmask) != 0:
+                    bins = self.varname[varname].calculate_fd_bins(cutmask=self.cutmaks)   
+                else:
+                    bins = self.vardict[varname].calculate_fd_bins()
             except Exception as e:
                 Logger.warn("Can not create Friedman Draconis bins {}".format(e))
                 Logger.warn("Will return 40 as last resort... Recommended to specify bins via the function parameter")

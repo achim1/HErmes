@@ -2,89 +2,11 @@ import sys
 import re
 import os
 import os.path
-import stat
-import shutil
-import atexit
-import pylab # seems useless, however triggers
-             # the matplotlib.style mechanism
 
-from glob import glob
 
 from setuptools import setup
-from setuptools.command.install import install
 
 
-
-def _post_install():
-    """
-    Copy matplotlib style files and set the permissions right
-    - at least for unix/sudo style systems
-
-    Returns:
-        None
-    """
-    print ("--------------------------------")
-    print ("Running post install...")
-
-    import matplotlib
-
-    styles = sorted(glob("resources/*mplstyle"))
-
-    as_root = False
-    if os.getuid() == 0:
-        try:
-            uid = int(os.getenv("SUDO_UID"))
-            gid = int(os.getenv("SUDO_GID"))
-        except Exception as e:
-            print ("Caught exception {}".format(e))
-            print ("There is no SUDO_UID/SUDO_GID shellvariable...")
-            as_root = True
-            
-            import pwd
-            import subprocess as sub
-
-            whois = sub.Popen(["who"], stdout=sub.PIPE).communicate()[0].split()[0]
-            # python2/3
-            if hasattr(whois, "decode"):
-                whois = whois.decode()
-
-            uid = int(pwd.getpwnam(whois).pw_uid)
-            gid = int(pwd.getpwnam(whois).pw_gid)
-
-    else:
-        uid = int(os.getuid())
-        gid = int(os.getgid())
-
-    mplstylelib = matplotlib.get_configdir()
-    mplstylelib = os.path.join(mplstylelib, "stylelib")
-    if as_root:
-        mplstylelib = mplstylelib.replace("/root", "/home/" + whois)
-    if not os.path.exists(mplstylelib):
-        print ("WARNING: Can not find stylelib dir {}".format(mplstylelib))
-        print ("Creating {}".format(mplstylelib))
-        os.mkdir(mplstylelib)
-    for st in styles:
-
-        print("INSTALLING {} to {}".format(st, mplstylelib))
-        shutil.copy(st, mplstylelib)
-        with open(os.path.join(mplstylelib, os.path.split(st)[1])) as fd:
-
-            os.fchown(fd.fileno(), uid, gid)
-            #os.fchmod(fd.fileno(), stat.S_IRWXU & stat.S_IRGRP & stat.S_IROTH)
-            os.fchmod(fd.fileno(), 0o755)
-
-    matplotlib.style.reload_library()
-    return
-
-class full_install(install):
-    """
-    Installation routine which executes post_install
-    """
-
-    def __init__(self, *args, **kwargs):
-        #super(new_install, self).__init__(*args, **kwargs)
-        install.__init__(self, *args, **kwargs)
-        #atexit.register(_post_install)
 
 
 # get_version and conditional adding of pytest-runner
@@ -163,7 +85,7 @@ setup(name='HErmes',
       install_requires=requirements, 
       setup_requires=setup_requires,
       license="GPL",
-      cmdclass={'install': full_install},
+      #cmdclass={'install': full_install},
       platforms=["Ubuntu 14.04","Ubuntu 16.04", "Ubuntu 16.10", "SL6.1"],
       classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",

@@ -12,7 +12,7 @@ import scipy.stats as st
 from future import standard_library
 standard_library.install_aliases()
 
-from ..utils.logger import Logger
+from ..utils import Logger
 
 def poisson(x, lmbda):
     """

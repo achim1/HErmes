@@ -3,7 +3,6 @@ Container classes for variables
 """
 
 from builtins import object
-import numpy as n # remove that in the future
 import numpy as np
 import os
 import pandas as pd
@@ -13,7 +12,7 @@ import enum
 import array
 import numbers
 from ..utils import files as f
-from ..utils.logger import Logger
+from ..utils import Logger
 from future.utils import with_metaclass
 from copy import deepcopy as copy
 DEFAULT_BINS = 70
@@ -307,15 +306,21 @@ def freedman_diaconis_bins(data,leftedge,\
     """
 
     try:
-        finite_data = n.isfinite(data)
-        q3          = n.percentile(data[finite_data],75)
-        q1          = n.percentile(data[finite_data],25)
+        finite_data = np.isfinite(data)
+        q3          = np.percentile(data[finite_data],75)
+        q1          = np.percentile(data[finite_data],25)
         n_data      = len(data)
+        if q3 == q1:
+            Logger.warn("Can not calculate bins, falling back... to min max approach")
+            q3 = max(finite_data)
+            q1 = min(finite_data)
+
         h           = (2*(q3-q1))/(n_data**1./3)
         bins = (rightedge - leftedge)/h
 
 
-        if not n.isfinite(bins):
+        if not np.isfinite(bins):
+            Logger.info("Got some nan somewhere: q1 : {}, q3 : {}, n_data : {}, h : {}".format(q1, q3, n_data, h))
             Logger.warn("Calculate Freedman-Draconis bins failed, calculated nan bins, returning fallback")
             bins = fallbackbins
 
@@ -396,16 +401,26 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
     def bins(self, value):
         self._bins = value
 
-    def calculate_fd_bins(self):
+    def calculate_fd_bins(self, cutmask=None):
         """
         Calculate a reasonable binning
+
+        Keyword Args:
+            cutmask (numpy.ndarray) : a boolean mask to cut on, in case 
+                                      cuts have been applied to the 
+                                      category this data is part of
 
         Returns:
             numpy.ndarray: Freedman Diaconis bins
         """
-        nbins = freedman_diaconis_bins(self.data, min(self.data), max(self.data))
-        self.bins = n.linspace(min(self.data),max(self.data), nbins)
-        return self.bins
+        tmpdata = self.data
+        if cutmask is not None:
+            if len(cutmask) > 0:
+                tmpdata = tmpdata[cutmask]
+
+        nbins = freedman_diaconis_bins(tmpdata, min(tmpdata), max(tmpdata))
+        bins = np.linspace(min(tmpdata),max(tmpdata), nbins)
+        return bins
 
     def harvest(self, *files):
         """

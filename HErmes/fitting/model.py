@@ -25,7 +25,7 @@ import inspect
 from copy import deepcopy as copy
 
 import scipy.optimize as optimize
-import seaborn.apionly as sb
+import seaborn as sb
 
 from . import functions as funcs
 from .. import utils as u

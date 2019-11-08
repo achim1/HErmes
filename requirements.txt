@@ -15,7 +15,7 @@ tables>=3.3.0
 iminuit>=1.2.0
 enum34>=1.1.6;python_version<"3.5"  
 uproot>=2.8.23
-hepbasestack>=0.0.1
+#hepbasestack>=0.0.1
 lz4>=1.1.0
 https://github.com/achim1/dashi/zipball/master#egg=dashi
 

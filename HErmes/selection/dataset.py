@@ -571,6 +571,7 @@ class Dataset(object):
                 plot.add_cumul(cat.name)
 
         if len(ratio[0]) and len(ratio[1]):
+            Logger.debug("Requested to plot ratio {} {}".format(ratio[0], ratio[1]))
             tratio,tratio_err = self.calc_ratio(nominator=ratio[0],\
                                                 denominator=ratio[1])
 

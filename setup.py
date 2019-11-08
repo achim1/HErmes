@@ -55,7 +55,6 @@ if no_parse_requirements:
                      'matplotlib>=1.5.0',
                      'pandas>=0.17.1',
                      'appdirs>=1.4.0',
-                     'futures>=3.0.5',
                      'future>=0.16.0',
                      'pyprind>=2.9.6']
 

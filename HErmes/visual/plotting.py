@@ -160,7 +160,7 @@ def line_plot(quantities,
         add_ratio (tuple): (["data1"],["data2"])
         ratiolabel (str):
         colors:
-        figure_factory (callable): Factory function returning matpltolib.Figure
+        figure_factory (callable): Factory function returning matplotolib.Figure
 
     Returns:
 
@@ -251,9 +251,9 @@ def gaussian_model_fit(data,
         xlabel (str)             : label for the x-axes
     """
     mod = fit.Model(fit.gauss, startparams=startparams)
-    mod.add_data(res, create_distribution=True, bins=bins, normalize=True)
+    mod.add_data(data, create_distribution=True, bins=bins, normalize=True)
     mod.fit_to_data()
-    thecolors = plt.colors.get_color_palette()
+    thecolors = get_color_palette()
     fig = mod.plot_result(log=False, xlabel=xlabel, add_parameter_text=(
      ('$\\mu$& {:4.2e}\\\\', 0), ('$\\sigma$& {:4.2e}\\\\', 1)), datacolor=thecolors[3], modelcolor=thecolors[3], histostyle='line', model_alpha=0.7, fig=fig)
     ax = fig.gca()
@@ -405,7 +405,7 @@ class VariableDistributionPlot(object):
         
     def add_cumul(self, name):
         """
-        Add a cumulative distribution to the plto
+        Add a cumulative distribution to the plot
 
         Args:
             name (str): the name of the category

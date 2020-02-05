@@ -19,6 +19,7 @@ from .colors import get_color_palette
 from .canvases import YStackedCanvas
 from ..utils import Logger
 from ..utils import flatten
+from .. import fitting as fit
 
 d.visual()
 
@@ -230,6 +231,43 @@ def line_plot(quantities,
     ax.legend(**legend_kwargs)
     return fig
 
+###############################################
+
+def gaussian_model_fit(data,
+                       startparams=(0,0.2),
+                       fig=None,
+                       bins=80,
+                       xlabel='$\\theta_{{rec}} - \\theta_{{true}}$'):
+    """
+    A plot with a gaussian fitted to data. A histogram of the data will be created and a gaussian
+    will be fitted, with 68 and 95 percentiles indicated in the plot.
+
+    Args:
+        data (array-like)        : input data with a (preferably) gaussian distribution
+
+    Keyword Args:
+        fig (matplotlib.Figure)  : pre-created figure to draw the plot in 
+        bins (array-like or int) : bins for the underliying histogram
+        xlabel (str)             : label for the x-axes
+    """
+    mod = fit.Model(fit.gauss, startparams=startparams)
+    mod.add_data(res, create_distribution=True, bins=bins, normalize=True)
+    mod.fit_to_data()
+    thecolors = plt.colors.get_color_palette()
+    fig = mod.plot_result(log=False, xlabel=xlabel, add_parameter_text=(
+     ('$\\mu$& {:4.2e}\\\\', 0), ('$\\sigma$& {:4.2e}\\\\', 1)), datacolor=thecolors[3], modelcolor=thecolors[3], histostyle='line', model_alpha=0.7, fig=fig)
+    ax = fig.gca()
+    ax.grid(1)
+    ax.set_ylim(ymax=1.1 * max(mod.data))
+    upper68 = mod.distribution.stats.mean + mod.distribution.stats.std
+    lower68 = mod.distribution.stats.mean - mod.distribution.stats.std
+    lower95 = mod.distribution.stats.mean - 2 * mod.distribution.stats.std
+    upper95 = mod.distribution.stats.mean + 2 * mod.distribution.stats.std
+    ax.axvspan(lower68, upper68, facecolor=thecolors[8], alpha=0.7, ec='none')
+    ax.axvspan(lower95, upper95, facecolor=thecolors[8], alpha=0.3, ec='none')
+    ax.text(lower68 * 0.9, max(mod.data) * 0.98, '68\\%', color=thecolors[3], fontsize=20)
+    ax.text(lower95 * 0.9, max(mod.data) * 0.85, '95\\%', color=thecolors[3], fontsize=20)
+    return (mod, fig)
 
 
 ###############################################

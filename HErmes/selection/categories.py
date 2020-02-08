@@ -121,6 +121,11 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         debug = []
 
         for v in list(self.vardict.keys()):
+            # omit parameters
+            if self.vardict[v].role == variables.VariableRole.PARAMETER:
+                Logger.debug("Omitting parameter {} from length calculation".format(v))
+                continue 
+
             # if there is a cut applied, this is the
             # cutted array
             variable = self.get(v)
@@ -752,6 +757,10 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         if varkey not in self.vardict:
             raise KeyError("{} not found!".format(varkey))
 
+        # a single value for the parameters - no len available
+        if self.vardict[varkey].role == variables.VariableRole.PARAMETER:
+            return self.vardict[varkey].data
+
         if len(self.vardict[varkey].data) and len(self.cutmask) and not uncut:
             return self.vardict[varkey].data[self.cutmask]
         else:
@@ -799,11 +808,16 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             # FIXME: Make it an option to not use
             # multi cpu readout!
             #self.vardict[varname].data = variables.harvest(self.files,self.vardict[varname].definitions)
+            direct_trafo = None
+            if self.vardict[varname].role == variables.VariableRole.PARAMETER:
+                # we need to apply  the transformation directly at readout
+                direct_trafo = self.vardict[varname].transform
             future_to_varname[executor.submit(variables.harvest,\
                                               self.files,\
                                               self.vardict[varname].definitions,\
                                               nevents = self.vardict[varname].nevents,\
                                               dtype = dtype,\
+                                              transformation = direct_trafo,\
                                               reduce_dimension = self.vardict[varname].reduce_dimension)] = varname
                                               #transformation = self.vardict[varname].transform)] = varname
 
@@ -834,7 +848,13 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                 # FIXME: check how different these two approaches really are
                 #        the second does not work for some vector data
                 #        from root files
-            data = data.map(self.vardict[varname].transform)
+            # also FIXME: in case of parameters, we apply the transformation directy when 
+            # reading the file out, in case it is some object which does not support 
+            # the numpy mechanism, e.g. root histogram (which is non-picklable) and needs 
+            # to be transformed first.
+            if not self.vardict[varname].role == variables.VariableRole.PARAMETER:
+                if not (self.vardict[varname].transform is None):
+                    data = data.map(self.vardict[varname].transform)
             #data = self.vardict[varname].transform(data)
 
             self.vardict[varname]._data = data

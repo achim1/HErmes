@@ -23,6 +23,7 @@ try:
     import uproot as ur
     import uproot_methods.classes.TVector3 as TVector3
     import uproot_methods.classes.TLorentzVector as TLorentzVector
+    import uproot_methods.classes.TH1
     REGISTERED_FILEEXTENSIONS.append(".root")
 
 except ImportError:
@@ -35,6 +36,7 @@ except ImportError:
 def extract_from_root(filename, definitions,
                       nevents=None,
                       dtype=np.float64,
+                      transform = None,
                       reduce_dimension=None):
     """
     Use the uproot system to get information from rootfiles. Supports a basic tree of
@@ -49,6 +51,7 @@ def extract_from_root(filename, definitions,
         reduce_dimension (int): If data is vector-type, reduce it by taking the n-th element
         dtype (np.dtyoe):  A numpy datatype, default double (np.float64) - use smaller dtypes to 
                            save memory
+        transform (func): A function which directy transforms the readout data
     """
 
     can_be_concatted = False
@@ -169,6 +172,8 @@ def extract_from_root(filename, definitions,
                 data = pd.Series(data) 
         Logger.debug("Got {} elements for {}".format(len(data), definitions[i]))
         can_be_concatted = True
+    if transform is not None:
+        data = transform(data)
     return data, can_be_concatted
 
 ################################################################
@@ -220,6 +225,8 @@ def harvest(filenames, definitions, **kwargs):
 
         assert filetype in REGISTERED_FILEEXTENSIONS, "Filetype {} not known!".format(filetype)
         assert os.path.exists(filename), "File {} does not exist!".format(filetype)
+        if (filetype == ".h5") and (transform is not None):
+            Logger.critical("Can not apply direct transformation for h5 files (yet). This is only important for root files and varaibles which are used as VariableRole.PARAMETER")
         Logger.debug("Attempting to harvest {1} file {0}".format(filename,filetype))
         
         if filetype == ".h5" and not isinstance(filename, tables.table.Table):
@@ -259,6 +266,7 @@ def harvest(filenames, definitions, **kwargs):
                 tmpdata, concattable = extract_from_root(filename, definitions,
                                                          nevents=nevents,
                                                          dtype=dtype,
+                                                         transform=transform,
                                                          reduce_dimension=reduce_dimension)
         if filetype == ".h5":
             hdftable.close()
@@ -349,7 +357,7 @@ class VariableRole(enum.Enum):
     STARTIME        = 60
     ENDTIME         = 70
     FLUXWEIGHT      = 80
-
+    PARAMETER       = 90 # a single parameter, no array whatsoever
 
 
 ##############################################################
@@ -428,7 +436,11 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
         Args:
             *files: walk through these files and readout
         """
-        self._data = harvest(files, self.definitions)
+        if self.role == VariableRole.PARAMETER:
+            self._data = harvest(files, self.definitions, transformation= self.transform)
+            self._data = self._data[0]
+        else:
+            self._data = harvest(files, self.definitions)
         self.declare_harvested()
 
     @abc.abstractmethod
@@ -445,7 +457,9 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
     @property
     def data(self):
         if isinstance(self._data, pd.DataFrame):
-            return self._data.as_matrix()
+            #return self._data.as_matrix()
+            #FIXME: as_matrix is depracted in favor of values
+            return self._data.values
         if not hasattr(self._data, "shape"):
             Logger.warning("Something's wrong, this should be array data!")
             Logger.warning("Seeeing {} data".format(type(self._data)))
@@ -462,7 +476,7 @@ class Variable(AbstractBaseVariable):
     """
 
     def __init__(self, name, definitions=None,\
-                 bins=None, label="", transform=lambda x: x,
+                 bins=None, label="", transform=None,
                  role=VariableRole.SCALAR,
                  nevents=None,
                  reduce_dimension=None):

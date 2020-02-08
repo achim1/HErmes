@@ -347,9 +347,10 @@ class VariableDistributionPlot(object):
         #print (data[0])
         # FIXME: check this
         # check pandas series and 
-        # numpy arrya difference
+        # numpy array difference
+        # FIMXME: values was as_matrix before - adapt changes in requirements.txt
         try:
-            data = data.as_matrix()
+            data = data.values
         except:
             pass
         # hack for applying the weights
@@ -626,19 +627,33 @@ class VariableDistributionPlot(object):
              log=True,
              legendwidth = 1.5,
              ylabel="rate/bin [1/s]",
-             figure_factory=None):
+             figure_factory=None,
+             zoomin=False,
+             adjust_ticks=lambda x : x):
         """
         Create the plot
 
         Keyword Args:
-            heights:
-            axes_locator:
+            axes_locator (tuple): A specialized tuple defining where the axes should be located in the plot
+                                  tuple has the following form: 
+                                  ( (PLOTA), (PLOTB), ...) where PLOTA is a tuple itself of the form (int, str, int)
+                                  describing (plotnumber, plottype, height of the axes in the figure)
+                                  plottype can be either: "c" - cumulative
+                                                          "r" - ratio
+                                                          "h" - histogram
             combined_distro:
             combined_ratio:
             combined_cumul:
             log (bool):
             style (str): Apply a simple style to the plot. Options are "modern" or "classic"
             normalized (bool):
+            figure_factor (fcn): Must return a matplotlib figure, use for custom formatting
+            zoomin (bool): If True, select the yrange in a way that the interesting part of the 
+                           histogram is shown. Caution is needed, since this might lead to an
+                           overinterpretation of fluctuations.
+            adjust_ticks (fcn): A function, applied on a matplotlib axes
+                                which will set the proper axis ticks
+
 
         Returns:
 
@@ -753,9 +768,14 @@ class VariableDistributionPlot(object):
             Logger.debug("Detected histogram with most likely a single bin!")
             Logger.debug("Adjusting plotrange")
             
-        else: 
-            maxplotrange += (maxplotrange*0.1)
-           
+        else:
+            if zoomin: 
+                figure_span = maxplotrange - minplotrange
+                minplotrange -= (figure_span*0.1)
+                maxplotrange += (figure_span*0.1) 
+            else: # start at zero and show the boring part
+                minplotrange = 0
+                maxplotrange += (maxplotrange*0.1)
         if log:
             maxplotrange = 10**(np.log10(maxplotrange) + 1)
 
@@ -796,6 +816,7 @@ class VariableDistributionPlot(object):
                                     labelbottom=False)
         for x in self.canvas.figure.axes:
             x.spines["right"].set_visible(True)
+            adjust_ticks(x)
 
         for ax in h_axes:
             #self.canvas.select_axes(ax[0]).ticklabel_format(useOffset=False, style='plain', axis="y")
@@ -839,7 +860,8 @@ class VariableDistributionPlot(object):
                 
             if max(h.bincontent[h.bincontent > 0]) > maxplotrange:
                 maxplotrange = max(h.bincontent[h.bincontent > 0])
- 
+
+        Logger.info("Estimated plotrange of xmin {} , xmax {}, ymin {}, ymax {}".format(leftplotedge, rightplotedge, minplotrange, maxplotrange)) 
         return leftplotedge, rightplotedge, minplotrange, maxplotrange
 
 

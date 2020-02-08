@@ -420,7 +420,9 @@ class Dataset(object):
                      bins=None,
                      external_weights=None,
                      savepath=None,
-                     figure_factory=None):
+                     figure_factory=None,
+                     zoomin=False,
+                     adjust_ticks = lambda x  : x):
         """
         One shot short-cut for one of the most used
         plots in eventselections
@@ -458,7 +460,11 @@ class Dataset(object):
                                                     "index": 0}
                                     }
 
-
+            zoomin (bool): If True, select the yrange in a way that the interesting part of the 
+                           histogram is shown. Caution is needed, since this might lead to an
+                           overinterpretation of fluctuations.
+            adjust_ticks (fcn): A function, applied on a matplotlib axes
+                                which will set the proper axis ticks
         Returns:
             HErmes.selection.variables.VariableDistributionPlot
         """
@@ -585,7 +591,9 @@ class Dataset(object):
                   figure_factory=figure_factory,\
                   log=log,\
                   style=style,\
-                  ylabel=ylabel)
+                  ylabel=ylabel,\
+                  zoomin=zoomin,\
+                  adjust_ticks=adjust_ticks)
         #plot.add_legend()
         #plot.canvas.save(savepath,savename,dpi=350)
         if savepath is not None:

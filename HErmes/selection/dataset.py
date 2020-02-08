@@ -11,7 +11,7 @@ import numpy as np
 from collections import OrderedDict
 from copy import deepcopy as copy
 
-from ..plotting import VariableDistributionPlot
+from ..visual import VariableDistributionPlot
 from ..utils import isnotebook
 from ..utils import Logger
 from dashi.tinytable import TinyTable

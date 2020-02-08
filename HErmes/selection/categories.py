@@ -24,7 +24,7 @@ from copy import deepcopy
 from ..utils import isnotebook
 from ..utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from ..utils import Logger
-from ..plotting.colors import get_color_palette
+from ..visual.colors import get_color_palette
 
 from .magic_keywords import MC_P_EN,\
                             MC_P_TY,\

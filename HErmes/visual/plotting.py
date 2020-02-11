@@ -235,7 +235,9 @@ def line_plot(quantities,
 
 def gaussian_model_fit(data,
                        startparams=(0,0.2),
+                       fitrange=((None,None), (None,None)),
                        fig=None,
+                       norm=True,
                        bins=80,
                        xlabel='$\\theta_{{rec}} - \\theta_{{true}}$'):
     """
@@ -246,13 +248,39 @@ def gaussian_model_fit(data,
         data (array-like)        : input data with a (preferably) gaussian distribution
 
     Keyword Args:
+        startparams (tuple)      : a set of startparams of the gaussian fit. If only
+                                   mu/sigma are given, then the plot will be normalized
         fig (matplotlib.Figure)  : pre-created figure to draw the plot in 
         bins (array-like or int) : bins for the underliying histogram
+        fitrange (tuple(min, max): min-max range for the gaussian fit
         xlabel (str)             : label for the x-axes
     """
-    mod = fit.Model(fit.gauss, startparams=startparams)
-    mod.add_data(data, create_distribution=True, bins=bins, normalize=True)
-    mod.fit_to_data()
+    if len(startparams) == 3:
+        tofit = lambda x,mean,sigma,amp : amp*fit.gauss(x,mean,sigma)
+    else:
+        tofit = fit.gauss
+    mod = fit.Model(tofit, startparams=startparams)
+    mod.add_data(data, create_distribution=True, bins=bins, normalize=norm)
+    limits = []
+    notempty = False
+    for k in fitrange:
+        thislimit = []
+        for j in k:
+            if j is None:
+                continue
+            else:
+                notempty = True
+                thislimit.append(j)
+        limits.append(tuple(thislimit))
+    limits = tuple(limits)
+    print (limits)
+    if notempty:
+        mod.fit_to_data(limits=limits)
+
+    else:
+        mod.fit_to_data()
+
+
     thecolors = get_color_palette()
     fig = mod.plot_result(log=False, xlabel=xlabel, add_parameter_text=(
      ('$\\mu$& {:4.2e}\\\\', 0), ('$\\sigma$& {:4.2e}\\\\', 1)), datacolor=thecolors[3], modelcolor=thecolors[3], histostyle='line', model_alpha=0.7, fig=fig)

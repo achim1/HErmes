@@ -165,4 +165,22 @@ def calculate_chi_square(data, model_data):
 
 #################################################
 
+def fwhm_gauss(x, mu, fwhm, amp):
+    """
+    A gaussian typically used for energy spectra fits of radiotion, where
+    resolutions/linewidths are typically given in full widht half maximum (fwhm)
 
+    Args:
+        x (float)    : input
+        mu (float)   : peak position
+        fwhm (float) : full width half maximum
+        amp (float)  : amplitude
+    Return:
+        float        : function value
+    """
+    return amp*np.exp((-4*np.log(2)*((x-mu)**2))/(fwhm**2))
+
+
+
+
+################################################

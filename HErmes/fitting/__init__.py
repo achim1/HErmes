@@ -10,5 +10,5 @@ from __future__ import absolute_import
 
 from future import standard_library
 standard_library.install_aliases()
-from .functions import poisson, gauss, exponential, calculate_chi_square
+from .functions import poisson, gauss, exponential, calculate_chi_square, fwhm_gauss
 from .model import Model

@@ -300,6 +300,70 @@ def gaussian_model_fit(data,
 
 ###############################################
 
+def gaussian_fwhm_fit(data,
+                      startparams=(0,0.2,1),\
+                      fitrange=((None,None), (None,None), (None, None)),\
+                      fig=None,\
+                      bins=80,\
+                      xlabel='$\\theta_{{rec}} - \\theta_{{true}}$'):
+    """
+    A plot with a gaussian fitted to data. A histogram of the data will be created and a gaussian
+    will be fitted, with 68 and 95 percentiles indicated in the plot. The gaussian will be in a form
+    so that the fwhm can be read directly from it. The "width" parameter of the gaussian is NOT the
+    standard deviation, but FWHM!
+
+    Args:
+        data (array-like)        : input data with a (preferably) gaussian distribution
+
+    Keyword Args:
+        startparams (tuple)      : a set of startparams of the gaussian fit. It is a 3
+                                   parameter fit with mu, fwhm and amplitude
+        fitrange (tuple)         : if desired, the fit can be restrained. One tuple of (min, max) per
+                                   parameter
+        fig (matplotlib.Figure)  : pre-created figure to draw the plot in
+        bins (array-like or int) : bins for the underliying histogram
+        xlabel (str)             : label for the x-axes
+    """
+    mod = fit.Model(fit.fwhm_gauss, startparams=startparams)
+    mod.add_data(data, create_distribution=True, bins=bins, normalize=False)
+    limits = []
+    notempty = False
+    for k in fitrange:
+        thislimit = []
+        for j in k:
+            if j is None:
+                continue
+            else:
+                notempty = True
+                thislimit.append(j)
+        limits.append(tuple(thislimit))
+    limits = tuple(limits)
+    print (limits)
+    if notempty:
+        mod.fit_to_data(limits=limits)
+
+    else:
+        mod.fit_to_data()
+
+    thecolors = get_color_palette()
+    fig = mod.plot_result(log=False, xlabel=xlabel, add_parameter_text=(
+        ('$\\mu$& {:4.2e}\\\\', 0), ('FWHM& {:4.2e}\\\\', 1), ('AMP& {:4.2e}\\\\',2)), datacolor=thecolors[3], modelcolor=thecolors[3], histostyle='line', model_alpha=0.7, fig=fig)
+    ax = fig.gca()
+    ax.grid(1)
+    ax.set_ylim(ymax=1.1 * max(mod.data))
+    upper68 = mod.distribution.stats.mean + mod.distribution.stats.std
+    lower68 = mod.distribution.stats.mean - mod.distribution.stats.std
+    lower95 = mod.distribution.stats.mean - 2 * mod.distribution.stats.std
+    upper95 = mod.distribution.stats.mean + 2 * mod.distribution.stats.std
+    ax.axvspan(lower68, upper68, facecolor=thecolors[8], alpha=0.7, ec='none')
+    ax.axvspan(lower95, upper95, facecolor=thecolors[8], alpha=0.3, ec='none')
+    ax.text(lower68 * 0.9, max(mod.data) * 0.98, '68\\%', color=thecolors[3], fontsize=20)
+    ax.text(lower95 * 0.9, max(mod.data) * 0.85, '95\\%', color=thecolors[3], fontsize=20)
+    return (mod, fig)
+
+
+###############################################
+
 class VariableDistributionPlot(object):
     """
     A plot which shows the distribution of a certain variable.

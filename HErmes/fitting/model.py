@@ -116,15 +116,15 @@ def construct_efunc(x, data, jointfunc, joint_pars):
     """
 
     datapar = inspect.getargspec(jointfunc).args[0]
-    print (datapar)
-    #print ("{}".format(datapar))
+    #print (datapar)
+    ##print ("{}".format(datapar))
     globals().update({"jointfunc" : jointfunc,\
                       "{}".format(datapar) : x,\
                       "data" : data})
     EFUNC = """def efunc({}):
     return ((abs(data - jointfunc({}))**2).sum())""".format(",".join(joint_pars), datapar + "," + ",".join(joint_pars))
 
-    print (EFUNC)
+    #print (EFUNC)
     exec (EFUNC, globals())
     return efunc
 
@@ -142,9 +142,9 @@ def create_minuit_pardict(fn, startparams, errors, limits, errordef):
     """
     parnames = inspect.getargspec(fn).args
     mindict = dict()
-    print (parnames)
+    #print (parnames)
     for i,k in enumerate(parnames):
-        print (k)
+        #print (k)
         mindict[k] = startparams[i]
         if not errors is None: mindict["error_" + k] = errors[i]
         if not limits is None: mindict["limit_" + k] = (limits[i][0], limits[i][1])
@@ -198,6 +198,7 @@ class Model(object):
 
         self._callbacks = [copy_func(func)]
         self.startparams = list(startparams)
+        self.errors = [len(startparams)]
         self.n_params = [len(startparams)]
         self.best_fit_params = list(startparams)
         self.coupling_variable = []
@@ -501,12 +502,13 @@ class Model(object):
             m = iminuit.Minuit(errorfunc, **params)
             m.migrad()
             values = m.values
-            print (values, "result")
+            if not silent: print (values, "result")
             parameters=[]
             for k in sorted(m.var2pos, key=m.var2pos.get):
-                print (k)
+                if not silent : print (k)
                 parameters.append(m.values[k])
             covariance_matrix = []
+            self.errors = m.errors
         else:
             parameters, covariance_matrix = optimize.curve_fit(self, self.xs,\
                                                            self.data, p0=startparams,\
@@ -590,8 +592,8 @@ class Model(object):
 
             ymax, ymin = scalemax*max(data), scalemin*min(data)
             xmax, xmin = scalemax*max(xs[abs(data) > 0]), scalemin*min(xs[abs(data) >0])
-            print (xmin, xmax)
-            print (ymin, ymax)
+            #print (xmin, xmax)
+            #print (ymin, ymax)
             ax.set_xlim(xmin, xmax)
             ax.set_ylim(ymin, ymax)
             return ax

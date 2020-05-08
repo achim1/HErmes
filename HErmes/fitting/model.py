@@ -97,7 +97,6 @@ def concat_functions(fncs):
         data += fn(*([{}] + ([{}][concat_functions_slices[1:][i]])))
     return data
 """.format(datapar + "," + ",".join(joint_pars),datapar, ",".join(joint_pars),datapar, ",".join(joint_pars))
-    #print (TEMPLATE)
     exec (TEMPLATE, globals())
     return jointfunc, joint_pars
 
@@ -116,15 +115,12 @@ def construct_efunc(x, data, jointfunc, joint_pars):
     """
 
     datapar = inspect.getargspec(jointfunc).args[0]
-    #print (datapar)
-    ##print ("{}".format(datapar))
     globals().update({"jointfunc" : jointfunc,\
                       "{}".format(datapar) : x,\
                       "data" : data})
     EFUNC = """def efunc({}):
     return ((abs(data - jointfunc({}))**2).sum())""".format(",".join(joint_pars), datapar + "," + ",".join(joint_pars))
 
-    #print (EFUNC)
     exec (EFUNC, globals())
     return efunc
 
@@ -142,9 +138,7 @@ def create_minuit_pardict(fn, startparams, errors, limits, errordef):
     """
     parnames = inspect.getargspec(fn).args
     mindict = dict()
-    #print (parnames)
     for i,k in enumerate(parnames):
-        #print (k)
         mindict[k] = startparams[i]
         if not errors is None: mindict["error_" + k] = errors[i]
         if not limits is None: mindict["limit_" + k] = (limits[i][0], limits[i][1])
@@ -459,6 +453,7 @@ class Model(object):
             self.data = data
             self.xs = xs
             self.ndf = len(data) - len(self.startparams)
+            self.bins = None
         if subtract is not None:
             self.data -= subtract(self.xs)
 
@@ -521,7 +516,6 @@ class Model(object):
 
         if not silent: print("Fit yielded parameters", parameters)
         if (not silent) and (not use_minuit): print("{:4.2f} NANs in covariance matrix".format(len(covariance_matrix[np.isnan(covariance_matrix)])))
-        if not silent: print("##########################################")
 
         # simple GOF
         #norm = 1
@@ -537,11 +531,11 @@ class Model(object):
         #for cmp in self.components:
         #    thischi2 = (calculate_chi_square(h.bincontent, norm * cmp(h.bincenters)))
         #    self.chi2_ndf_components.append(thischi2/nbins)
-
-        if not silent: print("Obtained chi2 and chi2/ndf of {:4.2f} {:4.2f}".format(chi2, self.chi2_ndf))
+        if not silent: print("Function value at minimum {:4.2e}".format(m.fval))
+        if not silent: print("Obtained chi2 : {:4.2f}; ndf : {:4.2f}; chi2/ndf {:4.2f}".format(chi2, self.ndf, self.chi2_ndf))
+        if not silent: print("##########################################")
         self.best_fit_params = parameters
         return parameters
-        #self.best_fit_params = fit_model(data, nbins, model, startparams, **kwargs)
 
     def clear(self):
         """
@@ -592,8 +586,6 @@ class Model(object):
 
             ymax, ymin = scalemax*max(data), scalemin*min(data)
             xmax, xmin = scalemax*max(xs[abs(data) > 0]), scalemin*min(xs[abs(data) >0])
-            #print (xmin, xmax)
-            #print (ymin, ymax)
             ax.set_xlim(xmin, xmax)
             ax.set_ylim(ymin, ymax)
             return ax

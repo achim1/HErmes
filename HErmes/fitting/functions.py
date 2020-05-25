@@ -9,6 +9,8 @@ from __future__ import absolute_import
 import numpy as np
 import scipy.stats as st
 
+#import statsmodels.stats.gof as gof
+
 from future import standard_library
 standard_library.install_aliases()
 
@@ -159,9 +161,44 @@ def calculate_chi_square(data, model_data):
     Returns:
         np.ndarray
     """
+    #FIXME there might be a reason I had chosen 
+    #      for going with my own implenetation 
+    #      initially
+    mask = np.logical_and(np.isfinite(data), np.isfinite(model_data))
+    chi2 =  (data[mask] - model_data[mask])**2/data[mask]
+    chi2 =  (chi2[np.isfinite(chi2)].sum())
+    #chi2 = st.chisquare(scale, model_data)[0]
+    Logger.warn(f'Calculated chi2 of {chi2}')
+    return chi2
+    #return chi[np.isfinite(chi)].sum()
 
-    chi = ((data - model_data)**2/data)
-    return chi[np.isfinite(chi)].sum()
+#################################################
+
+def calculate_reduced_chi_square(data, model_data, sigma):
+    """
+    Very simple estimator for goodness-of-fit. Use with care.
+    
+    Args:
+        data (np.ndarray)       : observed data 
+        model_data (np.ndarray) : model predictions 
+        sigma (np.ndarray)      : associated errors
+    Returns:
+    """
+    #FIXME there might be a reason I had chosen 
+    #      for going with my own implenetation 
+    #      initially
+    mask = np.logical_and(np.isfinite(data), np.isfinite(model_data), sigma > 0)
+    chi2 =  (data[mask] - model_data[mask])**2/sigma[mask]
+    chi2 =  (chi2[np.isfinite(chi2)].sum())
+    #chi2 = st.chisquare(scale, model_data)[0]
+    Logger.warn(f'Calculated chi2 of {chi2}')
+    return chi2
+    #return chi[np.isfinite(chi)].sum()
+
+#################################################
+
+def williams_correction():
+    pass
 
 #################################################
 

@@ -192,12 +192,14 @@ class Model(object):
 
         self._callbacks = [copy_func(func)]
         self.startparams = list(startparams)
-        self.errors = [len(startparams)]
+        #self.errors = [len(startparams)]
+        self.errors = None
         self.n_params = [len(startparams)]
         self.best_fit_params = list(startparams)
         self.coupling_variable = []
         self.all_coupled = False
         self.data = None
+        self.data_errs = None
         self.xs = None
         self.chi2_ndf = None
         self.chi2_ndf_components = []
@@ -208,6 +210,8 @@ class Model(object):
                                   [self.func_norm[i]*f(xs) for i,f in enumerate(self.components)])
         self.first_guess = None
         self._distribution = None
+        self._is_categorical = False 
+        self.covariance_matrix = None
 
     @property
     def distribution(self):
@@ -418,25 +422,38 @@ class Model(object):
             first += self.func_norm[i]*cmp(xs, *theparams)
         return first
 
-    def add_data(self, data, bins=200,\
+    def add_data(self, data,\
+                 data_errs=None,\
+                 bins=200,\
                  create_distribution=False,\
                  normalize=False,\
                  density=True,\
                  xs=None,\
                  subtract=None):
         """
-        Add some data to the model, in preparation for the fit
+        Add some data to the model, in preparation for the fit. There are two
+        modes of this:
+        1) Data needs to be histogrammed, then make sure to set
+            'nbins' appropriatly and set the 'create_distribution'
+        2) Data needs NOT to be histogrammed. In that case, bins has no meaning
+           For a meaningful calculation of chi2, the errors of the data points
+           need to be given to data_errs
 
 
         Args:
-            data (np.array):
+            data (np.array)            :
 
         Keyword Args
-            nbins (int):
-            subtract (callable):
-            normalize (bool): normalize the data before adding
-            density (bool): if normalized, assume the data is a pdf.
-                            if False, use bincount for normalization.
+            data_errs (np.array)       : errors of the data for chi2 calculation
+                                         (only used when not histogramming)
+            nbins (int/np.array)       : number of bins or bin array to be passed 
+                                         to the histogramming routine
+            create_distribution (bool) : data requires the creation of a histogram
+                                         first before fitting
+            subtract (callable)        :
+            normalize (bool)           : normalize the data before adding
+            density (bool)             : if normalized, assume the data is a pdf.
+                                         if False, use bincount for normalization.
         Returns:
 
         """
@@ -444,13 +461,19 @@ class Model(object):
             nbins = bins
         else:
             nbins = len(bins)
-
+        
         if create_distribution:
             self._create_distribution(data, bins, normalize, density=density)
+            self._is_categorical = True
             self.ndf = nbins - len(self.startparams)
         else:
             assert xs is not None, "Have to give xs if not histogramming!" 
+            if data_errs is not None:
+                assert len(data_errs) == len(data), "Data and associated errrors must have the same size"
+            else:
+                data_errs = np.ones(len(data))
             self.data = data
+            self.data_errs = data_errs
             self.xs = xs
             self.ndf = len(data) - len(self.startparams)
             self.bins = None
@@ -462,22 +485,30 @@ class Model(object):
                     errors=None,\
                     limits=None,\
                     errordef=1,\
+                    debug_minuit=False,\
                     **kwargs):
         """
         Apply this model to data
 
         Args:
-            data (np.ndarray): the data, unbinned
-            silent (bool): silence output
-            use_minuit (bool): use minuit for fitting
-            errors (list): errors for minuit, see miniuit manual
+            data (np.ndarray)      : the data, unbinned
+            silent (bool)          : silence output
+            use_minuit (bool)      : use minuit for fitting
+            errors (list)          : errors for minuit, see miniuit manual
             limits (list of tuples): limits for minuit, see minuit manual
-            errordef (int) : typically 1 for chi2 fit and 0.5 for llh fit 
+            errordef (int)         : typically 1 for chi2 fit and 0.5 for llh fit 
+                                   : this class is currently set up as a leeast square
+                                     fit, so this should not be changed
+            debug_minuit (int)     : if True, attache the iminuit instance to the model
+                                     so that it can be inspected later on. Will raise error
+                                     if use_minuit is set to False at the same time
             **kwargs: will be passed on to scipy.optimize.curvefit
 
         Returns:
             None
         """
+        if not use_minuit and debug_minuit:
+            raise ValueError("You can not debug  minuit when you are not using it!")
 
         startparams = self.startparams
 
@@ -494,6 +525,8 @@ class Model(object):
                                                                errors,\
                                                                limits,\
                                                                errordef)
+            # for debugging reasons we attach the minuit instance
+            # to the model if desired
             m = iminuit.Minuit(errorfunc, **params)
             m.migrad()
             values = m.values
@@ -502,8 +535,8 @@ class Model(object):
             for k in sorted(m.var2pos, key=m.var2pos.get):
                 if not silent : print (k)
                 parameters.append(m.values[k])
-            covariance_matrix = []
             self.errors = m.errors
+            self.covariance_matrix = m.covariance
         else:
             parameters, covariance_matrix = optimize.curve_fit(self, self.xs,\
                                                            self.data, p0=startparams,\
@@ -513,9 +546,14 @@ class Model(object):
                                                            # max_nfev=100000)
                                                            # method="lm",\
                                                            **fitkwargs)
-
+            self.covariance_matrix = covariance_matrix
+            self.errors = [] 
+            for i, row in enumerate(self.covariance_matrix):
+                for j,entry in enumerate(row):
+                    if i == j:
+                        self.errors.append(np.sqrt(entry))
         if not silent: print("Fit yielded parameters", parameters)
-        if (not silent) and (not use_minuit): print("{:4.2f} NANs in covariance matrix".format(len(covariance_matrix[np.isnan(covariance_matrix)])))
+        if (not silent) and (not use_minuit): print("{:4.2f} NANs in covariance matrix".format(len(self.covariance_matrix[np.isnan(np.asarray(covariance_matrix))])))
 
         # simple GOF
         #norm = 1
@@ -524,18 +562,37 @@ class Model(object):
         #    norm = norm[np.isfinite(norm)][0]
 
         #self.norm = norm
-        chi2 = (funcs.calculate_chi_square(self.norm*self.data, self.norm * self(self.xs, *parameters)))
+        if self._is_categorical:
+            chi2 = (funcs.calculate_chi_square(self.norm*self.data, self.norm * self(self.xs, *parameters)))
+        else:
+            # calculate the chi2 
+            chi2 = (funcs.calculate_reduced_chi_square(self.norm*self.data, self.norm * self(self.xs, *parameters), self.data_errs))
         self.chi2_ndf = chi2/self.ndf
 
         # FIXME: new feature
         #for cmp in self.components:
         #    thischi2 = (calculate_chi_square(h.bincontent, norm * cmp(h.bincenters)))
         #    self.chi2_ndf_components.append(thischi2/nbins)
-        if not silent: print("Function value at minimum {:4.2e}".format(m.fval))
+        if not silent and use_minuit: print("Function value at minimum {:4.2e}".format(m.fval))
         if not silent: print("Obtained chi2 : {:4.2f}; ndf : {:4.2f}; chi2/ndf {:4.2f}".format(chi2, self.ndf, self.chi2_ndf))
         if not silent: print("##########################################")
         self.best_fit_params = parameters
+        if debug_minuit:
+            self._m_instance = m
         return parameters
+    
+    def get_minuit_instance(self):
+        """
+        If a previous fit has been done with the debug_minuit instance
+        then it now can be accessed.
+
+        """
+        if not hasattr(self, '_m_instance'):
+            Logger.warn('Minuit instance not available. Execute `fit_to_data` with `debug_minuit` set to True')
+            return None
+        else:
+            return self._m_instance
+
 
     def clear(self):
         """

@@ -9,7 +9,7 @@ import HErmes.visual as plt
 import HErmes.visual.plotting as pltplt
 
 from HErmes.visual import canvases as cv
-from HErmes.visual import layout
+from hepbasestack import layout
 
 
 @pytest.fixture(scope='session')

@@ -1,6 +1,6 @@
 [![Coverage Status](https://coveralls.io/repos/github/achim1/HErmes/badge.svg?branch=master)](https://coveralls.io/github/achim1/HErmes?branch=master)
 [![Python 3.6+](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
-[![Build Status](https://travis-ci.org/achim1/HErmes.svg?branch=master)](https://travis-ci.org/achim1/HErmes.svg?branch=master)
+[![Build Status](https://travis-ci.org/achim1/HErmes.svg?branch=develop)](https://travis-ci.org/achim1/HErmes)
 [![Docs](https://readthedocs.org/projects/hermes-python/badge/?version=latest)](http://hermes-python.readthedocs.io/en/latest/?badge=latest)
 
 # HErmes

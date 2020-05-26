@@ -18,7 +18,7 @@ except ImportError:
         def Image(x): x
 
 # golden cut values
-from .layout import FIGSIZE_A4_SQUARE, FIGSIZE_A4, FIGSIZE_A4_LANDSCAPE
+from hepbasestack.layout import FIGSIZE_A4_SQUARE, FIGSIZE_A4, FIGSIZE_A4_LANDSCAPE
 
 ##########################################
 

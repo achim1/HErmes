@@ -4,13 +4,6 @@ distributions. The model is capable of having "components", which can
 be defined and fitted individually.
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-
-from future import standard_library
-standard_library.install_aliases()
 
 from functools import reduce
 
@@ -20,7 +13,6 @@ import pylab as p
 import iminuit
 import types
 import functools
-import sys
 import inspect
 from copy import deepcopy as copy
 
@@ -39,26 +31,21 @@ except Exception as e:
                 format(e))
 
 
-if sys.version_info < (3,0):
-    def copy_func(f):
-        """Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)"""
-        g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
+def copy_func(f):
+    """
+    Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)
+
+    Basically recreate the function f independently.
+
+    Args:
+        f (callable): the function f will be cloned
+    """
+    g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
                            argdefs=f.__defaults__,
                            closure=f.__closure__)
-        #g = types.FunctionType(f.func_code, f.func_globals, name=f.func_name,
-        #                   argdefs=f.func_defaults,
-        #                   closure=f.func_closure)
-        g = functools.update_wrapper(g, f)
-        return g
-else:
-    def copy_func(f):
-        """Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)"""
-        g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
-                               argdefs=f.__defaults__,
-                               closure=f.__closure__)
-        g = functools.update_wrapper(g, f)
-        g.__kwdefaults__ = f.__kwdefaults__
-        return g
+    g = functools.update_wrapper(g, f)
+    g.__kwdefaults__ = f.__kwdefaults__
+    return g
 
 def concat_functions(fncs):
     """
@@ -102,18 +89,20 @@ def concat_functions(fncs):
 
 def construct_efunc(x, data, jointfunc, joint_pars):
     """
-    Construct a least-squares function
+    Construct a least-squares error function. This function will then 
+    be minimized, e.g. with the help of minuit.
 
     Args:
-        x:
-        data:
-        jointfunc:
-        joint_pars:
+        x            (np.ndarray): The x-values the fit should be evaluated on
+        data:        (np.ndarray): The y-values of the data we want to describe
+        jointfunc:     (callable): The full data model with all components
+        joint_pars:       (tuple): The model parameters   
 
     Returns:
-
+        callable                 
     """
-
+    # ensure that "x" is the first parameter, even if it 
+    # has a different name
     datapar = inspect.getfullargspec(jointfunc).args[0]
     globals().update({"jointfunc" : jointfunc,\
                       "{}".format(datapar) : x,\
@@ -126,13 +115,17 @@ def construct_efunc(x, data, jointfunc, joint_pars):
 
 def create_minuit_pardict(fn, startparams, errors, limits, errordef):
     """
-    Construct a dictionary for minuit fitting
+    Construct a dictionary for minuit fitting. This dictionary contains information
+    for the minuit fitter like startparams or limits.
 
     Args:
-        fn (callable):
-        errors (list):
-        limits (list(tuple)):
-
+        fn        (callable): The function for which 
+        startparams  (tuple): A list of startparameter. One each per parameter
+        errors        (list): ?
+        limits (list(tuple)): A list of (min, max) tuples for each parameter, can be None
+        errordef     (float): The errordef should be 1 for a least square fit 
+                              (for what this all is constructed for) or 0.5 in 
+                              case of a likelihood fit
     Returns:
         dict
     """
@@ -164,21 +157,21 @@ class Model(object):
                  func_norm=1):
         """
         Args:
-            func (fnc): The function which shall model the data.
-                        It has to be of the form f(x, par1, par2, ...).
-                        Only 1d fits are supported, and "x" must be the
-                        first argument.
+            func              (fnc): The function which shall model the data.
+                                     It has to be of the form f(x, par1, par2, ...).
+                                     Only 1d fits are supported, and "x" must be the
+                                     first argument.
         Keyword Args:
             Will be passed to iminuit:    
                 startparams (tuple): A set of startparameters. 1 start parameter
                                      per function parameter. A good choice of 
                                      start parameters helps the fit a lot.
-                limits (tuple): individual limit min/max for each parameter
-                                1 tuple (min/max) per parameter
-                errors (tuple): One value per parameter, giving an 1sigma error
-                                estimate
+                limits      (tuple): individual limit min/max for each parameter
+                                     1 tuple (min/max) per parameter
+                errors      (tuple): One value per parameter, giving an 1sigma error
+                                     estimate
             Additional keywords:
-                func_norm (float): multiply the result of func when evaluated with norm
+                func_norm   (float): multiply the result of func when evaluated with norm
         """
 
         # if no startparams are given, construct 
@@ -219,13 +212,14 @@ class Model(object):
 
     def set_distribution(self, distr):
         """
-        Assing a distribution to the model
+        Adding a distribution to the model. The distribution shall contain
+        the data we want to model.
 
         Args:
-            distr:
+            distr (dashi.histogram):
 
         Returns:
-
+            None
         """
         self._distribution = distr
 
@@ -243,7 +237,9 @@ class Model(object):
     @property
     def n_free_params(self):
         """
-        The number of free parameters of this model
+        The number of free parameters of this model. The free 
+        parameter in a least square fit are 
+        number of data points - fit parameters.
 
         Returns:
             int
@@ -253,16 +249,18 @@ class Model(object):
     def _create_distribution(self, data, bins,\
                              normalize=False, density=True):
         """
-        Create a distribution
+        Create a distribution out of the data with the help of 
+        dashi.
 
         Args:
-            data (np.ndarray):
-            bins (np.ndarray or int):
+            data        (np.ndarray): input data
+            bins (np.ndarray or int): bins to forward to the histogram creation
 
         Keyword Args:
-            normalize (bool):
-            density (bool):
-
+            normalize         (bool): normalize the resulting distribution by nentries
+            density           (bool): if together with normalize, then normalize the 
+                                      distribution by area, as for a pdf for example.
+                                      The area under the curve will then be unity.
         Returns:
             None
         """
@@ -285,13 +283,15 @@ class Model(object):
 
     def add_first_guess(self, func):
         """
-        Use func to estimate better startparameters
+        Use func to estimate better startparameters for the initialization 
+        of the fit.
 
         Args:
-            func: Has to yield a set of startparameters
+            func (callable): The function func has to have the same amount
+                             of parameters as we have startparameters.
 
         Returns:
-
+            None
         """
 
         assert self.all_coupled or len(self.n_params) == 1, "Does not work yet if not all variables are coupled"
@@ -302,8 +302,10 @@ class Model(object):
         Assign a new set of start parameters obtained by calling the
         first geuss metthod
 
-        :param data:
-        :return:
+        Args:
+            data (np.ndarray): input data, used to evaluate the first guess method.
+        Returns:
+            None
         """
         assert self.first_guess is not None, "No first guess method provided! Run Model.add_first_guess "
         newstartparams = list(self.first_guess(data))
@@ -319,7 +321,8 @@ class Model(object):
         instead of p11, p12, k1, p21, p22, k2.
 
         Args:
-            coupling_variable: variable number of the number in startparams
+            coupling_variable: variable number of the number in startparams. 
+                               This *must* be the index to the respective tuple.
 
         Returns:
             None
@@ -330,6 +333,25 @@ class Model(object):
         self.coupling_variable.append(coupling_variable)
 
     def construct_error_function(self, startparams, errors, limits, errordef):
+        """
+        Construct the error function together with the necessary parameters 
+        for minuit.
+        
+        Args:
+            startparams (tuple): A set of startparameters. 1 start parameter
+                                 per function parameter. A good choice of 
+                                 start parameters helps the fit a lot.
+            limits      (tuple): individual limit min/max for each parameter
+                                 1 tuple (min/max) per parameter
+            errors      (tuple): One value per parameter, giving an 1sigma error
+                                 estimate
+            errordef    (float): The errordef should be 1 for a least square fit 
+                                 (for what this all is constructed for) or 0.5 in 
+                                 case of a likelihood fit
+        Returns:
+            tuple (callable, dict)
+        """
+
         concated, concated_pars = concat_functions(self._callbacks)
         error_func = construct_efunc(self.xs, self.data, concated, concated_pars)
         pardict = create_minuit_pardict(error_func, startparams, errors, limits, errordef)
@@ -337,8 +359,9 @@ class Model(object):
 
     def couple_all_models(self):
         """
-        Use the first models startparams for
-        the combined model
+        "Lock" the model after all components have been added. This 
+        will determiine a set of startparameters.
+        After this, no other models can be coupled/added any more.
 
         Returns:
             None
@@ -349,13 +372,16 @@ class Model(object):
 
     def __add__(self, other):
         """
-        Add another component to the model
+        Add another component to the model. This allows for more
+        complex functions like gaussian + exponential.
 
         Args:
-            other:
+            other (Model): A full flexed model which has to be 
+                           initialized with its own set of 
+                           startparameters
 
         Returns:
-
+            Model        : A multi-compoment Model
         """
         newmodel = Model(lambda x :x)
 
@@ -441,7 +467,7 @@ class Model(object):
 
 
         Args:
-            data (np.array)            :
+            data (np.array)            : input data
 
         Keyword Args
             data_errs (np.array)       : errors of the data for chi2 calculation
@@ -450,7 +476,7 @@ class Model(object):
                                          to the histogramming routine
             create_distribution (bool) : data requires the creation of a histogram
                                          first before fitting
-            subtract (callable)        :
+            subtract (callable)        : ?
             normalize (bool)           : normalize the data before adding
             density (bool)             : if normalized, assume the data is a pdf.
                                          if False, use bincount for normalization.
@@ -488,7 +514,8 @@ class Model(object):
                     debug_minuit=False,\
                     **kwargs):
         """
-        Apply this model to data
+        Apply this model to data. This will perform the fit with the help 
+        of either minuit or scipy.optimize.
 
         Args:
             data (np.ndarray)      : the data, unbinned
@@ -496,7 +523,7 @@ class Model(object):
             use_minuit (bool)      : use minuit for fitting
             errors (list)          : errors for minuit, see miniuit manual
             limits (list of tuples): limits for minuit, see minuit manual
-            errordef (int)         : typically 1 for chi2 fit and 0.5 for llh fit 
+            errordef (float)       : typically 1 for chi2 fit and 0.5 for llh fit 
                                    : this class is currently set up as a leeast square
                                      fit, so this should not be changed
             debug_minuit (int)     : if True, attache the iminuit instance to the model
@@ -596,7 +623,8 @@ class Model(object):
 
     def clear(self):
         """
-        Reset the model
+        Reset the model. This bascially deletes all components and 
+        resets the startparameters.
 
         Returns:
             None
@@ -615,23 +643,22 @@ class Model(object):
                     datacolor="k",
                     modelcolor=default_color):
         """
-        Show the fit result
+        Show the fit result, together with the fitted data.
 
         Args:
-            ymin (float): limit the yrange to ymin
-            xmax (float): limit the xrange to xmax
-            model_alpha (float): 0 <= x <= 1 the alpha value of the lineplot
-                                for the model
-            ylabel (str): label for yaxis
-            log (bool): plot in log scale
-            figure_factory (fnc): Use to generate the figure
-            axes_range (str): the "field of view" to show
-            fig (pylab.figure): A figure instance
+            ymin               (float): limit the yrange to ymin
+            xmax               (float): limit the xrange to xmax
+            model_alpha        (float): 0 <= x <= 1 the alpha value of the lineplot
+                                        for the model
+            ylabel               (str): label for yaxis
+            log                 (bool): plot in log scale
+            figure_factory       (fnc): Use to generate the figure
+            axes_range           (str): the "field of view" to show
+            fig         (pylab.figure): A figure instance
             add_parameter_text (tuple): Display a parameter in the table on the plot
                                         ((text, parameter_number), (text, parameter_number),...)
-            datacolor (matplotlib color compatible)
-            modelcolor (matplotlib color compatible)
-
+            datacolor            (str): color for the data points
+            modelcolor           (str): color for the model prediction
 
         Returns:
             pylab.figure

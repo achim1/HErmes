@@ -2,10 +2,7 @@
 Models for particle fluxes. These are just examples, for specific cosmic ray modelss
 have a look at e.g. https://github.com/afedynitch/CRFluxModels.git
 """
-from builtins import object
-
 import numpy as np
-
 
 class PowerLawFlux(object):
     """
@@ -16,9 +13,9 @@ class PowerLawFlux(object):
     def __init__(self, emin, emax, phi0, gamma):
         """
         Args:
-            emin (float): minimum energy
-            emax (float): maximum energy
-            phi0 (float): normalization
+            emin  (float): minimum energy
+            emax  (float): maximum energy
+            phi0  (float): normalization
             gamma (float): spectral index
         """
         self.emin = emin

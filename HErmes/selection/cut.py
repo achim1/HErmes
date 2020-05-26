@@ -2,10 +2,6 @@
 Remove part of the data which falls below a certain criteria.
 """
 
-from __future__ import absolute_import
-
-
-from builtins import object
 from .variables import Variable as V
 
 from collections import defaultdict

@@ -2,7 +2,6 @@
 Container classes for variables
 """
 
-from builtins import object
 import numpy as np
 import os
 import pandas as pd
@@ -13,7 +12,6 @@ import array
 import numbers
 from ..utils import files as f
 from ..utils import Logger
-from future.utils import with_metaclass
 from copy import deepcopy as copy
 DEFAULT_BINS = 70
 
@@ -362,7 +360,7 @@ class VariableRole(enum.Enum):
 
 ##############################################################
 
-class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
+class AbstractBaseVariable(metaclass=abc.ABCMeta):
     """
     Read out tagged numerical data from files
     """    

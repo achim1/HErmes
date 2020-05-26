@@ -3,7 +3,6 @@ Datasets group categories together. Method calls on datasets invoke the individu
 on the individual categories. Cuts applied to datasets will act on each individual category.
 
 """
-from __future__ import division
 
 import pandas as pd
 import numpy as np
@@ -16,7 +15,6 @@ from ..utils import isnotebook
 from ..utils import Logger
 from dashi.tinytable import TinyTable
 
-from builtins import object
 from . import categories
 
 def get_label(category):

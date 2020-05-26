@@ -2,7 +2,6 @@
 Unit conversions and such
 """
 
-from builtins import object
 from numpy import vectorize,int32
 #from icecube import icetray,dataclasses,NewNuFlux
 ####################################################

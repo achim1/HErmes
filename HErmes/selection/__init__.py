@@ -20,7 +20,6 @@ HErmes.selection provides the following submodules:
 
 
 """
-from __future__ import absolute_import
 
 import hjson
 import os
@@ -47,7 +46,7 @@ def load_dataset(config,
     with variables from the files given in the configuration file.
 
     Args:
-        config (str/dict): json style config file or dict
+        config   (str/dict): json style config file or dict
 
     Keyword Args:
         variables (list)   : list of strings of variable names to read out

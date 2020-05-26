@@ -24,7 +24,6 @@ __all__ = ["fitting", "icecube_goodies", "utils",\
            "selection", "visual", "analysis"]
 
 import os.path
-
 import hepbasestack as hep
 
 from . import utils

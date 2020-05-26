@@ -1,8 +1,13 @@
+"""
+HErmes setup.py file. To install, run python setup.py install. Requirese python >=3.6
+
+"""
+
 import sys
 import re
 import os
 import os.path
-
+import pathlib
 from setuptools import setup
 
 
@@ -11,8 +16,6 @@ def is_tool(name):
 
     from distutils.spawn import find_executable
     return find_executable(name) is not None
-
-
 
 # get_version and conditional adding of pytest-runner
 # are taken from 
@@ -31,38 +34,19 @@ version = get_version('HErmes')
 with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
     long_description = readme.read()
 
-
-def parse_requirements(req_file):
-    with open(req_file) as f:
-        reqs = []
-        for r in f.readlines():
-            if not r.startswith("http"):
-                reqs.append(r)
-            elif ";" in r:
-                continue # FIXME: find better solution
-                #data = r.split(";")       
-                #reqs.append(data[0]) 
-        return reqs
-
-no_parse_requirements = False
-
-try:
-    requirements = parse_requirements("requirements.txt")
-except Exception as e:
-    no_parse_requirements = True
-
-if sys.version_info.major < 3:
-    no_parse_requirements = True 
-    
-if no_parse_requirements:
-    print ("Not parsing requiremnts.txt, installing requirements from list in setup.py...")
-    requirements = ['numpy>=1.9.0',
-                     'matplotlib>=1.5.0',
-                     'pandas>=0.17.1',
-                     'appdirs>=1.4.0',
-                     'future>=0.16.0',
-                     'pyprind>=2.9.6']
-
+#parse the requirements.txt file
+# FIXME: this might not be the best way
+install_requires = []
+with pathlib.Path('requirements.txt').open() as requirements_txt:
+    for line in requirements_txt.readlines():
+        if line.startswith('#'):
+            continue
+        try:
+            req = str([j for j in pk.parse_requirements(line)][0])
+        except Exception as e:
+            print (f'WARNING: {e} : Can not parse requirement {line}')
+            continue
+        install_requires.append(req)
 
 h5ls_available = is_tool('h5ls')
 if not h5ls_available:
@@ -90,14 +74,14 @@ setup(name='HErmes',
       author_email="achim.stoessl@gmail.com",
       url='https://github.com/achim1/HErmes',
       #download_url="pip install HErmes",
-      install_requires=requirements, 
+      install_requires=install_requires, 
       setup_requires=setup_requires,
       license="GPL",
       #cmdclass={'install': full_install},
       platforms=["Ubuntu 18.04", "Ubuntu 20.04"],
       classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta"
         "Intended Audience :: Science/Research",
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 3.6",

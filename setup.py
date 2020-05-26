@@ -85,14 +85,14 @@ setup(name='HErmes',
       setup_requires=setup_requires,
       license="GPL",
       #cmdclass={'install': full_install},
-      platforms=["Ubuntu 14.04","Ubuntu 16.04", "Ubuntu 16.10", "SL6.1"],
+      platforms=["Ubuntu 18.04", "Ubuntu 20.04"],
       classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Science/Research",
         "Intended Audience :: Developers",
-        "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.8",
         "Topic :: Scientific/Engineering :: Physics"
               ],
       keywords=["event selection", "physics",\

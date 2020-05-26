@@ -6,6 +6,12 @@ import os.path
 from setuptools import setup
 
 
+def is_tool(name):
+    """Check whether `name` is on PATH."""
+
+    from distutils.spawn import find_executable
+    return find_executable(name) is not None
+
 
 
 # get_version and conditional adding of pytest-runner
@@ -58,6 +64,9 @@ if no_parse_requirements:
                      'pyprind>=2.9.6']
 
 
+h5ls_available = is_tool('h5ls')
+if not h5ls_available:
+    print ("ERROR: h5ls is not installed. This will cause MASSIVE problems in case you intend to work with hdf files.")
 
 #requirements.append("tables>=3.3.0") # problem with travis CI, removed from requirments.txt
 

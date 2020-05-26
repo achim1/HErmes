@@ -347,6 +347,8 @@ def test_dataset(prepare_testtable, prepare_sparser_testtable):
     #data.set_weightfunction(hobo_weightfunc)
     #data.get_weights(models)
     data.calculate_weights()
+    print (type(data.weights))
+    print (data.weights)
     assert len(data.weights) > 0
     data.integrated_rate
     data.sum_rate(categories=["exp", "nu"])

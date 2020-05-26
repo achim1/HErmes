@@ -94,7 +94,7 @@ class Cut(object):
                                                            other.condition[k])
                     else:
                         newcut.condition[k] = other.condition[k]
-        return new
+        return newcut
 
     def __iter__(self):
         """

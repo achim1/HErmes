@@ -72,12 +72,12 @@ def extract_from_root(filename, definitions,
             #branch = rootfile[definitions[i][0]].get(definitions[i][1])
             success = True
         except KeyError as e:
-            Logger.warning("Can not find address {}".format(definitions[i]))
+            Logger.warning(f"Can not find address {definitions[i]}")
             i+=1
         except IndexError:
-            Logger.critical("None of the provided keys could be found {}".format(definitions))
+            Logger.critical(f"None of the provided keys could be found {definitions}")
             break
-    Logger.debug("Found valid definitions {}".format(definitions[i]))
+    Logger.debug(f"Found valid definitions {definitions[i]}")
 
     ##FiXME make logger.critical end program!
     if nevents is not None:
@@ -91,7 +91,7 @@ def extract_from_root(filename, definitions,
         len(data[0])
         multidim = True
     except TypeError:
-        Logger.debug("Assuming scalar data {}".format(definitions[i]))
+        Logger.debug(f"Assuming scalar data {definitions[i]}")
 
     if multidim:
         Logger.debug("Inspecting data...")
@@ -211,14 +211,14 @@ def harvest(filenames, definitions, **kwargs):
         pd.Series or pd.DataFrame
     """
 
-    nevents = kwargs["nevents"] if "nevents" in kwargs else None
-    fill_empty = kwargs["fill_empty"] if "fill_empty" in kwargs else False
+    nevents          = kwargs["nevents"] if "nevents" in kwargs else None
+    fill_empty       = kwargs["fill_empty"] if "fill_empty" in kwargs else False
     reduce_dimension = kwargs["reduce_dimension"] if "reduce_dimension" in kwargs else None
-    transform = kwargs["transformation"] if "transformation" in kwargs else None
-    dtype = kwargs["dtype"] if "dtype" in kwargs else np.float64
+    transform        = kwargs["transformation"] if "transformation" in kwargs else None
+    dtype            = kwargs["dtype"] if "dtype" in kwargs else np.float64
 
     concattable = True
-    data = pd.Series()
+    data = pd.Series(dtype=dtype)
     #multidim_data = pd.DataFrame()
     for filename in filenames:
         filetype = f.strip_all_endings(filename)[1]
@@ -274,11 +274,11 @@ def harvest(filenames, definitions, **kwargs):
         #tmpdata = harvest_single_file(filename, filetype,definitions)
         # self.data = self.data.append(data.map(self.transform))
         # concat should be much faster
-        if not True in [isinstance(tmpdata, k) for k in [pd.Series, pd.Panel, pd.DataFrame] ]:
+        if not True in [isinstance(tmpdata, k) for k in [pd.Series, pd.DataFrame] ]:
             concattable = False
 
         if not concattable:
-            Logger.warn("Data {} can not be concatted, keep that in mind!".format(definitions))
+            Logger.warning(f"Data {definitions} can not be concatted, keep that in mind!")
             try:
                 tmpdata = pd.Series(tmpdata)
                 #return tmpdata
@@ -319,7 +319,7 @@ def freedman_diaconis_bins(data,leftedge,\
         q1          = np.percentile(data[finite_data],25)
         n_data      = len(data)
         if q3 == q1:
-            Logger.warn("Can not calculate bins, falling back... to min max approach")
+            Logger.warning("Can not calculate bins, falling back... to min max approach")
             q3 = max(finite_data)
             q1 = min(finite_data)
 
@@ -328,8 +328,8 @@ def freedman_diaconis_bins(data,leftedge,\
 
 
         if not np.isfinite(bins):
-            Logger.info("Got some nan somewhere: q1 : {}, q3 : {}, n_data : {}, h : {}".format(q1, q3, n_data, h))
-            Logger.warn("Calculate Freedman-Draconis bins failed, calculated nan bins, returning fallback")
+            Logger.info(f"Got some nan somewhere: q1 : {q1}, q3 : {q3}, n_data : {n_data}, h : {h}")
+            Logger.warning("Calculate Freedman-Draconis bins failed, calculated nan bins, returning fallback")
             bins = fallbackbins
 
         if bins < minbins:
@@ -337,7 +337,7 @@ def freedman_diaconis_bins(data,leftedge,\
         if bins > maxbins:
             bins = maxbins
     except Exception as e:
-        Logger.warn("Calculate Freedman-Draconis bins failed {0}".format( e.__repr__()))
+        Logger.warning(f"Calculate Freedman-Draconis bins failed {e}")
         bins = fallbackbins
     return bins
 
@@ -462,7 +462,7 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
             return self._data.values
         if not hasattr(self._data, "shape"):
             Logger.warning("Something's wrong, this should be array data!")
-            Logger.warning("Seeeing {} data".format(type(self._data)))
+            Logger.warning(f"Seeeing {type(self._data)} data")
             Logger.warning("Attempting to fix!")
             self._data = np.asarray(self._data)
 
@@ -539,17 +539,26 @@ class CompoundVariable(AbstractBaseVariable):
 
     def __init__(self, name, variables=None, label="",\
                  bins=None, operation=lambda x,y : x + y,
-                 role=VariableRole.SCALAR):
+                 role=VariableRole.SCALAR,
+                 dtype=np.float64):
         """
+        A compound variable is a variable which is created from two or more other variables. This variable does not have
+        a direct representation in a file, but gets calculated on the fly instead, e.g. a residual of two other variables
+        The 'operation' denoted function here defines what operator should be applied to the variables to create the new
+        coumpound variable
+
         Args:
-            name (str): An unique identifier for the new variable.
+            name                                     (str) : An unique identifier for the new variable.
 
         Keyword Args:
-            variables (list): A list of variables used to calculate the new variable.
-            label (str): A label for plotting.
-            bins (np.ndarray): binning for distributions.
-            operation (fnc): The operation which will be applied to variables.
-            role (HErmes.selection.variables.VariableRole): The role the variable is playing. In most cases the default is the best choice
+            variables                               (list) : A list of variables used to calculate the new variable.
+            label                                    (str) : A label for plotting.
+            bins                              (np.ndarray) : binning for distributions.
+            operation                                (fnc) : The operation which will be applied to variables.
+            role (HErmes.selection.variables.VariableRole) : The role the variable is playing.
+                                                             In most cases the default is the best choice. Assigning roles
+                                                             to variables allows for special magic, e.g. in the case
+                                                             of weighting
         """
         AbstractBaseVariable.__init__(self)
         self.name = name
@@ -560,7 +569,7 @@ class CompoundVariable(AbstractBaseVariable):
             variables = []
         self.variables = variables
         self.operation = operation
-        self._data = pd.Series()
+        self._data = pd.Series(dtype=np.float64) #dtype to suppress warning
         self.definitions = ((self.__repr__()),)
 
     def rewire_variables(self, vardict):

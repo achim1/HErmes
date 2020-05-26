@@ -73,7 +73,7 @@ class YStackedCanvas(object):
         axes = [p.axes([left, abs_bot, width, heights[0]])]
         abs_bot = bot + heights[0]
         for h in heights[1:]:
-            Logger.warn("Creating axes with {}".format(left, abs_bot, width, h))
+            Logger.warning(f"Creating axes with left: {left} abs_bot {abs_bot} width {width} and h {h}")
             theaxis = p.axes([left, abs_bot, width, h], sharex=axes[0])
             p.setp(theaxis.get_xticklabels(), visible=False)
             p.setp(theaxis.get_xticklines(), visible=False)

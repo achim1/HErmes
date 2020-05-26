@@ -1,4 +1,6 @@
-numpy>=1.9.1
+numpy>=1.18.4
+hepbasestack>=0.1.1
+uproot>=3.11.6
 pyparsing>=2.0.3
 python-dateutil>=2.4.0
 six>=1.9.0
@@ -14,7 +16,6 @@ hjson>=2.0.2
 tables>=3.3.0
 iminuit>=1.2.0
 enum34>=1.1.6;python_version<"3.5"  
-uproot>=2.8.23
 #hepbasestack>=0.0.1
 lz4>=1.1.0
 https://github.com/achim1/dashi/zipball/master#egg=dashi

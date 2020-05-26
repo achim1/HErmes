@@ -75,8 +75,8 @@ def concat_functions(fncs):
 
     """
 
-    datapar = inspect.getargspec(fncs[0]).args[0]
-    pars = [inspect.getargspec(f).args[1:] for f in fncs]
+    datapar = inspect.getfullargspec(fncs[0]).args[0]
+    pars = [inspect.getfullargspec(f).args[1:] for f in fncs]
     npars = [len(prs) for prs in pars]
     renamed_pars = [[k + str(i) for k in ipars] for i,ipars in enumerate(pars)]
     joint_pars = reduce( lambda x,y : x + y, renamed_pars)
@@ -114,7 +114,7 @@ def construct_efunc(x, data, jointfunc, joint_pars):
 
     """
 
-    datapar = inspect.getargspec(jointfunc).args[0]
+    datapar = inspect.getfullargspec(jointfunc).args[0]
     globals().update({"jointfunc" : jointfunc,\
                       "{}".format(datapar) : x,\
                       "data" : data})
@@ -136,7 +136,7 @@ def create_minuit_pardict(fn, startparams, errors, limits, errordef):
     Returns:
         dict
     """
-    parnames = inspect.getargspec(fn).args
+    parnames = inspect.getfullargspec(fn).args
     mindict = dict()
     for i,k in enumerate(parnames):
         mindict[k] = startparams[i]

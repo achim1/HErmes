@@ -327,8 +327,7 @@ class Dataset(object):
         """
         w = dict()
         for cat in self.categories:
-            w[cat.name] = cat.weights
-        print (w)
+            w[cat.name] = pd.Series(cat.weights, dtype=np.float64)
         return pd.DataFrame.from_dict(w,orient='index')
 
     def __repr__(self):
@@ -425,46 +424,47 @@ class Dataset(object):
                      adjust_ticks = lambda x  : x):
         """
         One shot short-cut for one of the most used
-        plots in eventselections
+        plots in eventselections.
 
         Args:
-            name (string): The name of the variable to plot
+            name                 (string) : The name of the variable to plot
 
         Keyword Args:
-            path (str): The path under which the plot will be saved.
-            ratio (list): A ratio plot of these categories will be crated
-            color_palette (str): A predifined color palette (from seaborn or HErmes.plotting.colors) 
-            normalized (bool): Normalize the histogram by number of events
-            transform (callable): Apply this transformation before plotting
-            disable_weights (bool): Disable all weighting to avoid problems with uneven sized arrays
-            styles (dict): plot styling options
-            ylabel (str): general label for y-axis
-            ratiolabel (str): different label for the ratio part of the plot
-            bins (np.ndarray): binning, if None binning will be deduced from the variable definition
-            figure_factory (func): factory function which return a matplotlib.Figure
-            style (string): TODO "modern" || "classic" || "modern-cumul" || "classic-cumul"
-            savepath (string): Save the canvas at given path. None means it will not be saved.
-            external_weights (dict): supply external weights - this will OVERIDE ANY INTERNALLY CALCULATED WEIGHTS and use the supplied weights instead.
-                                     must be in the form { "categoryname" : weights}
-            axis_properties (dict): Manually define a plot layout with up to three axes.
-                                    For example, it can look like this:
-                                    {
-                                        "top": {"type": "h", # histogram
-                                                "height": 0.4, # height in percent
-                                                "index": 2}, # used internally
-                                        "center": {"type": "r", # ratio plot
-                                                    "height": 0.2,
-                                                    "index": 1},
-                                        "bottom": { "type": "c", # cumulative histogram
-                                                    "height": 0.2,
-                                                    "index": 0}
-                                    }
+            path                    (str) : The path under which the plot will be saved.
+            ratio                  (list) : A ratio plot of these categories will be crated
+            color_palette           (str) : A predifined color palette (from seaborn or HErmes.plotting.colors) 
+            normalized             (bool) : Normalize the histogram by number of events
+            transform          (callable) : Apply this transformation before plotting
+            disable_weights        (bool) : Disable all weighting to avoid problems with uneven sized arrays
+            styles                 (dict) : plot styling options
+            ylabel                  (str) : general label for y-axis
+            ratiolabel              (str) : different label for the ratio part of the plot
+            bins             (np.ndarray) : binning, if None binning will be deduced from the variable definition
+            figure_factory         (func) : factory function which return a matplotlib.Figure
+            style                (string) : TODO "modern" || "classic" || "modern-cumul" || "classic-cumul"
+            savepath             (string) : Save the canvas at given path. None means it will not be saved.
+            external_weights       (dict) : supply external weights - this will OVERIDE ANY INTERNALLY CALCULATED WEIGHTS
+                                            and use the supplied weights instead.
+                                            Must be in the form { "categoryname" : weights}
+            axis_properties        (dict) : Manually define a plot layout with up to three axes.
+                                            For example, it can look like this:
+                                            {
+                                                "top": {"type": "h", # histogram
+                                                        "height": 0.4, # height in percent
+                                                        "index": 2}, # used internally
+                                                "center": {"type": "r", # ratio plot
+                                                            "height": 0.2,
+                                                            "index": 1},
+                                                "bottom": { "type": "c", # cumulative histogram
+                                                            "height": 0.2,
+                                                            "index": 0}
+                                            }
 
-            zoomin (bool): If True, select the yrange in a way that the interesting part of the 
-                           histogram is shown. Caution is needed, since this might lead to an
-                           overinterpretation of fluctuations.
-            adjust_ticks (fcn): A function, applied on a matplotlib axes
-                                which will set the proper axis ticks
+            zoomin                 (bool) : If True, select the yrange in a way that the interesting part of the 
+                                            histogram is shown. Caution is needed, since this might lead to an
+                                            overinterpretation of fluctuations.
+            adjust_ticks            (fcn) : A function, applied on a matplotlib axes
+                                           which will set the proper axis ticks
         Returns:
             HErmes.selection.variables.VariableDistributionPlot
         """
@@ -567,10 +567,12 @@ class Dataset(object):
                 weights = external_weights[cat.name]
             elif ((cat.weights is not None) and (not disable_weights)):
                 weights = cat.weights
-                Logger.debug("Found {} weights".format(len(weights)))
+                Logger.debug(f"Found {len(weights)} weights")
+                if not len(weights):
+                    weights = None
             else:
                 weights = None
-            Logger.debug("Adding variable data {}".format(name))
+            Logger.debug(f"Adding variable data {name}")
             plot.add_variable(cat, name, transform=transform, external_weights=weights)
             if cumulative:
                 Logger.debug("Adding variable data {} for cumulative plot".format(name))

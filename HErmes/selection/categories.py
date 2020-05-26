@@ -19,12 +19,15 @@ import concurrent.futures as fut
 import tables
 import matplotlib.colors as colors
 
+from hepbasestack.colors import get_color_palette
+from hepbasestack import isnotebook
+
 from copy import deepcopy
 
-from ..utils import isnotebook
+#from ..utils import isnotebook
 from ..utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from ..utils import Logger
-from ..visual.colors import get_color_palette
+#from ..visual.colors import get_color_palette
 
 from .magic_keywords import MC_P_EN,\
                             MC_P_TY,\
@@ -78,7 +81,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         self.cutmask = np.array([])
         self.plot = True
         self.show_in_table = True
-        self._weights = pd.Series()
+        self._weights = pd.Series(dtype=np.float64) #dtype to suppress warning
 
     def __repr__(self):
         return """<{0}: {1}>""".format(self.__class__, self.name)
@@ -331,8 +334,8 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                 else:
                     bins = self.vardict[varname].calculate_fd_bins()
             except Exception as e:
-                Logger.warn("Can not create Friedman Draconis bins {}".format(e))
-                Logger.warn("Will return 40 as last resort... Recommended to specify bins via the function parameter")
+                Logger.warning(f"Can not create Friedman Draconis bins {e}")
+                Logger.warning("Will return 40 as last resort... Recommended to specify bins via the function parameter")
                 bins = 40
         palette = get_color_palette()
         plotdict = False
@@ -379,7 +382,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             try:
                 style = self.plot_options["histotype"]
             except KeyError:
-                Logger.warn("Can not derive plot style. Falling back to line plot!")
+                Logger.warning("Can not derive plot style. Falling back to line plot!")
                 style = "line"
 
         if style == "line":
@@ -513,7 +516,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                 # special treatement if variable
                 # is an array
                 if (self[varname].ndim == 2) or (len(self[varname].shape) == 2):
-                    Lgger.warning("Cut on array variable {} can be only applied inline!".format(varname))
+                    Logger.warning("Cut on array variable {} can be only applied inline!".format(varname))
                     Logger.warning("Conditions can not be applied to array variable!")
                     for i, k in enumerate(s):
                         tmpmask =  op(s[i],value) 
@@ -602,7 +605,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         Logger.info("Found {} variables".format(len(all_vars)))
         for v in all_vars:
             if v.name in self.vardict:
-                Logger.warn("Variable {} already defined,skipping!".format(v.name))
+                Logger.warning("Variable {} already defined,skipping!".format(v.name))
                 continue
             self.add_variable(v)
 
@@ -1044,8 +1047,8 @@ class Simulation(AbstractBaseCategory):
         Usage example: calculate_weights(model=lambda x: np.pow(x, -2.), model_args=["primary_energy"])
 
         Keyword Args:
-            model (func): The target flux to weight to, if None, generated flux is used for weighting
-            model_args (list): The variables the model should be applied to from the variable dict
+            model (func)      : The target flux to weight to, if None, generated flux is used for weighting
+            model_args (list) : The variables the model should be applied to from the variable dict
 
         Returns:
             np.ndarray
@@ -1059,16 +1062,14 @@ class Simulation(AbstractBaseCategory):
             for var in self.variablenames:
                 if self.vardict[var].role == self.vardict[var].ROLES.FLUXWEIGHT:
                     if fluxvarname is not None:
-                        raise ValueError("Fluxweights already found with {}. Definitiion must be unique. Can not set {}"\
-                                         .format(fluxvarname, var))
+                        raise ValueError(f"Fluxweights already found with {fluxvarname}. Definitiion must be unique. Can not set {var}")
                     fluxvarname = var
-                    Logger.info("Found fluxweights {}".format(fluxvarname))
+                    Logger.info(f"Found fluxweights {fluxvarname}")
                 if self.vardict[var].role == self.vardict[var].ROLES.GENERATORWEIGHT:
                     if generatorvarname is not None:
-                        raise ValueError("Fluxweights already found with {}. Definitiion must be unique. Can not set {}"\
-                                         .format(generatorvarname, var))
+                        raise ValueError(f"Fluxweights already found with {generatorvarname}. Definitiion must be unique. Can not set {var}")
                     generatorvarname = var
-                    Logger.info("Found generator weight {}".format(generatorweight))
+                    Logger.info(f"Found generator weight {var}")
 
             if fluxvarname is None:
                 Logger.warning("Can not find fluxweigths, assuming unity")
@@ -1152,7 +1153,7 @@ class Simulation(AbstractBaseCategory):
     @property
     def livetime(self):
         if self.weights.sum() == 0:
-            Logger.warn("Weightsum is zero!")
+            Logger.warning("Weightsum is zero!")
             return np.nan
         else:
             return self.weights.sum() / np.power(self.weights, 2).sum()
@@ -1187,8 +1188,8 @@ class ReweightedSimulation(Simulation):
     def raw_count(self):
         return self.mother.raw_count
 
-    def read_variables(self,names=None, max_cpu_cores=MAX_CORES):
-        return self.mother.read_variables(names=names, max_cpu_cores=max_cpu_cores)
+    def read_variables(self,names=None, max_cpu_cores=MAX_CORES, dtype=np.float64):
+        return self.mother.read_variables(names=names, max_cpu_cores=max_cpu_cores, dtype=dtype)
 
     def read_mc_primary(self,energy_var=MC_P_EN,\
                        type_var=MC_P_TY,\
@@ -1360,7 +1361,7 @@ class CombinedCategory(object):
 
     @property
     def weights(self):
-        return pd.concat([cat.weights for cat in self.categories])
+        return pd.concat([pd.Series(cat.weights) for cat in self.categories])
 
     @property
     def vardict(self):

@@ -3,20 +3,13 @@
 [![Build Status](https://travis-ci.org/achim1/HErmes.svg?branch=master)](https://travis-ci.org/achim1/HErmes.svg?branch=master)
 [![Docs](https://readthedocs.org/projects/hermes-python/badge/?version=latest)](http://hermes-python.readthedocs.io/en/latest/?badge=latest)
 
-
-
 # HErmes
 
 *Highly efficient rapid multipurpose event selection toolset with a focus on high energy physics analysis tasks* 
 
-
-
-
 Rationale
 ----------------------------
 Aggregate data from hdf or root files and conveniently apply filter criterias.
-
-
 
 Background story
 ----------------------------
@@ -26,7 +19,8 @@ This software was developed while doing an analysis for the [IceCube] (http://ww
 For this analysis data has to be filtered down from 30 events/second to 10 events/year. To estimate signal efficiency and background supression power of the developed filter, the data is compared to simulated data. Different variables are exploited for the filter, and to estimate their performance, they are evalueted for experimental data and various types of simulations. 
 
 Besides writing actual filter and analysis code, a lot of "helper" code was written. It performes tasks like reading out variables from different files and stacking them together, keeping track of their origin.
-Especially keeping alignment between the different types of data (experimental or any simulation) is important. Such "helper" code is e.g. available in the root framework and can be accessed by python through [PyROOT] (https://root.cern.ch/pyroot), but a clean, lean and fun-to-use API was not available yet.
+Especially keeping alignment between the different types of data (experimental or any simulation) is important.
+Such "helper" code is e.g. available in the root framework and can be accessed by python through [PyROOT] (https://root.cern.ch/pyroot), but a clean, lean and fun-to-use API was not available yet (at least in my opinion).
 
 In parts, the problem has been already adressed by [dashi] (https://github.com/emiddell/dashi) which comes with a dataset/hub API, which takes care of wiring between Variables and datafiles, by providing a bundle class which basically extends the dictionary by a lean API to quickly access its contents.
 

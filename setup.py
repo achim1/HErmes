@@ -3,7 +3,6 @@ import re
 import os
 import os.path
 
-
 from setuptools import setup
 
 
@@ -74,6 +73,7 @@ setup_requires = ['pytest-runner'] if needs_pytest else []
 
 setup(name='HErmes',
       version=version,
+      python_requires='>=3.6.0',
       description='Highly efficient, rapid multipurpose event selection',
       #long_description='Manages bookkeeping for different simulation datasets, developed for the use with IceCube data',
       long_description=long_description,
@@ -100,12 +100,10 @@ setup(name='HErmes',
                 "astrophysics", "icecube"],
       tests_require=tests_require,
       packages=['HErmes','HErmes.icecube_goodies',\
-                'HErmes.plotting', 'HErmes.utils',\
+                'HErmes.visual', 'HErmes.utils',\
                 'HErmes.selection', 'HErmes.fitting',\
                 'HErmes.analysis'],
       #scripts=[],
-      package_data={'HErmes': [ 'plotting/HErmes-default.mplstyle',\
-                                'plotting/HErmes-present.mplstyle',\
-                                'utils/PATTERNS.cfg',\
+      package_data={'HErmes': [ 'utils/PATTERNS.cfg',\
                                 "icecube_goodies/geometry_ic86.h5"]}
       )

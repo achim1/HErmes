@@ -15,7 +15,8 @@ import pylab as p
 
 import matplotlib.ticker
 
-from .colors import get_color_palette
+from hepbasestack.colors import get_color_palette
+#from .colors import get_color_palette
 from .canvases import YStackedCanvas
 from ..utils import Logger
 from ..utils import flatten
@@ -403,7 +404,9 @@ class VariableDistributionPlot(object):
         if weights is None:
             self.histograms[name] = d.factory.hist1d(variable_data, bins)
         else:
-            Logger.debug("Found {} weights and {} data points".format(len(weights), len(variable_data)))
+            Logger.debug(f"Found {len(weights)} weights and {len(variable_data)} data points")
+            assert len(weights) == len(variable_data),\
+                 f"Mismatch between len(weights) {len(weights)} and len(variable_data) {len(variable_data)}"
             self.histograms[name] = d.factory.hist1d(variable_data, bins, weights=weights)
         self.label = label
         self.name = name
@@ -588,7 +591,7 @@ class VariableDistributionPlot(object):
         try:
             cfg = copy(self.plot_options[name])
         except KeyError:
-            Logger.warn("No plot configuration available for {}".format(name))
+            Logger.warning("No plot configuration available for {}".format(name))
             cfg = {"histotype": "line",
                    "label": name,
                    "linestyle" : {"color": "k",
@@ -846,7 +849,7 @@ class VariableDistributionPlot(object):
                 lg.get_frame().set_linewidth(legendwidth)
                 lg.get_frame().set_edgecolor("k")
             else:
-                Logger.warn("Can not set legendwidth!")       
+                Logger.warning("Can not set legendwidth!")       
         if style == "modern":
             # be more casual
             lgax.legend() 

@@ -5,12 +5,11 @@ matplotlib.use("Agg")
 
 
 import HErmes.selection.cut as cut
-import HErmes.plotting as plt
-import HErmes.plotting.plotting as pltplt
+import HErmes.visual as plt
+import HErmes.visual.plotting as pltplt
 
-from HErmes.plotting import colors as pc
-from HErmes.plotting import canvases as cv
-from HErmes.plotting import layout
+from HErmes.visual import canvases as cv
+from HErmes.visual import layout
 
 
 @pytest.fixture(scope='session')
@@ -18,26 +17,6 @@ def png_file(tmpdir_factory):
     png = tmpdir_factory.mktemp('data').join("testplot.png")
     return png
 
-def colordictfactory():
-    testdict = {1 : "red", 2: "blue"}
-    return testdict
-    assert config is not None 
-
-
-def test_plotcolors_ColorDict():
-    cd = pc.ColorDict()
-    testdict = colordictfactory()
-    cd.update(testdict)
-    assert cd[1] == "red"
-    assert cd["nan"] == "nan"
-
-
-def test_plotcolors_get_color_palette():
-    cd = pc.get_color_palette()
-    assert isinstance(cd, pc.ColorDict)
-    pc.seaborn_loaded = False
-    cd = pc.get_color_palette()
-    assert isinstance(cd, pc.ColorDict)
 
 def test_YStackedCanvas(png_file):
     import pylab as p

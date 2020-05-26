@@ -236,7 +236,7 @@ def harvest(filenames, definitions, **kwargs):
         else:
             hdftable = filename
 
-        tmpdata = pd.Series()
+        tmpdata = pd.Series(dtype=dtype)
         for definition in definitions:
 
             definition = list(definition) 
@@ -482,16 +482,18 @@ class Variable(AbstractBaseVariable):
                  reduce_dimension=None):
         """
         Args:
-            name (str): An unique identifier
+            name                                     (str) : An unique identifier
 
         Keyword Args:
-            definitions (list): table and/or column names in underlying data
-            bins (numpy.ndarray): used for histograms
-            label (str): used for plotting and as a label in tables
-            transform (func): apply to each member of the underlying data at readout
-            role (HErmes.selection.variables.VariableRole): The role the variable is playing. In most cases the default is the best choice
-            nevents (int): number of events to read in (ROOT only right now!)
-            reduce_dimension (int): in case of multidimensionality, take only the the given index of the array (ROOT only right now)
+            definitions                             (list) : table and/or column names in underlying data
+            bins                           (numpy.ndarray) : used for histograms
+            label                                    (str) : used for plotting and as a label in tables
+            transform                               (func) : apply to each member of the underlying data at readout
+            role (HErmes.selection.variables.VariableRole) : The role the variable is playing. 
+                                                             In most cases the default is the best choice
+            nevents                                  (int) : number of events to read in (ROOT only right now!)
+            reduce_dimension                         (int) : in case of multidimensionality,
+                                                             take only the the given index of the array (ROOT only right now)
         """
         AbstractBaseVariable.__init__(self)
 
@@ -509,7 +511,7 @@ class Variable(AbstractBaseVariable):
         self.label       = label
         self.transform   = transform
         self.definitions = definitions
-        self._data       = pd.Series()
+        self._data       = pd.Series(dtype=np.float64)
         self.nevents     = nevents
         self.reduce_dimension = reduce_dimension
         self._role = role

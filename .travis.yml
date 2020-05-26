@@ -9,7 +9,8 @@ notifications:
 # Setup anaconda
 before_install:
   - uname -r
-  - sudo apt install hdf5-tools
+  - sudo apt-get update
+  - sudo apt-get -y install hdf5-tools
 #  - echo $TRAVIS_PYTHON_VERSION
 #  - if [ $TRAVIS_PYTHON_VERSION >= "3.6" ]; then wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh; fi
 #  - chmod +x miniconda.sh

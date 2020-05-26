@@ -1,26 +1,22 @@
 """
-Provide some simple functions which can be used to create models
+Provide mathematical functions which can be used to create models. 
+The functions have to be always in the form f(x, *parameters) where the
+paramters will be fitted and x are the input values.
 """
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import absolute_import
-
 import numpy as np
 import scipy.stats as st
 
-from future import standard_library
-standard_library.install_aliases()
+#import statsmodels.stats.gof as gof
 
-from ..utils.logger import Logger
+from ..utils import Logger
 
 def poisson(x, lmbda):
     """
     Poisson probability
 
     Args:
-        x (int): measured number of occurences
-        lmbda (int): expected number of occurences
+        x (int)     : measured number of occurences
+        lmbda (int) : expected number of occurences
 
     Returns:
         np.ndarray
@@ -34,13 +30,20 @@ def poisson(x, lmbda):
 
 def pandel_factory(c_ice):
     """
-    Create a pandel function with the defined parameters
+    Create a pandel function with the defined parameters. The pandel function
+    is very specific, and a parametrisation for the delaytime distribution of 
+    photons from a source s measured at a reciever r after traversing a certain
+    large (compared to the size of source or reciever) distance in a homogenous
+    scatterint medium such as ice or water.
+    The version here has a number of fixed parameters optimized for IceCube.
+    This function will generate a Pandel function with a single free parameter, 
+    which is the distance between source and reciever.
 
     Args:
         c_ice (float): group velocity in ice in m/ns
 
     Returns:
-        callable
+        callable (float, float) -> float
     """
     tau = 450.
     el = 47.
@@ -75,9 +78,9 @@ def gauss(x, mu, sigma):
     Returns a normed gaussian.
 
     Args:
-        x (np.ndarray): x values
-        mu (float): Gauss mu
-        sigma (float): Gauss sigma
+        x    (np.ndarray): x values
+        mu        (float): Gauss mu
+        sigma     (float): Gauss sigma
         n:
 
     Returns:
@@ -159,10 +162,63 @@ def calculate_chi_square(data, model_data):
     Returns:
         np.ndarray
     """
-
-    chi = ((data - model_data)**2/data)
-    return chi[np.isfinite(chi)].sum()
+    #FIXME there might be a reason I had chosen 
+    #      for going with my own implenetation 
+    #      initially
+    mask = np.logical_and(np.isfinite(data), np.isfinite(model_data))
+    chi2 =  (data[mask] - model_data[mask])**2/data[mask]
+    chi2 =  (chi2[np.isfinite(chi2)].sum())
+    #chi2 = st.chisquare(scale, model_data)[0]
+    Logger.warn(f'Calculated chi2 of {chi2}')
+    return chi2
+    #return chi[np.isfinite(chi)].sum()
 
 #################################################
 
+def calculate_reduced_chi_square(data, model_data, sigma):
+    """
+    Very simple estimator for goodness-of-fit. Use with care.
+    
+    Args:
+        data (np.ndarray)       : observed data 
+        model_data (np.ndarray) : model predictions 
+        sigma (np.ndarray)      : associated errors
+    Returns:
+    """
+    #FIXME there might be a reason I had chosen 
+    #      for going with my own implenetation 
+    #      initially
+    mask = np.logical_and(np.isfinite(data), np.isfinite(model_data), sigma > 0)
+    chi2 =  (data[mask] - model_data[mask])**2/sigma[mask]
+    chi2 =  (chi2[np.isfinite(chi2)].sum())
+    #chi2 = st.chisquare(scale, model_data)[0]
+    Logger.debug(f'Calculated chi2 of {chi2}')
+    return chi2
 
+#################################################
+
+def williams_correction():
+    """
+    The so-called Williams correction can help to correct
+    a chi2 value in case of bins with low statistics (< 5 entries)
+    """
+    raise NotImplementedError
+
+#################################################
+
+def fwhm_gauss(x, mu, fwhm, amp):
+    """
+    A gaussian typically used for energy spectra fits of radiotion, where
+    resolutions/linewidths are typically given in full widht half maximum (fwhm)
+
+    Args:
+        x (float)    : input
+        mu (float)   : peak position
+        fwhm (float) : full width half maximum
+        amp (float)  : amplitude
+    Return:
+        float        : function value
+    """
+    return amp*np.exp((-4*np.log(2)*((x-mu)**2))/(fwhm**2))
+
+################################################

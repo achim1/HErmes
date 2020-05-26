@@ -1,26 +1,10 @@
 """
 Provide routines for fitting charge histograms
 """
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import absolute_import
-
-from builtins import zip
-from builtins import dict
-from future import standard_library
-standard_library.install_aliases()
-import sys
 import pylab as p
 import numpy as np
+import warnings
 
-
-from functools import reduce
-from copy import deepcopy as copy
-from collections import namedtuple
-
-import scipy.optimize as optimize
-import seaborn.apionly as sb
 import dashi as d
 
 d.visual()
@@ -30,18 +14,14 @@ try:
 except ImportError:
     print ("WARNING, can not load iminuit")
 
-# default color palette
-PALETTE = sb.color_palette("dark")
-
-
 def reject_outliers(data, m=2):
     """
     A simple way to remove extreme outliers from data
 
     Args:
         data (np.ndarray): data with outliers
-        m (int): number of standard deviations outside the
-                 data should be discarded
+        m           (int): number of standard deviations outside the
+                           data should be discarded
 
     Returns:
         np.ndarray
@@ -59,7 +39,7 @@ def fit_model(charges, model, startparams=None, \
               normalize=True,\
               **kwargs):
     """
-    Standardazied fitting routine
+    Standardazied fitting routine. 
 
     Args:
         charges (np.ndarray): Charges obtained in a measurement (no histogram)
@@ -77,6 +57,12 @@ def fit_model(charges, model, startparams=None, \
     Returns:
         tuple
     """
+    warnings.warn(
+        "fit_model is deprecated and will go away in a future releas. Use model.fit_to_data instead.",
+        DeprecationWarning
+        )
+
+
     if rej_outliers:
         charges = reject_outliers(charges)
     if use_minuit:

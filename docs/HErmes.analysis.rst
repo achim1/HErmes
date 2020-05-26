@@ -1,27 +1,27 @@
-HErmes\.analysis package
-========================
+HErmes.analysis package
+=======================
 
 Submodules
 ----------
 
-HErmes\.analysis\.calculus module
----------------------------------
+HErmes.analysis.calculus module
+-------------------------------
 
 .. automodule:: HErmes.analysis.calculus
     :members:
     :undoc-members:
     :show-inheritance:
 
-HErmes\.analysis\.fluxes module
--------------------------------
+HErmes.analysis.fluxes module
+-----------------------------
 
 .. automodule:: HErmes.analysis.fluxes
     :members:
     :undoc-members:
     :show-inheritance:
 
-HErmes\.analysis\.tasks module
-------------------------------
+HErmes.analysis.tasks module
+----------------------------
 
 .. automodule:: HErmes.analysis.tasks
     :members:

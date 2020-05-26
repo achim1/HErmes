@@ -1,91 +1,22 @@
+"""
+HErmes setup.py file. To install, run python setup.py install. Requirese python >=3.6
+
+"""
+
 import sys
 import re
 import os
 import os.path
-import stat
-import shutil
-import atexit
-import pylab # seems useless, however triggers
-             # the matplotlib.style mechanism
-
-from glob import glob
-
+import pathlib
+import pkg_resources as pk
 from setuptools import setup
-from setuptools.command.install import install
 
 
+def is_tool(name):
+    """Check whether `name` is on PATH."""
 
-def _post_install():
-    """
-    Copy matplotlib style files and set the permissions right
-    - at least for unix/sudo style systems
-
-    Returns:
-        None
-    """
-    print ("--------------------------------")
-    print ("Running post install...")
-
-    import matplotlib
-
-    styles = sorted(glob("resources/*mplstyle"))
-
-    as_root = False
-    if os.getuid() == 0:
-        try:
-            uid = int(os.getenv("SUDO_UID"))
-            gid = int(os.getenv("SUDO_GID"))
-        except Exception as e:
-            print ("Caught exception {}".format(e))
-            print ("There is no SUDO_UID/SUDO_GID shellvariable...")
-            as_root = True
-            
-            import pwd
-            import subprocess as sub
-
-            whois = sub.Popen(["who"], stdout=sub.PIPE).communicate()[0].split()[0]
-            # python2/3
-            if hasattr(whois, "decode"):
-                whois = whois.decode()
-
-            uid = int(pwd.getpwnam(whois).pw_uid)
-            gid = int(pwd.getpwnam(whois).pw_gid)
-
-    else:
-        uid = int(os.getuid())
-        gid = int(os.getgid())
-
-    mplstylelib = matplotlib.get_configdir()
-    mplstylelib = os.path.join(mplstylelib, "stylelib")
-    if as_root:
-        mplstylelib = mplstylelib.replace("/root", "/home/" + whois)
-    if not os.path.exists(mplstylelib):
-        print ("WARNING: Can not find stylelib dir {}".format(mplstylelib))
-        print ("Creating {}".format(mplstylelib))
-        os.mkdir(mplstylelib)
-    for st in styles:
-
-        print("INSTALLING {} to {}".format(st, mplstylelib))
-        shutil.copy(st, mplstylelib)
-        with open(os.path.join(mplstylelib, os.path.split(st)[1])) as fd:
-
-            os.fchown(fd.fileno(), uid, gid)
-            #os.fchmod(fd.fileno(), stat.S_IRWXU & stat.S_IRGRP & stat.S_IROTH)
-            os.fchmod(fd.fileno(), 0o755)
-
-    matplotlib.style.reload_library()
-    return
-
-class full_install(install):
-    """
-    Installation routine which executes post_install
-    """
-
-    def __init__(self, *args, **kwargs):
-        #super(new_install, self).__init__(*args, **kwargs)
-        install.__init__(self, *args, **kwargs)
-        #atexit.register(_post_install)
-
+    from distutils.spawn import find_executable
+    return find_executable(name) is not None
 
 # get_version and conditional adding of pytest-runner
 # are taken from 
@@ -104,41 +35,23 @@ version = get_version('HErmes')
 with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
     long_description = readme.read()
 
+#parse the requirements.txt file
+# FIXME: this might not be the best way
+install_requires = []
+with pathlib.Path('requirements.txt').open() as requirements_txt:
+    for line in requirements_txt.readlines():
+        if line.startswith('#'):
+            continue
+        try:
+            req = str([j for j in pk.parse_requirements(line)][0])
+        except Exception as e:
+            print (f'WARNING: {e} : Can not parse requirement {line}')
+            continue
+        install_requires.append(req)
 
-def parse_requirements(req_file):
-    with open(req_file) as f:
-        reqs = []
-        for r in f.readlines():
-            if not r.startswith("http"):
-                reqs.append(r)
-            elif ";" in r:
-                continue # FIXME: find better solution
-                #data = r.split(";")       
-                #reqs.append(data[0]) 
-        return reqs
-
-no_parse_requirements = False
-
-try:
-    requirements = parse_requirements("requirements.txt")
-except Exception as e:
-    no_parse_requirements = True
-
-if sys.version_info.major < 3:
-    no_parse_requirements = True 
-    
-if no_parse_requirements:
-    print ("Not parsing requiremnts.txt, installing requirements from list in setup.py...")
-    requirements = ['numpy>=1.9.0',
-                     'matplotlib>=1.5.0',
-                     'pandas>=0.17.1',
-                     'appdirs>=1.4.0',
-                     'futures>=3.0.5',
-                     'future>=0.16.0',
-                     'tqdm>=4.19.5']
-                     #'pyprind>=2.9.6']
-
-
+h5ls_available = is_tool('h5ls')
+if not h5ls_available:
+    print ("ERROR: h5ls is not installed. This will cause MASSIVE problems in case you intend to work with hdf files.")
 
 #requirements.append("tables>=3.3.0") # problem with travis CI, removed from requirments.txt
 
@@ -154,6 +67,7 @@ setup_requires = ['pytest-runner'] if needs_pytest else []
 
 setup(name='HErmes',
       version=version,
+      python_requires='>=3.6.0',
       description='Highly efficient, rapid multipurpose event selection',
       #long_description='Manages bookkeeping for different simulation datasets, developed for the use with IceCube data',
       long_description=long_description,
@@ -161,18 +75,18 @@ setup(name='HErmes',
       author_email="achim.stoessl@gmail.com",
       url='https://github.com/achim1/HErmes',
       #download_url="pip install HErmes",
-      install_requires=requirements, 
+      install_requires=install_requires, 
       setup_requires=setup_requires,
       license="GPL",
-      cmdclass={'install': full_install},
-      platforms=["Ubuntu 14.04","Ubuntu 16.04", "Ubuntu 16.10", "SL6.1"],
+      #cmdclass={'install': full_install},
+      platforms=["Ubuntu 18.04", "Ubuntu 20.04"],
       classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta"
         "Intended Audience :: Science/Research",
         "Intended Audience :: Developers",
-        "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.8",
         "Topic :: Scientific/Engineering :: Physics"
               ],
       keywords=["event selection", "physics",\
@@ -180,12 +94,10 @@ setup(name='HErmes',
                 "astrophysics", "icecube"],
       tests_require=tests_require,
       packages=['HErmes','HErmes.icecube_goodies',\
-                'HErmes.plotting', 'HErmes.utils',\
+                'HErmes.visual', 'HErmes.utils',\
                 'HErmes.selection', 'HErmes.fitting',\
                 'HErmes.analysis'],
       #scripts=[],
-      package_data={'HErmes': [ 'plotting/HErmes-default.mplstyle',\
-                                'plotting/HErmes-present.mplstyle',\
-                                'utils/PATTERNS.cfg',\
+      package_data={'HErmes': [ 'utils/PATTERNS.cfg',\
                                 "icecube_goodies/geometry_ic86.h5"]}
       )

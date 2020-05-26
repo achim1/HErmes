@@ -11,7 +11,7 @@ The HErmes modules provides the following submodules:
 
 - `fitting` : Fit models to variable distributions with iminuit.
 
-- `plotting` : Data visualization.
+- `visual` : Data visualization.
 
 - `icecube_goodies` : Weighting for icecube datasets.
 
@@ -19,17 +19,24 @@ The HErmes modules provides the following submodules:
 
 """
 
-__version__ = '0.0.9dev'
+__version__ = '0.1.0'
 __all__ = ["fitting", "icecube_goodies", "utils",\
-           "selection", "plotting", "analysis"]
+           "selection", "visual", "analysis"]
 
 import os.path
+import hepbasestack as hep
 
 from . import utils
-loglevel = utils.logger.LOGLEVEL
+loglevel = hep.logger.LOGLEVEL
 
-from . import plotting
-plotting.add_styles()
+from . import visual
+
+def set_loglevel(level):
+    """
+    Set the loglevel, 10 = debug, 20 = info, 30 = warn
+    """
+    hep.logger.LOGLEVEL = level
+    return
 
 # FIXME documentation
 def _hook():

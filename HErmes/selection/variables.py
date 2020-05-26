@@ -3,24 +3,27 @@ Container classes for variables
 """
 
 from builtins import object
-import numpy as n # remove that in the future
 import numpy as np
 import os
 import pandas as pd
 import tables
 import abc
 import enum
-
+import array
+import numbers
 from ..utils import files as f
-from ..utils.logger import Logger
+from ..utils import Logger
 from future.utils import with_metaclass
-
+from copy import deepcopy as copy
 DEFAULT_BINS = 70
 
 REGISTERED_FILEEXTENSIONS = [".h5"]
 
 try:
     import uproot as ur
+    import uproot_methods.classes.TVector3 as TVector3
+    import uproot_methods.classes.TLorentzVector as TLorentzVector
+    import uproot_methods.classes.TH1
     REGISTERED_FILEEXTENSIONS.append(".root")
 
 except ImportError:
@@ -32,6 +35,8 @@ except ImportError:
 # multiprocessing approach
 def extract_from_root(filename, definitions,
                       nevents=None,
+                      dtype=np.float64,
+                      transform = None,
                       reduce_dimension=None):
     """
     Use the uproot system to get information from rootfiles. Supports a basic tree of
@@ -39,38 +44,42 @@ def extract_from_root(filename, definitions,
 
     Args:
         filename (str): datafile
-        defininitiions (list): tree and branch adresses
+        definitiions (list): tree and branch adresses
 
     Keyword Args:
         nevents (int): number of events to read out
         reduce_dimension (int): If data is vector-type, reduce it by taking the n-th element
+        dtype (np.dtyoe):  A numpy datatype, default double (np.float64) - use smaller dtypes to 
+                           save memory
+        transform (func): A function which directy transforms the readout data
     """
 
     can_be_concatted = False
-    file = ur.open(filename)
+    rootfile = ur.open(filename)
     success = False
     i=0
     branch = None
     # it will most likely work only with TTrees
     while not success:
         try:
-            tree = file.get(definitions[i][0])
+            tree = rootfile.get(definitions[i][0])
             branch = tree
             for address in definitions[i][1:]:
+                Logger.debug("Searching for address {}".format(address))
                 branch = branch.get(address)
 
             #tree = file[definitions[i][0]]
-            #branch = file[definitions[i][0]].get(definitions[i][1])
+            #branch = rootfile[definitions[i][0]].get(definitions[i][1])
             success = True
         except KeyError as e:
-            Logger.warning("Can not find address {}".format(definitions[i]))
+            Logger.warning(f"Can not find address {definitions[i]}")
             i+=1
         except IndexError:
-            Logger.critical("None of the provided keys could be found {}".format(definitions))
+            Logger.critical(f"None of the provided keys could be found {definitions}")
             break
-    Logger.debug("Found valid definitions {}".format(definitions[i]))
+    Logger.debug(f"Found valid definitions {definitions[i]}")
 
-    #FiXME make logger.critical end program!
+    ##FiXME make logger.critical end program!
     if nevents is not None:
         data = branch.array(entrystop=nevents)
     else:
@@ -81,42 +90,90 @@ def extract_from_root(filename, definitions,
     try:
         len(data[0])
         multidim = True
-        Logger.debug("Assuming array data {}".format(definitions[i]))
     except TypeError:
-        Logger.debug("Assuming scalar data {}".format(definitions[i]))
+        Logger.debug(f"Assuming scalar data {definitions[i]}")
+
+    if multidim:
+        Logger.debug("Inspecting data...")
+        tmp_lengths = set([len(k) for k in data])
+        Logger.debug("Found {}".format(tmp_lengths))
+        firstlen = list(tmp_lengths)[0]
+        if (len(tmp_lengths) == 1) and (firstlen == 1):
+            multidim = False
+            Logger.debug("Found data containing iterables of size 1... flattening!")
+            del tmp_lengths
+            if dtype != np.float64:
+                tmpdata = array.array("f",[])
+            else:
+                tmpdata = array.array("d",[])
+            if isinstance(data[0][0], numbers.Number):
+                [tmpdata.append(dtype(k)) for k in data]
+                #tmpdata = np.asarray([k[0] for k in data])
+                #multidim = True
+                data = tmpdata
+                del tmpdata 
+            else:
+                Logger.info("Is multidim data")
+                multidim = True
+        else:
+            del tmp_lengths
+            multidim = True
+            Logger.debug("Assuming array data {}".format(definitions[i]))
 
     if reduce_dimension is not None:
         if not multidim:
             raise ValueError("Can not reduce scalar data!")
         if isinstance(reduce_dimension, int):
-            data = np.array([k[reduce_dimension] for k in data])
+            data = np.array([k[reduce_dimension] for k in data], dtype=dtype)
             multidim = False
         else:
             data = [[k[reduce_dimension[1]] for k in j] for j in data]
-
     if multidim:
         Logger.debug("Grabbing multidimensional data from root-tree for {}".format(definitions[i]))
-
+        del data
         if nevents is None:
             data = branch.array() #this will be a jagged array now!
         else:
             data = branch.array(entrystop=nevents)
-
-        tmpdata = [np.array(i) for i in data]
+        del branch
+        if (len(data[0])):
+            if isinstance(data[0][0], TVector3.TVector3):
+                Logger.info("Found TVector3 data, treating appropriatly")
+                data =  pd.Series([np.array([i.x,i.y,i.z], dtype=dtype) for i in data])
+            if isinstance(data[0][0], TLorentzVector.TLorentzVector):
+                Logger.info("Found TLorentzVector data, treating appropriatly")
+                data =  pd.Series([np.array([i.x,i.y,i.z,i.t], dtype=dtype) for i in data])
+        else: # probably number then    
+            data = pd.Series([np.asarray(i,dtype=dtype) for i in data])
+    
         # the below might not be picklable (multiprocessing!)
         #tmpdata = [i for i in data]
         # FIXME: dataframe/series
         # try to convert this to a pandas dataframe
         #data = pd.DataFrame(tmpdata)
-        data = pd.Series(tmpdata)
-
         can_be_concatted = True
-        #data.shape = (len(data),None)
-        #data.ndim = 2
+        data.multidim = True
     else:
         Logger.debug("Grabbing scalar data from root-tree for {}".format(definitions[i]))
-        data = pd.Series(np.asarray(data))
+        # convert in cases of TVector3/TLorentzVector
+
+        if isinstance(data[0], TVector3.TVector3):
+            Logger.debug("Found TVector3")
+            data =  pd.Series([np.array([i.x,i.y,i.z], dtype=dtype) for i in data])
+        elif isinstance(data[0], TLorentzVector.TLorentzVector):
+            Logger.debug("Found TLorentzVector")
+            data =  pd.Series([np.array([i.x,i.y,i.z, i.t], dtype=dtype) for i in data])
+        else:
+            try:
+                #FIXME: why is that asarray needed?
+                #data = pd.Series(np.asarray(data,dtype=dtype))
+                data = pd.Series(data,dtype=dtype)
+            except TypeError: # data consist of some object
+                data = pd.Series(data) 
+        Logger.debug("Got {} elements for {}".format(len(data), definitions[i]))
         can_be_concatted = True
+    if transform is not None:
+        data = transform(data)
     return data, can_be_concatted
 
 ################################################################
@@ -147,25 +204,29 @@ def harvest(filenames, definitions, **kwargs):
                                             using the index given by reduce_dimension.
                                             E.g. in case of a TVector3, and we want to have onlz
                                             x, that would be 0, y -> 1 and z -> 2.
-
-        FIXME: Not implemented yet! precision (int): Precision in bit
+        dtype (np.dtype) : datatype to cast to (default np.float64, but can be used
+                           to reduce memory footprint.
 
     Returns:
         pd.Series or pd.DataFrame
     """
 
-    nevents = kwargs["nevents"] if "nevents" in kwargs else None
-    fill_empty = kwargs["fill_empty"] if "fill_empty" in kwargs else False
+    nevents          = kwargs["nevents"] if "nevents" in kwargs else None
+    fill_empty       = kwargs["fill_empty"] if "fill_empty" in kwargs else False
     reduce_dimension = kwargs["reduce_dimension"] if "reduce_dimension" in kwargs else None
-    transform = kwargs["transformation"] if "transformation" in kwargs else None
+    transform        = kwargs["transformation"] if "transformation" in kwargs else None
+    dtype            = kwargs["dtype"] if "dtype" in kwargs else np.float64
+
     concattable = True
-    data = pd.Series()
+    data = pd.Series(dtype=dtype)
     #multidim_data = pd.DataFrame()
     for filename in filenames:
         filetype = f.strip_all_endings(filename)[1]
 
         assert filetype in REGISTERED_FILEEXTENSIONS, "Filetype {} not known!".format(filetype)
         assert os.path.exists(filename), "File {} does not exist!".format(filetype)
+        if (filetype == ".h5") and (transform is not None):
+            Logger.critical("Can not apply direct transformation for h5 files (yet). This is only important for root files and varaibles which are used as VariableRole.PARAMETER")
         Logger.debug("Attempting to harvest {1} file {0}".format(filename,filetype))
         
         if filetype == ".h5" and not isinstance(filename, tables.table.Table):
@@ -175,7 +236,7 @@ def harvest(filenames, definitions, **kwargs):
         else:
             hdftable = filename
 
-        tmpdata = pd.Series()
+        tmpdata = pd.Series(dtype=dtype)
         for definition in definitions:
 
             definition = list(definition) 
@@ -191,9 +252,9 @@ def harvest(filenames, definitions, **kwargs):
                     if tmpdata.ndim == 2:
                         if data.empty:
                             data = pd.DataFrame()
-                        tmpdata = pd.DataFrame(tmpdata, dtype=n.float32)
+                        tmpdata = pd.DataFrame(tmpdata, dtype=dtype)
                     else:
-                        tmpdata = pd.Series(tmpdata, dtype=n.float32)
+                        tmpdata = pd.Series(tmpdata, dtype=dtype)
 
                     Logger.debug("Found {} entries in table for {}{}".format(len(tmpdata),definition[0],definition[1]))
                     break
@@ -204,6 +265,8 @@ def harvest(filenames, definitions, **kwargs):
             elif filetype == ".root":
                 tmpdata, concattable = extract_from_root(filename, definitions,
                                                          nevents=nevents,
+                                                         dtype=dtype,
+                                                         transform=transform,
                                                          reduce_dimension=reduce_dimension)
         if filetype == ".h5":
             hdftable.close()
@@ -211,13 +274,22 @@ def harvest(filenames, definitions, **kwargs):
         #tmpdata = harvest_single_file(filename, filetype,definitions)
         # self.data = self.data.append(data.map(self.transform))
         # concat should be much faster
+        if not True in [isinstance(tmpdata, k) for k in [pd.Series, pd.DataFrame] ]:
+            concattable = False
+
         if not concattable:
-            logger.warn("Data can not be concatted, keep that in mind!")
-            return tmpdata
+            Logger.warning(f"Data {definitions} can not be concatted, keep that in mind!")
+            try:
+                tmpdata = pd.Series(tmpdata)
+                #return tmpdata
+            except:
+                tmpdata = [k for k in tmpdata]
+                tmpdata = pd.Series(tmpdata)
+                #return tmpdata
 
         data = pd.concat([data, tmpdata])
+
         del tmpdata
-    #print (data)
     return data
 
 ################################################################
@@ -242,16 +314,22 @@ def freedman_diaconis_bins(data,leftedge,\
     """
 
     try:
-        finite_data = n.isfinite(data)
-        q3          = n.percentile(data[finite_data],75)
-        q1          = n.percentile(data[finite_data],25)
+        finite_data = np.isfinite(data)
+        q3          = np.percentile(data[finite_data],75)
+        q1          = np.percentile(data[finite_data],25)
         n_data      = len(data)
+        if q3 == q1:
+            Logger.warning("Can not calculate bins, falling back... to min max approach")
+            q3 = max(finite_data)
+            q1 = min(finite_data)
+
         h           = (2*(q3-q1))/(n_data**1./3)
         bins = (rightedge - leftedge)/h
 
 
-        if not n.isfinite(bins):
-            Logger.warn("Calculate Freedman-Draconis bins failed, calculated nan bins, returning fallback")
+        if not np.isfinite(bins):
+            Logger.info(f"Got some nan somewhere: q1 : {q1}, q3 : {q3}, n_data : {n_data}, h : {h}")
+            Logger.warning("Calculate Freedman-Draconis bins failed, calculated nan bins, returning fallback")
             bins = fallbackbins
 
         if bins < minbins:
@@ -259,7 +337,7 @@ def freedman_diaconis_bins(data,leftedge,\
         if bins > maxbins:
             bins = maxbins
     except Exception as e:
-        Logger.warn("Calculate Freedman-Draconis bins failed {0}".format( e.__repr__()))
+        Logger.warning(f"Calculate Freedman-Draconis bins failed {e}")
         bins = fallbackbins
     return bins
 
@@ -278,7 +356,8 @@ class VariableRole(enum.Enum):
     EVENTID         = 50
     STARTIME        = 60
     ENDTIME         = 70
-
+    FLUXWEIGHT      = 80
+    PARAMETER       = 90 # a single parameter, no array whatsoever
 
 
 ##############################################################
@@ -330,16 +409,26 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
     def bins(self, value):
         self._bins = value
 
-    def calculate_fd_bins(self):
+    def calculate_fd_bins(self, cutmask=None):
         """
         Calculate a reasonable binning
+
+        Keyword Args:
+            cutmask (numpy.ndarray) : a boolean mask to cut on, in case 
+                                      cuts have been applied to the 
+                                      category this data is part of
 
         Returns:
             numpy.ndarray: Freedman Diaconis bins
         """
-        nbins = freedman_diaconis_bins(self.data, min(self.data), max(self.data))
-        self.bins = n.linspace(min(self.data),max(self.data), nbins)
-        return self.bins
+        tmpdata = self.data
+        if cutmask is not None:
+            if len(cutmask) > 0:
+                tmpdata = tmpdata[cutmask]
+
+        nbins = freedman_diaconis_bins(tmpdata, min(tmpdata), max(tmpdata))
+        bins = np.linspace(min(tmpdata),max(tmpdata), nbins)
+        return bins
 
     def harvest(self, *files):
         """
@@ -347,7 +436,11 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
         Args:
             *files: walk through these files and readout
         """
-        self._data = harvest(files, self.definitions)
+        if self.role == VariableRole.PARAMETER:
+            self._data = harvest(files, self.definitions, transformation= self.transform)
+            self._data = self._data[0]
+        else:
+            self._data = harvest(files, self.definitions)
         self.declare_harvested()
 
     @abc.abstractmethod
@@ -356,18 +449,22 @@ class AbstractBaseVariable(with_metaclass(abc.ABCMeta, object)):
 
     @property
     def ndim(self):
+        if hasattr(self._data, "multidim"):
+            if self._data.multidim == True:
+                return 2
         return self._data.ndim
 
     @property
     def data(self):
         if isinstance(self._data, pd.DataFrame):
-            return self._data.as_matrix()
+            #return self._data.as_matrix()
+            #FIXME: as_matrix is depracted in favor of values
+            return self._data.values
         if not hasattr(self._data, "shape"):
             Logger.warning("Something's wrong, this should be array data!")
-            Logger.warning("Seeeing {} data".format(type(self._data)))
+            Logger.warning(f"Seeeing {type(self._data)} data")
             Logger.warning("Attempting to fix!")
             self._data = np.asarray(self._data)
-            return self._data
 
         return self._data
 
@@ -379,29 +476,32 @@ class Variable(AbstractBaseVariable):
     """
 
     def __init__(self, name, definitions=None,\
-                 bins=None, label="", transform=lambda x: x,
+                 bins=None, label="", transform=None,
                  role=VariableRole.SCALAR,
                  nevents=None,
                  reduce_dimension=None):
         """
         Args:
-            name (str): An unique identifier
+            name                                     (str) : An unique identifier
 
         Keyword Args:
-            definitions (list): table and/or column names in underlying data
-            bins (numpy.ndarray): used for histograms
-            label (str): used for plotting and as a label in tables
-            transform (func): apply to each member of the underlying data at readout
-            role (HErmes.selection.variables.VariableRole): The role the variable is playing. In most cases the default is the best choice
-            nevents (int): number of events to read in (ROOT only right now!)
-            reduce_dimension (int): in case of multidimensionality, take only the the given index of the array (ROOT only right now)
+            definitions                             (list) : table and/or column names in underlying data
+            bins                           (numpy.ndarray) : used for histograms
+            label                                    (str) : used for plotting and as a label in tables
+            transform                               (func) : apply to each member of the underlying data at readout
+            role (HErmes.selection.variables.VariableRole) : The role the variable is playing. 
+                                                             In most cases the default is the best choice
+            nevents                                  (int) : number of events to read in (ROOT only right now!)
+            reduce_dimension                         (int) : in case of multidimensionality,
+                                                             take only the the given index of the array (ROOT only right now)
         """
         AbstractBaseVariable.__init__(self)
 
         if definitions is not None:
             #assert not (False in [len(x) <= 2 for x in definitions]), "Can not understand variable definitions {}!".format(definitions)
             self.defsize = len(definitions[0])
-            assert not (False in [len(x) == self.defsize for x in definitions]), "All definitions must have the same length!"
+            #FIXME : not sure how important this is right now
+            #assert not (False in [len(x) == self.defsize for x in definitions]), "All definitions must have the same length!"
         else:
             self.defsize = 0
 
@@ -411,9 +511,10 @@ class Variable(AbstractBaseVariable):
         self.label       = label
         self.transform   = transform
         self.definitions = definitions
-        self._data       = pd.Series()
+        self._data       = pd.Series(dtype=np.float64)
         self.nevents     = nevents
         self.reduce_dimension = reduce_dimension
+        self._role = role
 
         #if self.defsize  == 1:
         #    self.data    = pd.DataFrame()
@@ -440,17 +541,26 @@ class CompoundVariable(AbstractBaseVariable):
 
     def __init__(self, name, variables=None, label="",\
                  bins=None, operation=lambda x,y : x + y,
-                 role=VariableRole.SCALAR):
+                 role=VariableRole.SCALAR,
+                 dtype=np.float64):
         """
+        A compound variable is a variable which is created from two or more other variables. This variable does not have
+        a direct representation in a file, but gets calculated on the fly instead, e.g. a residual of two other variables
+        The 'operation' denoted function here defines what operator should be applied to the variables to create the new
+        coumpound variable
+
         Args:
-            name (str): An unique identifier for the new variable.
+            name                                     (str) : An unique identifier for the new variable.
 
         Keyword Args:
-            variables (list): A list of variables used to calculate the new variable.
-            label (str): A label for plotting.
-            bins (np.ndarray): binning for distributions.
-            operation (fnc): The operation which will be applied to variables.
-            role (HErmes.selection.variables.VariableRole): The role the variable is playing. In most cases the default is the best choice
+            variables                               (list) : A list of variables used to calculate the new variable.
+            label                                    (str) : A label for plotting.
+            bins                              (np.ndarray) : binning for distributions.
+            operation                                (fnc) : The operation which will be applied to variables.
+            role (HErmes.selection.variables.VariableRole) : The role the variable is playing.
+                                                             In most cases the default is the best choice. Assigning roles
+                                                             to variables allows for special magic, e.g. in the case
+                                                             of weighting
         """
         AbstractBaseVariable.__init__(self)
         self.name = name
@@ -461,7 +571,7 @@ class CompoundVariable(AbstractBaseVariable):
             variables = []
         self.variables = variables
         self.operation = operation
-        self._data = pd.Series()
+        self._data = pd.Series(dtype=np.float64) #dtype to suppress warning
         self.definitions = ((self.__repr__()),)
 
     def rewire_variables(self, vardict):

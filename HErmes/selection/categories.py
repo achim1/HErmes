@@ -19,12 +19,15 @@ import concurrent.futures as fut
 import tables
 import matplotlib.colors as colors
 
+from hepbasestack.colors import get_color_palette
+from hepbasestack import isnotebook
+
 from copy import deepcopy
 
-from ..utils import isnotebook
+#from ..utils import isnotebook
 from ..utils.files import harvest_files,DS_ID,EXP_RUN_ID
-from ..utils.logger import Logger
-from ..plotting.colors import get_color_palette
+from ..utils import Logger
+#from ..visual.colors import get_color_palette
 
 from .magic_keywords import MC_P_EN,\
                             MC_P_TY,\
@@ -78,7 +81,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         self.cutmask = np.array([])
         self.plot = True
         self.show_in_table = True
-        self._weights = pd.Series()
+        self._weights = pd.Series(dtype=np.float64) #dtype to suppress warning
 
     def __repr__(self):
         return """<{0}: {1}>""".format(self.__class__, self.name)
@@ -121,6 +124,11 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         debug = []
 
         for v in list(self.vardict.keys()):
+            # omit parameters
+            if self.vardict[v].role == variables.VariableRole.PARAMETER:
+                Logger.debug("Omitting parameter {} from length calculation".format(v))
+                continue 
+
             # if there is a cut applied, this is the
             # cutted array
             variable = self.get(v)
@@ -155,7 +163,9 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                        interpolation="gaussian",
                        cblabel="events",
                        weights=None,
+                       transform=(None,None),
                        despine=False,
+                       alpha=0.95, 
                        return_histo=False):
         """
         Draw a 2d distribution of 2 variables in the same category.
@@ -171,7 +181,9 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             norm (str) : "n" or "density" - make normed histogram
             // style (str): Either "line" or "scatter"
             transform (callable): Apply transformation to the data before plotting
+            alpha (float) : 0-1, transparency of the histogram
             log (bool): Plot yaxis in log scale
+            transform (tuple): Two functions which shall transform sample 1 and 2 respectively
             figure_factory (func): Must return a single matplotlib.Figure, NOTE: figure_factory has priority over fig keyword
             return_histo (bool): Return the histogram instead of the figure. WARNING: changes return type!
         Returns:
@@ -180,20 +192,32 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         """
         sample = []
 
-        for varname in varnames:
+        for var_k,varname in enumerate(varnames):
             var = self.get(varname)
+            if not isinstance(var, np.ndarray):
+                var = var.as_matrix()
+            if transform[var_k] is not None:
+                var = transform[var_k](var)
+            sample.append(var)
+            
 
-            # XXX HACK
-            if not hasattr(var, "ndim"):
-                var = np.asarray(var)
-            if var.ndim != 1:
-                Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\
-                                Data shape is {}".format(self.get(varname).shape))
-                return fig
-            sample.append(np.asarray(var))
+#            # XXX HACK
+#            # FIXME: This doesn't really work...
+#            if not hasattr(var, "ndim"):
+#                var = np.asarray(var)
+#            if var.ndim != 1:
+#                Logger.warning("Unable to histogram array-data. Needs to be flattened (e.g. by averaging first!\
+#                                Data shape is {}".format(self.get(varname).shape))
+#                return fig
+#
+#            # not sure why this is necessary - maybe for 2d arrays_
+#            # FIXME
+#            if transform[var_k] is not None:
+#                sample.append(np.asarray(transform[var_k](np.asarray(var))))
+#            else:
+#                sample.append(np.asarray(var))
+
         sample = tuple(sample)
-
-
         if figure_factory is not None:
             fig = figure_factory()
 
@@ -221,14 +245,15 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             #norm=colors.SymLogNorm(linthresh=0.1, linscale=0.1, vmin=minval, vmax = maxval)
             norm=None
         try:
-            h2.imshow(log=log, cmap=cmap, interpolation=interpolation, alpha=0.95, label='events',
+            h2.imshow(log=log, cmap=cmap,
+                      interpolation=interpolation, alpha=alpha, label='events',
                       norm=norm)
             cb = p.colorbar(drawedges=False, shrink=0.5, orientation='vertical', fraction=0.05)
             cb.set_label(cblabel)
             cb.ticklocation = 'left'
         except Exception as e:
             Logger.warning("Exception encountered when creating colorbar! {}".format(e))
-            Logger.warning("Creation of colorbar failed with min {:4.2e} and max {:4.2e}".format(minval, maxval))
+            #Logger.warning("Creation of colorbar failed with min {:4.2e} and max {:4.2e}".format(minval, maxval))
             Logger.warning("Will try again without using normalization for colorbar...")
             #norm=colors.Normalize(minval, maxval)
             h2.imshow(log=log, cmap=cmap, interpolation=interpolation,
@@ -304,10 +329,13 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             bins = self.vardict[varname].bins
         if bins is None:
             try:
-                bins = self.vardict[varname].calculate_fd_bins()
+                if len(self.cutmask) != 0:
+                    bins = self.varname[varname].calculate_fd_bins(cutmask=self.cutmaks)   
+                else:
+                    bins = self.vardict[varname].calculate_fd_bins()
             except Exception as e:
-                Logger.warn("Can not create Friedman Draconis bins {}".format(e))
-                Logger.warn("Will return 40 as last resort... Recommended to specify bins via the function parameter")
+                Logger.warning(f"Can not create Friedman Draconis bins {e}")
+                Logger.warning("Will return 40 as last resort... Recommended to specify bins via the function parameter")
                 bins = 40
         palette = get_color_palette()
         plotdict = False
@@ -354,7 +382,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             try:
                 style = self.plot_options["histotype"]
             except KeyError:
-                Logger.warn("Can not derive plot style. Falling back to line plot!")
+                Logger.warning("Can not derive plot style. Falling back to line plot!")
                 style = "line"
 
         if style == "line":
@@ -449,7 +477,10 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         """
         self.undo_cuts()
         mask = np.ones(self.raw_count)
-        
+        if self.cuts[0].type == 'OR':
+            Logger.warning("'OR' type cut is experimental!")
+            mask = np.zeros(self.raw_count)
+
         # only apply the condition to the mask
         # created for the cut with the condition
         # not the others
@@ -458,7 +489,6 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             cond_mask = np.ones(self.raw_count)
             if cut.condition is None:
                 continue
-
 
             for varname,(op,value) in cut:
                 s = self.get(varname)
@@ -470,35 +500,70 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         for m in cond_masks:
             mask = np.logical_and(mask,m)
 
+        # only for non-conditional cuts
         for cut in self.cuts:
             if cut.condition is not None:
                 continue
+
+            thiscutmask = np.ones(self.raw_count)
+            if cut.type == 'OR':
+                Logger.warning("'OR' type cut is experimental!")
+                thiscutmask = np.zeros(self.raw_count)
+            
             for varname, (op,value) in cut:
                 s = self.get(varname)
-                
+                Logger.debug("Cutting on {}".format(varname))
                 # special treatement if variable
                 # is an array
-                if self[varname].ndim == 2:
-                    Logger.warning("Cut on array variable can be only applied inline!")
+                if (self[varname].ndim == 2) or (len(self[varname].shape) == 2):
+                    Logger.warning("Cut on array variable {} can be only applied inline!".format(varname))
                     Logger.warning("Conditions can not be applied to array variable!")
                     for i, k in enumerate(s):
-                        mask =  op(s[i],value) 
-                        s[i] = cut_with_nans(s[i], mask)
+                        tmpmask =  op(s[i],value) 
+                        s[i] = cut_with_nans(s[i], tmpmask)
                     self.vardict[varname]._data = s
-
+                # in the case of a jagged array, it will be recognized as 
+                # one dimensional.
+                # However, the entries of the array are iterables
+                elif hasattr(self.vardict[varname]._data[0],"__iter__"):
+                    #Logger.warning("Cut on jagged array for variable {}! Can only be applied inplace!".format(varname))
+                    Logger.warning("Conditions can not be applied to array variable! However, this will happen in a future version...")
+                    Logger.warning("Cut on jagged array for varialbe {} is currently an experimental feature".format(varname))
+                    #for i, k in enumerate(s):
+                    #    tmpmask =  op(s[i],value) 
+                    #    s[i] = cut_with_nans(s[i], tmpmask)
+                    #self.vardict[varname]._data = s
+                    #inplace = True        
+                    assert len(mask) == len(op(s, value)),\
+                        "Cutting fails due to different variable lengths for {}".format(varname)
+                    if cut.type == 'OR':
+                        Logger.warning("'OR' cut is still experimental!")
+                        thiscutmask = np.logical_or(thiscutmask, op(s, value))
+                    else:
+                        thiscutmask = np.logical_and(thiscutmask, op(s, value))
                 else:
                     assert len(mask) == len(op(s, value)),\
                         "Cutting fails due to different variable lengths for {}".format(varname)
-                    mask = np.logical_and(mask, op(s,value))
-
+                    if cut.type == 'OR':
+                        Logger.warning("'OR' cut is still experimental!")
+                        thiscutmask = np.logical_or(thiscutmask, op(s, value))
+                    else:
+                        thiscutmask = np.logical_and(thiscutmask, op(s,value))
+            if not mask.any():
+                mask = np.logical_or(thiscutmask, mask)
+            else:
+                mask = np.logical_and(thiscutmask, mask)
         if inplace:
             for k in list(self.vardict.keys()):
-                if self.vardict[varname].ndim != 2:
+                if self.vardict[k].ndim != 2:
                     self.vardict[k]._data = self.vardict[k].data[mask]
-        elif self.vardict[varname].ndim != 2:
-            self.cutmask = np.array(mask, dtype=bool)
         else:
-            pass
+            # multidim variables are cut inline anyway
+            self.cutmask = np.array(mask, dtype=bool)
+        #elif self.vardict[varname].ndim != 2:
+        #    self.cutmask = np.array(mask, dtype=bool)
+        #else:
+        #    pass
 
     def undo_cuts(self):
         """
@@ -540,7 +605,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         Logger.info("Found {} variables".format(len(all_vars)))
         for v in all_vars:
             if v.name in self.vardict:
-                Logger.warn("Variable {} already defined,skipping!".format(v.name))
+                Logger.warning("Variable {} already defined,skipping!".format(v.name))
                 continue
             self.add_variable(v)
 
@@ -607,10 +672,13 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
 
         force = False
         append = False
+        only_nfiles = None
         if "force" in kwargs:
             force = kwargs.pop("force")
         if "append" in kwargs:
             append = kwargs.pop("append")
+        if "only_nfiles" in kwargs:
+            only_nfiles = kwargs.pop("only_nfiles")
         if self.harvested:
             Logger.info("Variables have already been harvested!\
                          if you really want to reload the filelist,\
@@ -626,11 +694,13 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         datasets = {}
         if "datasets" in kwargs:
             datasets = kwargs["datasets"]
+            Logger.debug("Found datasets".format(datasets))
             self.datasets = kwargs.pop("datasets")
 
         if datasets:
             filtered_files = []
             files = harvest_files(*args, **kwargs)
+            Logger.debug("Found {} files, will start filtering...".format(len(files)))
             datasets = [self._ds_regexp(x) for x in files]
             assert len(datasets) == len(files)
 
@@ -640,6 +710,9 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             files = filtered_files
         else:
             files = harvest_files(*args, **kwargs)
+
+        if only_nfiles is not None:
+            files = files[:only_nfiles]
 
         if append:
             self.files += files
@@ -668,6 +741,9 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
                         if isinstance(n, tables.Group):
                             tablenames.append("Group (unknown name): {}".format(n.__members__))
                     t.close()
+            else:
+                Logger.info("Can not peek into rootfiles at the moment")
+
         return tablenames
 
     def get(self, varkey, uncut=False):
@@ -681,22 +757,26 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             uncut (bool): never return cutted values
         """
 
-
         if varkey not in self.vardict:
             raise KeyError("{} not found!".format(varkey))
+
+        # a single value for the parameters - no len available
+        if self.vardict[varkey].role == variables.VariableRole.PARAMETER:
+            return self.vardict[varkey].data
 
         if len(self.vardict[varkey].data) and len(self.cutmask) and not uncut:
             return self.vardict[varkey].data[self.cutmask]
         else:
             return self.vardict[varkey].data
 
-    def read_variables(self, names=None, max_cpu_cores=MAX_CORES):
+    def read_variables(self, names=None, max_cpu_cores=MAX_CORES, dtype=np.float64):
         """
         Harvest the variables in self.vardict
 
         Keyword Args:
             names (list): havest only these variables
             max_cpu_cores (list): use a maximum of X cores of the cpu
+            dtype (np.dtype) : Cast to this datatype (defalut np.float64)
         """
 
         assert self.files, "Need to assign some files before reading out variables"
@@ -731,10 +811,16 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             # FIXME: Make it an option to not use
             # multi cpu readout!
             #self.vardict[varname].data = variables.harvest(self.files,self.vardict[varname].definitions)
-            future_to_varname[executor.submit(variables.harvest,
-                                              self.files,
-                                              self.vardict[varname].definitions,
-                                              nevents = self.vardict[varname].nevents,
+            direct_trafo = None
+            if self.vardict[varname].role == variables.VariableRole.PARAMETER:
+                # we need to apply  the transformation directly at readout
+                direct_trafo = self.vardict[varname].transform
+            future_to_varname[executor.submit(variables.harvest,\
+                                              self.files,\
+                                              self.vardict[varname].definitions,\
+                                              nevents = self.vardict[varname].nevents,\
+                                              dtype = dtype,\
+                                              transformation = direct_trafo,\
                                               reduce_dimension = self.vardict[varname].reduce_dimension)] = varname
                                               #transformation = self.vardict[varname].transform)] = varname
 
@@ -757,16 +843,22 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             Logger.debug("Reading {} finished".format(varname))
             try:
                 data = future.result()
-                Logger.debug("Found {} entries ...".format(len(data)))
+                Logger.debug("Found {} entries for {}".format(len(data), varname))
+            except Exception as exc:
+                exc_caught += "Reading {} for {} generated an exception: {} - {}\n".format(varname,self.name,type(exc), exc)
+                data = pd.Series([])
 
                 # FIXME: check how different these two approaches really are
                 #        the second does not work for some vector data
                 #        from root files
-                data = data.map(self.vardict[varname].transform)
-                #data = self.vardict[varname].transform(data)
-            except Exception as exc:
-                exc_caught += "Reading {} for {} generated an exception: {}\n".format(varname,self.name, exc)
-                data = pd.Series([])
+            # also FIXME: in case of parameters, we apply the transformation directy when 
+            # reading the file out, in case it is some object which does not support 
+            # the numpy mechanism, e.g. root histogram (which is non-picklable) and needs 
+            # to be transformed first.
+            if not self.vardict[varname].role == variables.VariableRole.PARAMETER:
+                if not (self.vardict[varname].transform is None):
+                    data = data.map(self.vardict[varname].transform)
+            #data = self.vardict[varname].transform(data)
 
             self.vardict[varname]._data = data
             self.vardict[varname].declare_harvested()
@@ -955,30 +1047,67 @@ class Simulation(AbstractBaseCategory):
         Usage example: calculate_weights(model=lambda x: np.pow(x, -2.), model_args=["primary_energy"])
 
         Keyword Args:
-            model (func): The target flux to weight to, if None, generated flux is used for weighting
-            model_args (list): The variables the model should be applied to from the variable dict
+            model (func)      : The target flux to weight to, if None, generated flux is used for weighting
+            model_args (list) : The variables the model should be applied to from the variable dict
 
         Returns:
             np.ndarray
         """
-        if self.weightvarname is None:
-            Logger.warn("Have to specify which variable to use for weighting! Set weightvarname first!")
-            self._weights = None
-            return
 
-        #weights = [self.vardict[v] for v in self.vardict if self.vardict[v].role == v.ROLES.WEIGHT]
-        #weight_vars = [v for v in weights if v.name == self.weightvarname]
-        #if len(weight_vars) != 1:
-        #    Logger.warn("Can not calculate weights, {} weight variables found!".format(len(weight_vars)))
+        if model is None:
+            Logger.info("No model given, will attempt automatic weighting")
+            Logger.info("Will deduce weights from variable roles")
+            fluxvarname = None
+            generatorvarname = None
+            for var in self.variablenames:
+                if self.vardict[var].role == self.vardict[var].ROLES.FLUXWEIGHT:
+                    if fluxvarname is not None:
+                        raise ValueError(f"Fluxweights already found with {fluxvarname}. Definitiion must be unique. Can not set {var}")
+                    fluxvarname = var
+                    Logger.info(f"Found fluxweights {fluxvarname}")
+                if self.vardict[var].role == self.vardict[var].ROLES.GENERATORWEIGHT:
+                    if generatorvarname is not None:
+                        raise ValueError(f"Fluxweights already found with {generatorvarname}. Definitiion must be unique. Can not set {var}")
+                    generatorvarname = var
+                    Logger.info(f"Found generator weight {var}")
+
+            if fluxvarname is None:
+                Logger.warning("Can not find fluxweigths, assuming unity")
+                fluxweights = np.ones(self.raw_count)
+            else:
+                fluxweights = self.get(fluxvarname)
+
+            if generatorvarname is None:
+                Logger.warning("Can not find generatorweights, assuming unity")
+                generatorweights = np.ones(self.raw_count)
+            else:
+                generatorweights = self.get(generatorvarname)
+
+            self._weights = fluxweights/generatorweights
+        else:
+            Logger.warning("Model currently not supported")
+            self._weights = None
+        return
+
+        #FIXME
+        #if self.weightvarname is None:
+        #    Logger.warn("Have to specify which variable to use for weighting! Set weightvarname first!")
         #    self._weights = None
         #    return
-        if model is None:
-            self._weights = self.vardict[self.weightvarname].data
-        else:
-            model_args = [self.get(v) for v in model_args]
-            target_flux = model(*model_args)
-            self._weights = target_flux/self.vardict[self.weightvarname].data
-
+        #
+        ##weights = [self.vardict[v] for v in self.vardict if self.vardict[v].role == v.ROLES.WEIGHT]
+        ##weight_vars = [v for v in weights if v.name == self.weightvarname]
+        ##if len(weight_vars) != 1:
+        ##    Logger.warn("Can not calculate weights, {} weight variables found!".format(len(weight_vars)))
+        ##    self._weights = None
+        ##    return
+        #if model is None:
+        #    self._weights = self.vardict[self.weightvarname].data
+        #else:
+        #    model_args = [self.get(v) for v in model_args]
+        #    target_flux = model(*model_args)
+        #    self._weights = target_flux/self.vardict[self.weightvarname].data
+        #
 
     # def get_weights(self, model=None, model_kwargs = None):
     #     """
@@ -1024,7 +1153,7 @@ class Simulation(AbstractBaseCategory):
     @property
     def livetime(self):
         if self.weights.sum() == 0:
-            Logger.warn("Weightsum is zero!")
+            Logger.warning("Weightsum is zero!")
             return np.nan
         else:
             return self.weights.sum() / np.power(self.weights, 2).sum()
@@ -1059,8 +1188,8 @@ class ReweightedSimulation(Simulation):
     def raw_count(self):
         return self.mother.raw_count
 
-    def read_variables(self,names=None, max_cpu_cores=MAX_CORES):
-        return self.mother.read_variables(names=names, max_cpu_cores=max_cpu_cores)
+    def read_variables(self,names=None, max_cpu_cores=MAX_CORES, dtype=np.float64):
+        return self.mother.read_variables(names=names, max_cpu_cores=max_cpu_cores, dtype=dtype)
 
     def read_mc_primary(self,energy_var=MC_P_EN,\
                        type_var=MC_P_TY,\
@@ -1232,7 +1361,7 @@ class CombinedCategory(object):
 
     @property
     def weights(self):
-        return pd.concat([cat.weights for cat in self.categories])
+        return pd.concat([pd.Series(cat.weights) for cat in self.categories])
 
     @property
     def vardict(self):

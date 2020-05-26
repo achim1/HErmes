@@ -11,9 +11,9 @@ import numpy as np
 from collections import OrderedDict
 from copy import deepcopy as copy
 
-from ..plotting import VariableDistributionPlot
+from ..visual import VariableDistributionPlot
 from ..utils import isnotebook
-from ..utils.logger import Logger
+from ..utils import Logger
 from dashi.tinytable import TinyTable
 
 from builtins import object
@@ -138,15 +138,21 @@ class Dataset(object):
     def variablenames(self):
         return {cat.name : cat.variablenames for cat in self.categories}
 
+    @property
+    def files(self):
+        return {cat.name : cat.files for cat in self.categories}
 
     #@GetTiming
-    def read_variables(self, names=None, max_cpu_cores=categories.MAX_CORES):
+    def read_variables(self, names=None,
+                             max_cpu_cores=categories.MAX_CORES,
+                             dtype=np.float64):
         """
         Read out the variable for all categories
 
         Keyword Args:
             names (str): Readout only these variables if given
             max_cpu_cores (int): Maximum number of cpu cores which will be used
+            dtype (np.dtype) : Cast to the given datatype (default is np.flaot64)
         Returns:
             None
         """
@@ -164,7 +170,7 @@ class Dataset(object):
             pass
         for cat in self.categories:
             Logger.debug("Reading variables for {}".format(cat))
-            cat.read_variables(names=names, max_cpu_cores=max_cpu_cores)
+            cat.read_variables(names=names, max_cpu_cores=max_cpu_cores, dtype=dtype)
             if progbar: bar.update()
 
     def drop_empty_variables(self):
@@ -321,8 +327,7 @@ class Dataset(object):
         """
         w = dict()
         for cat in self.categories:
-            w[cat.name] = cat.weights
-        print (w)
+            w[cat.name] = pd.Series(cat.weights, dtype=np.float64)
         return pd.DataFrame.from_dict(w,orient='index')
 
     def __repr__(self):
@@ -342,7 +347,6 @@ class Dataset(object):
 
         Args:
             cut (HErmes.selection.variables.cut.Cut): Append this cut to the internal cutlist
-
         """
         for cat in self.categories:
             cat.add_cut(cut)
@@ -404,6 +408,7 @@ class Dataset(object):
                      cumulative=True,
                      log=False,
                      transform=None,
+                     disable_weights=False,
                      color_palette='dark',
                      normalized = False,
                      styles = dict(),
@@ -412,41 +417,54 @@ class Dataset(object):
                      axis_properties=None,
                      ratiolabel="data/$\Sigma$ bg",
                      bins=None,
-                     figure_factory=None):
+                     external_weights=None,
+                     savepath=None,
+                     figure_factory=None,
+                     zoomin=False,
+                     adjust_ticks = lambda x  : x):
         """
         One shot short-cut for one of the most used
-        plots in eventselections
+        plots in eventselections.
 
         Args:
-            name (string): The name of the variable to plot
+            name                 (string) : The name of the variable to plot
 
         Keyword Args:
-            path (str): The path under which the plot will be saved.
-            ratio (list): A ratio plot of these categories will be crated
-            color_palette (str): A predifined color palette (from seaborn or HErmes.plotting.colors) 
-            normalized (bool): Normalize the histogram by number of events
-            transform (callable): Apply this transformation before plotting
-            styles (dict): plot styling options
-            ylabel (str): general label for y-axis
-            ratiolabel (str): different label for the ratio part of the plot
-            bins (np.ndarray): binning, if None binning will be deduced from the variable definition
-            figure_factory (func): factory function which return a matplotlib.Figure
-            style (string): TODO "modern" || "classic" || "modern-cumul" || "classic-cumul"
-            axis_properties (dict): Manually define a plot layout with up to three axes.
-                                    For example, it can look like this:
-                                    {
-                                        "top": {"type": "h", # histogram
-                                                "height": 0.4, # height in percent
-                                                "index": 2}, # used internally
-                                        "center": {"type": "r", # ratio plot
-                                                    "height": 0.2,
-                                                    "index": 1},
-                                        "bottom": { "type": "c", # cumulative histogram
-                                                    "height": 0.2,
-                                                    "index": 0}
-                                    }
+            path                    (str) : The path under which the plot will be saved.
+            ratio                  (list) : A ratio plot of these categories will be crated
+            color_palette           (str) : A predifined color palette (from seaborn or HErmes.plotting.colors) 
+            normalized             (bool) : Normalize the histogram by number of events
+            transform          (callable) : Apply this transformation before plotting
+            disable_weights        (bool) : Disable all weighting to avoid problems with uneven sized arrays
+            styles                 (dict) : plot styling options
+            ylabel                  (str) : general label for y-axis
+            ratiolabel              (str) : different label for the ratio part of the plot
+            bins             (np.ndarray) : binning, if None binning will be deduced from the variable definition
+            figure_factory         (func) : factory function which return a matplotlib.Figure
+            style                (string) : TODO "modern" || "classic" || "modern-cumul" || "classic-cumul"
+            savepath             (string) : Save the canvas at given path. None means it will not be saved.
+            external_weights       (dict) : supply external weights - this will OVERIDE ANY INTERNALLY CALCULATED WEIGHTS
+                                            and use the supplied weights instead.
+                                            Must be in the form { "categoryname" : weights}
+            axis_properties        (dict) : Manually define a plot layout with up to three axes.
+                                            For example, it can look like this:
+                                            {
+                                                "top": {"type": "h", # histogram
+                                                        "height": 0.4, # height in percent
+                                                        "index": 2}, # used internally
+                                                "center": {"type": "r", # ratio plot
+                                                            "height": 0.2,
+                                                            "index": 1},
+                                                "bottom": { "type": "c", # cumulative histogram
+                                                            "height": 0.2,
+                                                            "index": 0}
+                                            }
 
-
+            zoomin                 (bool) : If True, select the yrange in a way that the interesting part of the 
+                                            histogram is shown. Caution is needed, since this might lead to an
+                                            overinterpretation of fluctuations.
+            adjust_ticks            (fcn) : A function, applied on a matplotlib axes
+                                           which will set the proper axis ticks
         Returns:
             HErmes.selection.variables.VariableDistributionPlot
         """
@@ -545,13 +563,23 @@ class Dataset(object):
 
         Logger.warn("For variables with different lengths the weighting is broken. If weights, it will fail")
         for cat in [x for x in plotcategories if x.plot]:
-            plot.add_variable(cat, name, transform=transform)
-            Logger.debug("Adding variable data {}".format(name))
+            if external_weights is not None:
+                weights = external_weights[cat.name]
+            elif ((cat.weights is not None) and (not disable_weights)):
+                weights = cat.weights
+                Logger.debug(f"Found {len(weights)} weights")
+                if not len(weights):
+                    weights = None
+            else:
+                weights = None
+            Logger.debug(f"Adding variable data {name}")
+            plot.add_variable(cat, name, transform=transform, external_weights=weights)
             if cumulative:
                 Logger.debug("Adding variable data {} for cumulative plot".format(name))
                 plot.add_cumul(cat.name)
 
         if len(ratio[0]) and len(ratio[1]):
+            Logger.debug("Requested to plot ratio {} {}".format(ratio[0], ratio[1]))
             tratio,tratio_err = self.calc_ratio(nominator=ratio[0],\
                                                 denominator=ratio[1])
 
@@ -563,10 +591,15 @@ class Dataset(object):
         plot.plot(axes_locator=axes_locator,\
                   normalized=normalized,\
                   figure_factory=figure_factory,\
-                  log=log,
-                  ylabel=ylabel)
+                  log=log,\
+                  style=style,\
+                  ylabel=ylabel,\
+                  zoomin=zoomin,\
+                  adjust_ticks=adjust_ticks)
         #plot.add_legend()
         #plot.canvas.save(savepath,savename,dpi=350)
+        if savepath is not None:
+            plot.canvas.save(savepath, name)
         return plot
 
     @property

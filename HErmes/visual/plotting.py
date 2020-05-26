@@ -15,44 +15,14 @@ import pylab as p
 
 import matplotlib.ticker
 
-from .colors import get_color_palette
+from hepbasestack.colors import get_color_palette
+#from .colors import get_color_palette
 from .canvases import YStackedCanvas
-from ..utils.logger import Logger
+from ..utils import Logger
+from ..utils import flatten
+from .. import fitting as fit
 
 d.visual()
-
-###############################################
-
-def adjust_minor_ticks(axis, which="x"):
-    """
-    Decorate the x-axis with a reasonable set of
-    minor x-ticks
-    
-    Args:
-        axis (matplotlib.axis): The axis to decorate
-
-    Keyword Args:
-        which (str): either "x", "y" or "both"
-
-    Returns:
-        matplotlib.axis
-
-    """
-    assert which in ("x", "y", "both"), "Unable to find {} axis!".format(which)
-    axes_to_modify = [which]
-    if which == "both":
-        axes_to_modify = ["x", "y"]
-    
-    for which in axes_to_modify:
-        minor_tick_space = getattr(axis, "{}axis".format(which)).get_ticklocs()
-        #minor_tick_space = axis.xaxis.get_ticklocs()
-        minor_tick_space = (minor_tick_space[1] - minor_tick_space[0])/10.
-        if minor_tick_space < 0.1:
-            Logger.debug("Adjusting for small numbers in tick spacing, tickspace detectected {}".format(minor_tick_space))
-            minor_tick_space = 0.1
-        getattr(axis, "{}axis".format(which)).set_minor_locator(matplotlib.ticker.MultipleLocator(minor_tick_space))
-        #axis.xaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(minor_tick_space))
-    return axis
 
 ###############################################
 
@@ -158,7 +128,7 @@ def line_plot(quantities,
         add_ratio (tuple): (["data1"],["data2"])
         ratiolabel (str):
         colors:
-        figure_factory (callable): Factory function returning matpltolib.Figure
+        figure_factory (callable): Factory function returning matplotolib.Figure
 
     Returns:
 
@@ -229,6 +199,135 @@ def line_plot(quantities,
     ax.legend(**legend_kwargs)
     return fig
 
+###############################################
+
+def gaussian_model_fit(data,
+                       startparams=(0,0.2),
+                       fitrange=((None,None), (None,None)),
+                       fig=None,
+                       norm=True,
+                       bins=80,
+                       xlabel='$\\theta_{{rec}} - \\theta_{{true}}$'):
+    """
+    A plot with a gaussian fitted to data. A histogram of the data will be created and a gaussian
+    will be fitted, with 68 and 95 percentiles indicated in the plot.
+
+    Args:
+        data (array-like)        : input data with a (preferably) gaussian distribution
+
+    Keyword Args:
+        startparams (tuple)      : a set of startparams of the gaussian fit. If only
+                                   mu/sigma are given, then the plot will be normalized
+        fig (matplotlib.Figure)  : pre-created figure to draw the plot in 
+        bins (array-like or int) : bins for the underliying histogram
+        fitrange (tuple(min, max): min-max range for the gaussian fit
+        xlabel (str)             : label for the x-axes
+    """
+    if len(startparams) == 3:
+        tofit = lambda x,mean,sigma,amp : amp*fit.gauss(x,mean,sigma)
+    else:
+        tofit = fit.gauss
+    mod = fit.Model(tofit, startparams=startparams)
+    mod.add_data(data, create_distribution=True, bins=bins, normalize=norm)
+    limits = []
+    notempty = False
+    for k in fitrange:
+        thislimit = []
+        for j in k:
+            if j is None:
+                continue
+            else:
+                notempty = True
+                thislimit.append(j)
+        limits.append(tuple(thislimit))
+    limits = tuple(limits)
+    print (limits)
+    if notempty:
+        mod.fit_to_data(limits=limits)
+
+    else:
+        mod.fit_to_data()
+
+
+    thecolors = get_color_palette()
+    fig = mod.plot_result(log=False, xlabel=xlabel, add_parameter_text=(
+     ('$\\mu$& {:4.2e}\\\\', 0), ('$\\sigma$& {:4.2e}\\\\', 1)), datacolor=thecolors[3], modelcolor=thecolors[3], histostyle='line', model_alpha=0.7, fig=fig)
+    ax = fig.gca()
+    ax.grid(1)
+    ax.set_ylim(ymax=1.1 * max(mod.data))
+    upper68 = mod.distribution.stats.mean + mod.distribution.stats.std
+    lower68 = mod.distribution.stats.mean - mod.distribution.stats.std
+    lower95 = mod.distribution.stats.mean - 2 * mod.distribution.stats.std
+    upper95 = mod.distribution.stats.mean + 2 * mod.distribution.stats.std
+    ax.axvspan(lower68, upper68, facecolor=thecolors[8], alpha=0.7, ec='none')
+    ax.axvspan(lower95, upper95, facecolor=thecolors[8], alpha=0.3, ec='none')
+    ax.text(lower68 * 0.9, max(mod.data) * 0.98, '68\\%', color=thecolors[3], fontsize=20)
+    ax.text(lower95 * 0.9, max(mod.data) * 0.85, '95\\%', color=thecolors[3], fontsize=20)
+    return (mod, fig)
+
+
+###############################################
+
+def gaussian_fwhm_fit(data,
+                      startparams=(0,0.2,1),\
+                      fitrange=((None,None), (None,None), (None, None)),\
+                      fig=None,\
+                      bins=80,\
+                      xlabel='$\\theta_{{rec}} - \\theta_{{true}}$'):
+    """
+    A plot with a gaussian fitted to data. A histogram of the data will be created and a gaussian
+    will be fitted, with 68 and 95 percentiles indicated in the plot. The gaussian will be in a form
+    so that the fwhm can be read directly from it. The "width" parameter of the gaussian is NOT the
+    standard deviation, but FWHM!
+
+    Args:
+        data (array-like)        : input data with a (preferably) gaussian distribution
+
+    Keyword Args:
+        startparams (tuple)      : a set of startparams of the gaussian fit. It is a 3
+                                   parameter fit with mu, fwhm and amplitude
+        fitrange (tuple)         : if desired, the fit can be restrained. One tuple of (min, max) per
+                                   parameter
+        fig (matplotlib.Figure)  : pre-created figure to draw the plot in
+        bins (array-like or int) : bins for the underliying histogram
+        xlabel (str)             : label for the x-axes
+    """
+    mod = fit.Model(fit.fwhm_gauss, startparams=startparams)
+    mod.add_data(data, create_distribution=True, bins=bins, normalize=False)
+    limits = []
+    notempty = False
+    for k in fitrange:
+        thislimit = []
+        for j in k:
+            if j is None:
+                continue
+            else:
+                notempty = True
+                thislimit.append(j)
+        limits.append(tuple(thislimit))
+    limits = tuple(limits)
+    print (limits)
+    if notempty:
+        mod.fit_to_data(limits=limits)
+
+    else:
+        mod.fit_to_data()
+
+    thecolors = get_color_palette()
+    fig = mod.plot_result(log=False, xlabel=xlabel, add_parameter_text=(
+        ('$\\mu$& {:4.2e}\\\\', 0), ('FWHM& {:4.2e}\\\\', 1), ('AMP& {:4.2e}\\\\',2)), datacolor=thecolors[3], modelcolor=thecolors[3], histostyle='line', model_alpha=0.7, fig=fig)
+    ax = fig.gca()
+    ax.grid(1)
+    ax.set_ylim(ymax=1.1 * max(mod.data))
+    upper68 = mod.distribution.stats.mean + mod.distribution.stats.std
+    lower68 = mod.distribution.stats.mean - mod.distribution.stats.std
+    lower95 = mod.distribution.stats.mean - 2 * mod.distribution.stats.std
+    upper95 = mod.distribution.stats.mean + 2 * mod.distribution.stats.std
+    ax.axvspan(lower68, upper68, facecolor=thecolors[8], alpha=0.7, ec='none')
+    ax.axvspan(lower95, upper95, facecolor=thecolors[8], alpha=0.3, ec='none')
+    ax.text(lower68 * 0.9, max(mod.data) * 0.98, '68\\%', color=thecolors[3], fontsize=20)
+    ax.text(lower95 * 0.9, max(mod.data) * 0.85, '95\\%', color=thecolors[3], fontsize=20)
+    return (mod, fig)
 
 
 ###############################################
@@ -257,7 +356,10 @@ class VariableDistributionPlot(object):
         self.plotratio = False
         self.plotcumul = False
         self.canvas = None
-        self.label = ''
+        if (xlabel is None):
+            self.label = ''
+        else:
+            self.label = xlabel
         self.name = ''
         self.bins = bins
         if cuts is None:
@@ -282,8 +384,8 @@ class VariableDistributionPlot(object):
         self.cuts.append(cut)
 
     def add_data(self, variable_data,\
-                      name, bins=None,\
-                      weights=None, label=''):
+                 name, bins=None,\
+                 weights=None, label=''):
         """
         Histogram the added data and store internally
         
@@ -302,19 +404,26 @@ class VariableDistributionPlot(object):
         if weights is None:
             self.histograms[name] = d.factory.hist1d(variable_data, bins)
         else:
+            Logger.debug(f"Found {len(weights)} weights and {len(variable_data)} data points")
+            assert len(weights) == len(variable_data),\
+                 f"Mismatch between len(weights) {len(weights)} and len(variable_data) {len(variable_data)}"
             self.histograms[name] = d.factory.hist1d(variable_data, bins, weights=weights)
         self.label = label
         self.name = name
 
-    def add_variable(self, category, variable_name, transform=None):
+    def add_variable(self, category,
+                     variable_name,
+                     external_weights=None,
+                     transform=None):
         """
         Convenience interface if data is sorted in categories already
 
         Args:
-            category (pyevsel.variables.category.Category): Get variable from this category
+            category (HErmese.variables.category.Category): Get variable from this category
             variable_name (string): The name of the variable
 
         Keyword Args:
+            external_weights (np.ndarray): Supply an array for weighting. This will OVERIDE ANY INTERNAL WEIGHTING MECHANISM and use the supplied weights.
             transform (callable): Apply transformation todata
 
         """
@@ -323,26 +432,48 @@ class VariableDistributionPlot(object):
         if self.bins is None:
             self.bins = category.vardict[variable_name].bins
         self.name = variable_name
-        Logger.warning("Weighting is broken at the moment, FIXME!")
-        #weights = category.weights
-        #if len(weights) == 0:
-        #    weights = None
-        weights = None
+        if external_weights is None:
+            Logger.warning("Internal weighting mechanism is broken at the moment, FIXME!")
+            #weights = category.weights
+            #if len(weights) == 0:
+            #    weights = None
+            weights = None
+        else:
+            weights = external_weights
         if transform is None: transform = lambda x : x
-        self.add_data(transform(category.get(variable_name)),\
+        data = category.get(variable_name)
+        #print (variable_name)
+        #print (data)
+        #print (data[0])
+        # FIXME: check this
+        # check pandas series and 
+        # numpy array difference
+        # FIMXME: values was as_matrix before - adapt changes in requirements.txt
+        try:
+            data = data.values
+        except:
+            pass
+        # hack for applying the weights
+        if hasattr(data[0],"__iter__"):
+            if weights is not None:
+                Logger.warning("Multi array data for {} detected. Trying to apply weights".format(variable_name))
+                tmpweights = np.array([weights[i]*np.ones(len(data[i])) for i in range(len(data))])
+                Logger.warning("Weights broken, assuming flatten as transformation")
+                weights = flatten(tmpweights)
+
+        self.add_data(transform(data),\
                       category.name,\
                       self.bins, weights=weights,\
                       label=category.vardict[variable_name].label)
-
+        
     def add_cumul(self, name):
         """
-        Add a cumulative distribution to the plto
+        Add a cumulative distribution to the plot
 
         Args:
             name (str): the name of the category
         """
         assert name in self.histograms, "Need to add data first"
-
         self.cumuls[name] = self.histograms[name].normalized()
 
     def indicate_cut(self, ax, arrow=True):
@@ -460,7 +591,7 @@ class VariableDistributionPlot(object):
         try:
             cfg = copy(self.plot_options[name])
         except KeyError:
-            Logger.warn("No plot configuration available for {}".format(name))
+            Logger.warning("No plot configuration available for {}".format(name))
             cfg = {"histotype": "line",
                    "label": name,
                    "linestyle" : {"color": "k",
@@ -592,21 +723,37 @@ class VariableDistributionPlot(object):
              combined_ratio=True,\
              combined_cumul=True,
              normalized=True,
+             style="classic",\
              log=True,
              legendwidth = 1.5,
              ylabel="rate/bin [1/s]",
-             figure_factory=None):
+             figure_factory=None,
+             zoomin=False,
+             adjust_ticks=lambda x : x):
         """
         Create the plot
 
         Keyword Args:
-            heights:
-            axes_locator:
+            axes_locator (tuple): A specialized tuple defining where the axes should be located in the plot
+                                  tuple has the following form: 
+                                  ( (PLOTA), (PLOTB), ...) where PLOTA is a tuple itself of the form (int, str, int)
+                                  describing (plotnumber, plottype, height of the axes in the figure)
+                                  plottype can be either: "c" - cumulative
+                                                          "r" - ratio
+                                                          "h" - histogram
             combined_distro:
             combined_ratio:
             combined_cumul:
-            log:
+            log (bool):
+            style (str): Apply a simple style to the plot. Options are "modern" or "classic"
             normalized (bool):
+            figure_factor (fcn): Must return a matplotlib figure, use for custom formatting
+            zoomin (bool): If True, select the yrange in a way that the interesting part of the 
+                           histogram is shown. Caution is needed, since this might lead to an
+                           overinterpretation of fluctuations.
+            adjust_ticks (fcn): A function, applied on a matplotlib axes
+                                which will set the proper axis ticks
+
 
         Returns:
 
@@ -686,23 +833,27 @@ class VariableDistributionPlot(object):
             cur_ax.grid(True)
         lgax = self.canvas.select_axes(-1) # most upper one
         ncol = 2 if len(self.histograms) <= 4 else 3 
-        
-        legend_kwargs = {"bbox_to_anchor": [0., 1.0, 1., .102],
-                         "loc": 3,
-                         "frameon": True,
-                         "ncol": ncol,
-                         "framealpha": 1.,
-                         "borderaxespad": 0,
-                         "mode": "expand",
-                         "handlelength": 2,
-                         "numpoints": 1}
-        lg = lgax.legend(**legend_kwargs)
-        if lg is not None:
-            lg.get_frame().set_linewidth(legendwidth)
-            lg.get_frame().set_edgecolor("k")
-        else:
-            Logger.warn("Can not set legendwidth!")       
- 
+        if style == "classic":
+            # draw the legend in the box above the plot
+            legend_kwargs = {"bbox_to_anchor": [0., 1.0, 1., .102],
+                             "loc": 3,
+                             "frameon": True,
+                             "ncol": ncol,
+                             "framealpha": 1.,
+                             "borderaxespad": 0,
+                             "mode": "expand",
+                             "handlelength": 2,
+                             "numpoints": 1}
+            lg = lgax.legend(**legend_kwargs)
+            if lg is not None:
+                lg.get_frame().set_linewidth(legendwidth)
+                lg.get_frame().set_edgecolor("k")
+            else:
+                Logger.warning("Can not set legendwidth!")       
+        if style == "modern":
+            # be more casual
+            lgax.legend() 
+
         # plot the cuts
         if self.cuts:
             for ax in h_axes:
@@ -713,9 +864,21 @@ class VariableDistributionPlot(object):
                 self.indicate_cut(cur_ax, arrow=False)
         # cleanup
         leftplotedge, rightplotedge, minplotrange, maxplotrange = self.optimal_plotrange_histo(self.histograms.values())
-        maxplotrange += (maxplotrange*0.1)
-           
+        if minplotrange == maxplotrange:
+            Logger.debug("Detected histogram with most likely a single bin!")
+            Logger.debug("Adjusting plotrange")
+            
+        else:
+            if zoomin: 
+                figure_span = maxplotrange - minplotrange
+                minplotrange -= (figure_span*0.1)
+                maxplotrange += (figure_span*0.1) 
+            else: # start at zero and show the boring part
+                minplotrange = 0
+                maxplotrange += (maxplotrange*0.1)
         if log:
+            maxplotrange = 10**(np.log10(maxplotrange) + 1)
+
             if maxplotrange < 1: 
                 minplotrange -= (minplotrange*0.01)
             else:
@@ -753,10 +916,15 @@ class VariableDistributionPlot(object):
                                     labelbottom=False)
         for x in self.canvas.figure.axes:
             x.spines["right"].set_visible(True)
+            adjust_ticks(x)
 
         for ax in h_axes:
             #self.canvas.select_axes(ax[0]).ticklabel_format(useOffset=False, style='plain', axis="y")
             self.canvas.select_axes(ax[0]).get_yaxis().get_offset_text().set_x(-0.1)
+
+        if ((len(h_axes) == 1) and (style == "modern")):
+            self.canvas.select_axes(-1).spines["top"].set_visible(False)
+            self.canvas.select_axes(-1).spines["right"].set_visible(False)
 
 
     @staticmethod
@@ -793,6 +961,7 @@ class VariableDistributionPlot(object):
             if max(h.bincontent[h.bincontent > 0]) > maxplotrange:
                 maxplotrange = max(h.bincontent[h.bincontent > 0])
 
+        Logger.info("Estimated plotrange of xmin {} , xmax {}, ymin {}, ymax {}".format(leftplotedge, rightplotedge, minplotrange, maxplotrange)) 
         return leftplotedge, rightplotedge, minplotrange, maxplotrange
 
 

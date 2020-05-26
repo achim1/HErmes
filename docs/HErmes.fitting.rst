@@ -1,27 +1,27 @@
-HErmes\.fitting package
-=======================
+HErmes.fitting package
+======================
 
 Submodules
 ----------
 
-HErmes\.fitting\.fit module
----------------------------
+HErmes.fitting.fit module
+-------------------------
 
 .. automodule:: HErmes.fitting.fit
     :members:
     :undoc-members:
     :show-inheritance:
 
-HErmes\.fitting\.functions module
----------------------------------
+HErmes.fitting.functions module
+-------------------------------
 
 .. automodule:: HErmes.fitting.functions
     :members:
     :undoc-members:
     :show-inheritance:
 
-HErmes\.fitting\.model module
------------------------------
+HErmes.fitting.model module
+---------------------------
 
 .. automodule:: HErmes.fitting.model
     :members:

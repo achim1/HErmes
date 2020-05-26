@@ -12,9 +12,10 @@ from collections import defaultdict
 from copy import deepcopy as copy
 import operator
 operator_lookup = {\
-    ">" : operator.gt,\
+    ">"  : operator.gt,\
     "==" : operator.eq,\
-    "<" : operator.lt,\
+    "!=" : operator.ne,\
+    "<"  : operator.lt,\
     ">=" : operator.ge,\
     "<=" : operator.le\
     }
@@ -35,6 +36,7 @@ class Cut(object):
         Keyword Args:
             condition (dict): where to apply the cut. It has te be a dictionary of
                               categoryname to np.ndarray(bool)
+            type (str)      : either 'AND' (default) or 'OR'
 
         Returns:
             HErmes.selection.Cut
@@ -42,10 +44,17 @@ class Cut(object):
 
         self.condition = None
         self.name = None
+        self.type = None
+
         if "condition" in kwargs:
             self.condition = kwargs["condition"]
         if 'name' in kwargs:
             self.name = kwargs['name']
+        if 'type' in kwargs:
+            self.type = kwargs['type']
+        else:
+            self.type = 'AND'
+
         self.cutdict = defaultdict(list)
         for var, operation, value in cuts:
             # FIXME: most likely this has to go away...
@@ -65,26 +74,27 @@ class Cut(object):
         return list(self.cutdict.keys())
 
     def __add__(self, other):
-        new = copy(self)
+        newcut = copy(self)
+        assert self.type == other.type, "At the moment, mixing cut types is not supported"
         for k in other.cutdict:
             if k in self.cutdict:
-                new.cutdict[k] += other.cutdict[k]
+                newcut.cutdict[k] += other.cutdict[k]
             else:
-                new.cutdict[k] = other.cutdict[k]
+                newcut.cutdict[k] = other.cutdict[k]
         if other.condition is None:
             pass
         else:
             # condition is dict catname -> np.ndarray(bool)
-            if new.condition is None:
-                new.condition = other.condition
+            if newcut.condition is None:
+                newcut.condition = other.condition
             else:
                 for k in other.condition:
                     if k in self.condition:
-                        new.condition[k] = np.logical_and(self.condition[k],\
+                        newcut.condition[k] = np.logical_and(self.condition[k],\
                                                            other.condition[k])
                     else:
-                        new.condition[k] = other.condition[k]
-        return new
+                        newcut.condition[k] = other.condition[k]
+        return newcut
 
     def __iter__(self):
         """
@@ -100,9 +110,9 @@ class Cut(object):
 
     def __repr__(self):
         if self.condition is not None:
-            rep = """< Cut with condition | \n"""
+            rep = """< {} Cut with condition | \n""".format(self.type)
         else:
-            rep = """< Cut | \n"""
+            rep = """< {} Cut | \n""".format(self.type)
         for i, (j, k) in sorted(self):
             rep += """| {0} {1} {2} \n""".format(i,inv_operator_lookup[j],k)
 

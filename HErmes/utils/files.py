@@ -31,11 +31,11 @@ def _regex_compiler(cfgsection,cfgname,transform = lambda x : x
     Reads out regex from a configfile and compiles them
 
     Args:
-        cfgsection (str): name of the section in the configfile
-        cfgname (str): name of the variable in the section
+        cfgsection     (str) : name of the section in the configfile
+        cfgname        (str) : name of the variable in the section
 
     Keyword Args:
-        transform: apply a transformation to the read-out value
+        transform      (fnc) :        apply a transformation to the read-out value
 
     Returns:
         function: containes the compiled regex
@@ -73,7 +73,7 @@ def strip_all_endings(filename):
         filename (str): a filename which shall be split
 
     Returns:
-        list: file basename + ending
+        list          : file basename + ending
     """
     ending = ENDING(filename)
     while ENDING(ending[0]) is not None:

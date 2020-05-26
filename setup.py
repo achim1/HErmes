@@ -8,6 +8,7 @@ import re
 import os
 import os.path
 import pathlib
+import pkg_resources as pk
 from setuptools import setup
 
 

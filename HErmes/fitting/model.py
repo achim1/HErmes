@@ -460,28 +460,28 @@ class Model(object):
         Add some data to the model, in preparation for the fit. There are two
         modes of this:
         1) Data needs to be histogrammed, then make sure to set
-            'nbins' appropriatly and set the 'create_distribution'
+           'nbins' appropriatly and set the 'create_distribution'
         2) Data needs NOT to be histogrammed. In that case, bins has no meaning
            For a meaningful calculation of chi2, the errors of the data points
            need to be given to data_errs
 
 
         Args:
-            data (np.array)            : input data
+           data (np.array)            : input data
 
         Keyword Args
-            data_errs (np.array)       : errors of the data for chi2 calculation
+           data_errs (np.array)       : errors of the data for chi2 calculation
                                          (only used when not histogramming)
-            nbins (int/np.array)       : number of bins or bin array to be passed 
+           nbins (int/np.array)       : number of bins or bin array to be passed 
                                          to the histogramming routine
-            create_distribution (bool) : data requires the creation of a histogram
+           create_distribution (bool) : data requires the creation of a histogram
                                          first before fitting
-            subtract (callable)        : ?
-            normalize (bool)           : normalize the data before adding
-            density (bool)             : if normalized, assume the data is a pdf.
-                                         if False, use bincount for normalization.
+           subtract (callable)        : ?
+           normalize (bool)           : normalize the data before adding
+           density (bool)             : if normalized, assume the data is a pdf.
+                                        if False, use bincount for normalization.
         Returns:
-
+           None
         """
         if np.isscalar(bins):
             nbins = bins

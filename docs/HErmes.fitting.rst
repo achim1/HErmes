@@ -1,9 +1,6 @@
 HErmes.fitting package
 ======================
 
-Submodules
-----------
-
 HErmes.fitting.fit module
 -------------------------
 

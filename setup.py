@@ -32,8 +32,8 @@ def get_version(package):
 
 version = get_version('HErmes')
 
-with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
-    long_description = readme.read()
+long_description = "Aggregate data from hdf or root files and conveniently apply filter criterias.\
+Explore datasets with ease with a focus on interactivity and rapidity."
 
 #parse the requirements.txt file
 # FIXME: this might not be the best way
@@ -65,7 +65,7 @@ needs_pytest = set(('pytest', 'test', 'ptr')).intersection(sys.argv)
 setup_requires = ['pytest-runner'] if needs_pytest else []
 #setup_requires += ["matplotlib>=1.5.0"]
 
-setup(name='HErmes',
+setup(name='HErmes-py',
       version=version,
       python_requires='>=3.6.0',
       description='Highly efficient, rapid multipurpose event selection',
@@ -82,7 +82,7 @@ setup(name='HErmes',
       platforms=["Ubuntu 18.04", "Ubuntu 20.04"],
       classifiers=[
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
-        "Development Status :: 4 - Beta"
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 3.6",

@@ -345,10 +345,13 @@ class VariableDistributionPlot(object):
                  xlabel=None):
         """
         Keyword Args:
-            bins (array-like): desired binning, if None use default
-            cuts (HErmes.selection.cut.Cut):
-            color_palette (str): use this palette for the plotting
-            xlabel (str): descriptive string for x-label
+            bins               (array-like): desired binning, if None use default
+            cuts (HErmes.selection.cut.Cut): conditions applied to the dataset.
+                                             the cut will not be performed, but visualized
+                                             instead with a line and a arrow indicatng the
+                                             cutted region
+            color_palette             (str): use this palette for the plotting
+            xlabel                    (str): descriptive string for x-label
         """
         self.histograms = {}
         self.histratios = {}
@@ -456,7 +459,7 @@ class VariableDistributionPlot(object):
         # hack for applying the weights
         if hasattr(data[0],"__iter__"):
             if weights is not None:
-                Logger.warning("Multi array data for {} detected. Trying to apply weights".format(variable_name))
+                Logger.warning("Multi array data for {} de tected. Trying to apply weights".format(variable_name))
                 tmpweights = np.array([weights[i]*np.ones(len(data[i])) for i in range(len(data))])
                 Logger.warning("Weights broken, assuming flatten as transformation")
                 weights = flatten(tmpweights)
@@ -574,10 +577,10 @@ class VariableDistributionPlot(object):
         return name
 
     def _draw_distribution(self, ax, name,
-                                 log=True,\
-                                 cumulative=False,
-                                 normalized=False, 
-                                 ylabel="rate/bin [1/s]"):
+                           log=True,\
+                           cumulative=False,
+                           normalized=False, 
+                           ylabel="rate/bin [1/s]"):
         """
         Paint the histograms!
         
@@ -585,8 +588,11 @@ class VariableDistributionPlot(object):
     
         Keyword Args:
             normalized (bool): draw by number of events normalized distribution
-                              
-
+            log        (bool): Use a logarithmic scale for the y-axis                  
+            cumulative (bool): Show a cumulative distribution 
+            normalized (bool): normalize by number of entries
+            ylable      (str): shown label on y-axis
+    
         """
         try:
             cfg = copy(self.plot_options[name])
@@ -759,9 +765,9 @@ class VariableDistributionPlot(object):
 
         """
 
-        Logger.info("Found {} distributions".format(len(self.histograms)))
-        Logger.info("Found {} ratios".format(len(self.histratios)))
-        Logger.info("Found {} cumulative distributions".format(len(self.cumuls)))
+        Logger.info(f"Found {len(self.histograms)} distributions")
+        Logger.info(f"Found {len(self.histratios)} ratios")
+        Logger.info(f"Found {len(self.cumuls)} cumulative distributions")
         if not axes_locator:
             axes_locator = self._locate_axes(combined_cumul,\
                                              combined_ratio,\
@@ -775,8 +781,8 @@ class VariableDistributionPlot(object):
                                      figure_factory=figure_factory)
         
         cu_axes = [x for x in axes_locator if x[1] == "c"]
-        h_axes = [x for x in axes_locator if x[1] == "h"]
-        r_axes = [x for x in axes_locator if x[1] == "r"]
+        h_axes  = [x for x in axes_locator if x[1] == "h"]
+        r_axes  = [x for x in axes_locator if x[1] == "r"]
 
         maxheights = []
         minheights = []

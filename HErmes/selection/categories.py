@@ -962,7 +962,7 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
             dict (name, len)
         """
         if not self.harvested:
-            Logger.warn("No variables for {} loaded yet!".format(self.name))
+            Logger.warning("No variables for {} loaded yet!".format(self.name))
             return {}
 
         lengths = {}

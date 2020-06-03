@@ -19,7 +19,7 @@ The HErmes modules provides the following submodules:
 
 """
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 __all__ = ["fitting", "icecube_goodies", "utils",\
            "selection", "visual", "analysis"]
 
@@ -27,10 +27,12 @@ import os.path
 import hepbasestack as hep
 
 from . import utils
-loglevel = hep.logger.LOGLEVEL
-
 from . import visual
 
+# FIXME:
+# This has to change. HErmes needs
+# to define its own loglevel.
+loglevel = hep.logger.LOGLEVEL
 def set_loglevel(level):
     """
     Set the loglevel, 10 = debug, 20 = info, 30 = warn

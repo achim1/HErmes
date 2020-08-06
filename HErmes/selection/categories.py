@@ -187,7 +187,9 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
         for var_k,varname in enumerate(varnames):
             var = self.get(varname)
             if not isinstance(var, np.ndarray):
-                var = var.as_matrix()
+                #var = var.as_matrix()
+                # the is no 'as_matrix' anymore
+                var = np.array(var)
             if transform[var_k] is not None:
                 var = transform[var_k](var)
             sample.append(var)

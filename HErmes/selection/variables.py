@@ -13,6 +13,10 @@ import numbers
 from ..utils import files as f
 from ..utils import Logger
 from copy import deepcopy as copy
+
+from collections import Sequence
+from itertools import chain, count
+
 DEFAULT_BINS = 70
 
 REGISTERED_FILEEXTENSIONS = [".h5"]
@@ -27,6 +31,26 @@ try:
 except ImportError:
     Logger.warning("No uproot found, root support is limited!")
 
+# helper
+def _depth(seq):
+    """ 
+    Infer out the depth of a nested sequence.
+    """
+    for level in count(1):
+
+        #print (seq)        
+        if not hasattr(seq,"__iter__"):
+            return level
+        else:
+            if not hasattr(seq[0],"__iter__"):
+                return level + 1 
+            else:
+                if len(seq[0]) == 0:
+                    return level + 1 
+            seq = seq[0]
+        #seq = list(chain.from_iterable(s for s in seq if isinstance(s, Sequence)))
+    if level > 5:
+        raise ValueError("This data has a nesting level > 5. This seems at the edge of being useful")
 
 ################################################################
 # define a non-member function so that it can be used in a
@@ -423,6 +447,11 @@ class AbstractBaseVariable(metaclass=abc.ABCMeta):
         if cutmask is not None:
             if len(cutmask) > 0:
                 tmpdata = tmpdata[cutmask]
+        try:
+            min(tmpdata)
+        except Exception as e:
+            Logger.warning(f"Can not infere minimum of {tmpdata}. Fall back to DEFAULT_BINS. This is a bug!")
+            return DEFAULT_BINS
 
         nbins = freedman_diaconis_bins(tmpdata, min(tmpdata), max(tmpdata))
         bins = np.linspace(min(tmpdata),max(tmpdata), nbins)
@@ -447,9 +476,18 @@ class AbstractBaseVariable(metaclass=abc.ABCMeta):
 
     @property
     def ndim(self):
+        """
+        Infer the nesting depth of the data
+        """
         if hasattr(self._data, "multidim"):
             if self._data.multidim == True:
                 return 2
+        if self._data.ndim == 1:
+            # check again
+            level = _depth(self._data)
+            if level != self._data.ndim:
+                Logger.warning(f"Discrepancy in dimensionality found {level} VS {self._data.ndmin}")
+                return level
         return self._data.ndim
 
     @property

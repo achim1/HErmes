@@ -556,7 +556,10 @@ class Model(object):
             # FIXME - new try: use miniuit own cost function for
             # least square
             if self.data_errs is None:
-                _errs = 0
+                # FIXME - this is stupid, however we need something
+                # to work with
+                Logger.warn('No errors given. Will use 1!. This might be wrong (most likely).') 
+                _errs = 1
             else:
                 _errs = self.data_errs
             concated, concated_pars = concat_functions(self._callbacks)

@@ -2,10 +2,6 @@
 An interface to icecube's weighting schmagoigl
 """
 
-from __future__ import division
-
-from builtins import map
-from builtins import object
 
 try:
     from icecube.weighting.weighting import from_simprod, EnergyWeight,ParticleType
@@ -178,7 +174,7 @@ def GetModelWeight(model,datasets,\
     # for -> 1e4 is for the conversion of
     factor = 1.
     gen  = GetGenerator(datasets)
-    if map(int,list(gen.spectra.keys()))[0] in NUTYPES:
+    if [k for k in map(int,list(gen.spectra.keys()))][0] in NUTYPES:
         Logger.debug('Patching weights')
         factor = 5000
     weight = Weight(gen,flux)

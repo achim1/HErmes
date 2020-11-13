@@ -11,6 +11,7 @@ import numpy as np
 import dashi as d
 import pylab as p
 import iminuit
+import iminuit.cost as icost
 import types
 import functools
 import inspect
@@ -460,28 +461,28 @@ class Model(object):
         Add some data to the model, in preparation for the fit. There are two
         modes of this:
         1) Data needs to be histogrammed, then make sure to set
-            'nbins' appropriatly and set the 'create_distribution'
+           'nbins' appropriatly and set the 'create_distribution'
         2) Data needs NOT to be histogrammed. In that case, bins has no meaning
            For a meaningful calculation of chi2, the errors of the data points
            need to be given to data_errs
 
 
         Args:
-            data (np.array)            : input data
+           data (np.array)            : input data
 
         Keyword Args
-            data_errs (np.array)       : errors of the data for chi2 calculation
+           data_errs (np.array)       : errors of the data for chi2 calculation
                                          (only used when not histogramming)
-            nbins (int/np.array)       : number of bins or bin array to be passed 
+           nbins (int/np.array)       : number of bins or bin array to be passed 
                                          to the histogramming routine
-            create_distribution (bool) : data requires the creation of a histogram
+           create_distribution (bool) : data requires the creation of a histogram
                                          first before fitting
-            subtract (callable)        : ?
-            normalize (bool)           : normalize the data before adding
-            density (bool)             : if normalized, assume the data is a pdf.
-                                         if False, use bincount for normalization.
+           subtract (callable)        : ?
+           normalize (bool)           : normalize the data before adding
+           density (bool)             : if normalized, assume the data is a pdf.
+                                        if False, use bincount for normalization.
         Returns:
-
+           None
         """
         if np.isscalar(bins):
             nbins = bins
@@ -552,8 +553,19 @@ class Model(object):
                                                                errors,\
                                                                limits,\
                                                                errordef)
-            # for debugging reasons we attach the minuit instance
-            # to the model if desired
+            # FIXME - new try: use miniuit own cost function for
+            # least square
+            if self.data_errs is None:
+                # FIXME - this is stupid, however we need something
+                # to work with
+                Logger.warn('No errors given. Will use 1!. This might be wrong (most likely).') 
+                _errs = 1
+            else:
+                _errs = self.data_errs
+            concated, concated_pars = concat_functions(self._callbacks)
+            # TODO: this is a vast improvement. Clean up the rest of
+            #       the code
+            errorfunc = icost.LeastSquares(self.xs, self.data, _errs, concated)
             m = iminuit.Minuit(errorfunc, **params)
             m.migrad()
             values = m.values
@@ -562,8 +574,18 @@ class Model(object):
             for k in sorted(m.var2pos, key=m.var2pos.get):
                 if not silent : print (k)
                 parameters.append(m.values[k])
-            self.errors = m.errors
-            self.covariance_matrix = m.covariance
+            #self.covariance_matrix = m.covariance
+            # use hesse() to calculate parabolic errors
+            # FIXME - technically, we should also think about
+            # of employing minos
+            #m.minos()
+            hesse = m.hesse()
+
+            self.errors = dict()
+            for k in hesse:
+                self.errors[k.name] = k.error
+            #self.errors = m.errors
+
         else:
             parameters, covariance_matrix = optimize.curve_fit(self, self.xs,\
                                                            self.data, p0=startparams,\
@@ -592,9 +614,12 @@ class Model(object):
         if self._is_categorical:
             chi2 = (funcs.calculate_chi_square(self.norm*self.data, self.norm * self(self.xs, *parameters)))
         else:
-            # calculate the chi2 
+            # calculate the chi2
             chi2 = (funcs.calculate_reduced_chi_square(self.norm*self.data, self.norm * self(self.xs, *parameters), self.data_errs))
-        self.chi2_ndf = chi2/self.ndf
+        # this is only for the least-square case!
+        self.chi2_ndf = m.fval/(len(self.data) - m.nfit)
+        #self.chi2_ndf = chi2/self.ndf
+        if not silent: print(f'Got degrees of freedom {self.ndf} and chi2 {chi2} - reduced chi2 {self.chi2_ndf}')
 
         # FIXME: new feature
         #for cmp in self.components:

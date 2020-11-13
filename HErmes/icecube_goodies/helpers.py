@@ -2,7 +2,6 @@
 Goodies for icecube
 """
 
-from builtins import object
 import tables
 import numpy as np
 import os

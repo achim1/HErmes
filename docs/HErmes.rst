@@ -9,7 +9,7 @@ Subpackages
     HErmes.analysis
     HErmes.fitting
     HErmes.icecube_goodies
-    HErmes.plotting
+    HErmes.visual
     HErmes.selection
     HErmes.utils
 

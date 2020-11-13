@@ -2,7 +2,6 @@
 Miscellaneous tools
 """
 
-from __future__ import division
 
 __all__ = ["files"]
 

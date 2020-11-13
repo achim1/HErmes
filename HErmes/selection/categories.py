@@ -1,12 +1,6 @@
 """
 Categories of data, like "signal" of "background" etc
 """
-from __future__ import absolute_import
-
-from builtins import zip
-from builtins import map
-from builtins import object
-from future.utils import with_metaclass
 
 
 import pandas as pd
@@ -24,10 +18,8 @@ from hepbasestack import isnotebook
 
 from copy import deepcopy
 
-#from ..utils import isnotebook
 from ..utils.files import harvest_files,DS_ID,EXP_RUN_ID
 from ..utils import Logger
-#from ..visual.colors import get_color_palette
 
 from .magic_keywords import MC_P_EN,\
                             MC_P_TY,\
@@ -61,7 +53,7 @@ def cut_with_nans(data, cutmask):
     return tmpdata
 
 
-class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
+class AbstractBaseCategory(metaclass=abc.ABCMeta):
     """
     Stands for a specific type of data, e.g.
     detector data in a specific configuarion,
@@ -87,7 +79,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         return """<{0}: {1}>""".format(self.__class__, self.name)
 
     def __hash__(self):
-        return hash((self.name,"".join(map(str,list(self.datasets.keys())))))
+        return hash((self.name,"".join([k for k in map(str,list(self.datasets.keys()))])))
 
     def __eq__(self,other):
         if (self.name == other.name) and (list(self.datasets.keys()) == list(other.datasets.keys())):
@@ -195,7 +187,9 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
         for var_k,varname in enumerate(varnames):
             var = self.get(varname)
             if not isinstance(var, np.ndarray):
-                var = var.as_matrix()
+                #var = var.as_matrix()
+                # the is no 'as_matrix' anymore
+                var = np.array(var)
             if transform[var_k] is not None:
                 var = transform[var_k](var)
             sample.append(var)
@@ -970,7 +964,7 @@ class AbstractBaseCategory(with_metaclass(abc.ABCMeta, object)):
             dict (name, len)
         """
         if not self.harvested:
-            Logger.warn("No variables for {} loaded yet!".format(self.name))
+            Logger.warning("No variables for {} loaded yet!".format(self.name))
             return {}
 
         lengths = {}

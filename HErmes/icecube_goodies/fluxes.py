@@ -4,7 +4,6 @@ as well as power law fluxes
 """
 from __future__ import absolute_import
 
-from builtins import object
 import numpy as np
 from functools import reduce
 from . import conversions as conv

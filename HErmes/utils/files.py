@@ -3,13 +3,8 @@ Locate files on the filesystem and
 group them together
 """
 
-from future import standard_library
 from functools import reduce
-standard_library.install_aliases()
 
-from builtins import zip
-from builtins import filter
-from builtins import map
 from configparser import ConfigParser
 from . import logger
 from glob import glob
@@ -135,8 +130,8 @@ def harvest_files(path, ending=".bz2", sanitizer=lambda x : True,\
             ending = "*" + ending
 
         tmpindirs = [item[0] for item in os.walk(path,followlinks=True)]
-        files = reduce(lambda x,y : x+y,list(map(glob,[os.path.join(direc,ending) for direc in tmpindirs])))
-    files = list(filter(sanitizer, files))
+        files = reduce(lambda x,y : x+y,[k for k in map(glob,[os.path.join(direc,ending) for direc in tmpindirs])])
+    files = [k for k in filter(sanitizer, files)]
     files = [prefix + x for x in files]
     files = sorted(files) # ensure that each call returns exact same list
     if "h5" in ending:
@@ -162,9 +157,9 @@ def group_names_by_regex(names,regex=EXP_RUN_ID,firstpattern=GCD,estimate_first=
     Returns:
         list: names grouped by reges with first pattern as leading element
     """
-    identifiers        = list(map(regex,names))
+    identifiers        = [k for k in map(regex,names)]
     unique_identifiers = set(identifiers)
-    meta_names         = list(zip(identifiers,names))
+    meta_names         = [k for k in zip(identifiers,names)]
     def sorter(pair):
         if pair[0] is None:
             return 0
@@ -180,7 +175,7 @@ def group_names_by_regex(names,regex=EXP_RUN_ID,firstpattern=GCD,estimate_first=
             #print firstpattern
             #print k
             #print firstpattern(groupdict[k])
-            first = list(filter(firstpattern,groupdict[k]))
+            first = [k for k in filter(firstpattern,groupdict[k])]
             if len(first) > 1: 
                 Logger.info("First entry is not unique! {}".format(first.__repr__()))  
                 for j in first:

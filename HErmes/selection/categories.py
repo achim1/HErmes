@@ -117,7 +117,8 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
 
         for v in list(self.vardict.keys()):
             # omit parameters
-            if self.vardict[v].role == variables.VariableRole.PARAMETER:
+            if self.vardict[v].role in (variables.VariableRole.PARAMETER,
+                                        variables.VariableRole.PARAMETERARRAY):
                 Logger.debug("Omitting parameter {} from length calculation".format(v))
                 continue 
 
@@ -755,7 +756,8 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
             raise KeyError("{} not found!".format(varkey))
 
         # a single value for the parameters - no len available
-        if self.vardict[varkey].role == variables.VariableRole.PARAMETER:
+        if self.vardict[varkey].role in (variables.VariableRole.PARAMETER,\
+                                         variables.VariableRole.PARAMETERARRAY):
             return self.vardict[varkey].data
 
         if len(self.vardict[varkey].data) and len(self.cutmask) and not uncut:
@@ -806,7 +808,8 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
             # multi cpu readout!
             #self.vardict[varname].data = variables.harvest(self.files,self.vardict[varname].definitions)
             direct_trafo = None
-            if self.vardict[varname].role == variables.VariableRole.PARAMETER:
+            if self.vardict[varname].role in (variables.VariableRole.PARAMETER,\
+                                              variables.VariableRole.PARAMETERARRAY):
                 # we need to apply  the transformation directly at readout
                 direct_trafo = self.vardict[varname].transform
             future_to_varname[executor.submit(variables.harvest,\
@@ -849,7 +852,8 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
             # reading the file out, in case it is some object which does not support 
             # the numpy mechanism, e.g. root histogram (which is non-picklable) and needs 
             # to be transformed first.
-            if not self.vardict[varname].role == variables.VariableRole.PARAMETER:
+            if not self.vardict[varname].role in (variables.VariableRole.PARAMETER,
+                                                  variables.VariableRole.PARAMETERARRAY):
                 if not (self.vardict[varname].transform is None):
                     data = data.map(self.vardict[varname].transform)
             #data = self.vardict[varname].transform(data)

@@ -379,8 +379,8 @@ class VariableRole(enum.Enum):
     STARTIME        = 60
     ENDTIME         = 70
     FLUXWEIGHT      = 80
-    PARAMETER       = 90 # a single parameter, no array whatsoever
-
+    PARAMETER       = 90  # a single parameter, no array whatsoever
+    PARAMETERARRAY  = 100 # an array of parameters
 
 ##############################################################
 

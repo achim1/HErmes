@@ -658,7 +658,8 @@ class VariableDistributionPlot(object):
         else:
             ax.set_ylabel(ylabel)
 
-    def _draw_histratio(self, name, axes, ylim=(0.1,2.5)):
+    def _draw_histratio(self, name, axes, ylim=(0.1,2.5),\
+                        markersize=3):
         """
         Plot one of the ratios
         
@@ -666,8 +667,8 @@ class VariableDistributionPlot(object):
             tuple (float,float) : the min and max of the ratio
         """
         ratio,total_ratio,total_ratio_errors,label = self.histratios[name]
-        ratio.scatter(c="k", marker="o", markersize=3)
-        axes.hlines(total_ratio,axes.get_xlim()[0],axes.get_xlim()[1],linestyle="--")
+        ratio.scatter(c="k", marker="o", markersize=markersize)
+        axes.hlines(total_ratio,axes.get_xlim()[0],axes.get_xlim()[1],linestyle="dashed", lw=1.0)
         if total_ratio_errors is not None:
             axes.hlines(total_ratio + total_ratio_errors,axes.get_xlim()[0],axes.get_xlim()[1],linestyle=":")
             axes.hlines(total_ratio - total_ratio_errors,axes.get_xlim()[0],axes.get_xlim()[1],linestyle=":")

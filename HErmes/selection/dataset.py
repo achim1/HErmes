@@ -414,6 +414,7 @@ class Dataset(object):
                      ylabel="rate/bin [1/s]",
                      axis_properties=None,
                      ratiolabel="data/$\Sigma$ bg",
+                     ratioline=None, 
                      bins=None,
                      external_weights=None,
                      savepath=None,
@@ -437,6 +438,8 @@ class Dataset(object):
             styles                 (dict) : plot styling options
             ylabel                  (str) : general label for y-axis
             ratiolabel              (str) : different label for the ratio part of the plot
+            ratioline             (float) : indicate desired ration with a horizontal line at <value>
+                                            if None, automatically calculate it
             bins             (np.ndarray) : binning, if None binning will be deduced from the variable definition
             figure_factory         (func) : factory function which return a matplotlib.Figure
             style                (string) : TODO "modern" || "classic" || "modern-cumul" || "classic-cumul"
@@ -466,33 +469,6 @@ class Dataset(object):
         Returns:
             HErmes.selection.variables.VariableDistributionPlot
         """
-        
-        
-        # if (not cumulative) or ratio  == ([],[]):
-        #
-        #     # assuming a single cumulative axis
-        #     tmp_axis_properties = dict()
-        #     unassigned_height = 0
-        #
-        #     for key in axis_properties:
-        #         if ("c" == axis_properties[key]["type"]) and (not cumulative):
-        #             unassigned_height += axis_properties[key]["height"]
-        #             continue
-        #         if ("r" == axis_properties[key]["type"]) and (ratio == ([],[])):
-        #             unassigned_height += axis_properties[key]["height"]
-        #             continue
-        #
-        #         tmpdict = copy(axis_properties[key])
-        #         tmpdict["index"] = tmpdict["index"] -1 - bool(ratio == ([],[]))
-        #         tmp_axis_properties.update({key : tmpdict})
-        #
-        #     n_plots = len(tmp_axis_properties.keys())
-        #     extra_height = unassigned_height/float(n_plots)
-        #     for key in tmp_axis_properties:
-        #         tmp_axis_properties[key]["height"] += extra_height
-        #
-        # else:
-        #     tmp_axis_properties = copy(axis_properties)
 
         if axis_properties is not None:
             tmp_axis_properties = copy(axis_properties)
@@ -581,6 +557,9 @@ class Dataset(object):
             tratio,tratio_err = self.calc_ratio(nominator=ratio[0],\
                                                 denominator=ratio[1])
 
+            if ratioline is not None:
+                tratio = ratioline
+            
             plot.add_ratio(ratio[0],ratio[1],\
                            total_ratio=tratio,\
                            label=ratiolabel,

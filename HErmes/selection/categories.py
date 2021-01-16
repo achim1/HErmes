@@ -271,13 +271,18 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
             return h2
         return fig
 
-    def distribution(self, varname, bins=None,\
-                     color=None, alpha=0.5,\
-                     fig=None, xlabel=None,\
+    def distribution(self,\
+                     varname,\
+                     bins=None,\
+                     color=None,\
+                     alpha=0.5,\
+                     fig=None,\
+                     xlabel=None,\
                      norm=False,\
                      filled=None,\
                      legend=True,\
-                     style="line", log=False,
+                     style="line",\
+                     log=False,
                      transform=None,
                      extra_weights=None,
                      figure_factory=None,

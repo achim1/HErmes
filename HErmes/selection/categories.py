@@ -515,6 +515,12 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
                 Logger.debug("Cutting on {}".format(varname))
                 # special treatement if variable
                 # is an array
+                try:
+                    evalhasarray = hasattr(self.vardict[varname]._data[0],"__iter__")
+                except IndexError:
+                    Logger.warning('Caught index error!')
+                    #raise ValueError
+                    evalhasarray = True
                 if (self[varname].ndim == 2) or (len(self[varname].shape) == 2):
                     Logger.warning("Cut on array variable {} can be only applied inline!".format(varname))
                     Logger.warning("Conditions can not be applied to array variable!")
@@ -525,7 +531,7 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
                 # in the case of a jagged array, it will be recognized as 
                 # one dimensional.
                 # However, the entries of the array are iterables
-                elif hasattr(self.vardict[varname]._data[0],"__iter__"):
+                elif evalhasarray:
                     #Logger.warning("Cut on jagged array for variable {}! Can only be applied inplace!".format(varname))
                     Logger.warning("Conditions can not be applied to array variable! However, this will happen in a future version...")
                     Logger.warning("Cut on jagged array for varialbe {} is currently an experimental feature".format(varname))

@@ -1,5 +1,6 @@
 numpy>=1.18.4
-uproot>=3.11.6
+uproot>=4.0.0
+awkward>=1.0.0
 iminuit>=1.5.2
 hjson>=3.0.1
 tables>=3.6.1

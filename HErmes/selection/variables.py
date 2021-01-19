@@ -23,9 +23,9 @@ REGISTERED_FILEEXTENSIONS = [".h5"]
 
 try:
     import uproot as ur
-    import uproot_methods.classes.TVector3 as TVector3
-    import uproot_methods.classes.TLorentzVector as TLorentzVector
-    import uproot_methods.classes.TH1
+    #import uproot_methods.classes.TVector3 as TVector3
+    #import uproot_methods.classes.TLorentzVector as TLorentzVector
+    #import uproot_methods.classes.TH1
     REGISTERED_FILEEXTENSIONS.append(".root")
 
 except ImportError:
@@ -51,6 +51,18 @@ def _depth(seq):
         #seq = list(chain.from_iterable(s for s in seq if isinstance(s, Sequence)))
     if level > 5:
         raise ValueError("This data has a nesting level > 5. This seems at the edge of being useful")
+
+def _array_rd(branch, entry_stop=None):
+    """
+    Get the array method on a branch
+    if there is a problem, then use 
+    numpy instead of awkward
+    """
+    try:
+        data = branch.array(entry_stop=entry_stop)
+    except ur.interpretation.objects.CannotBeAwkward:
+        data = branch.array(entry_stop=entry_stop, library='np')
+    return data
 
 ################################################################
 # define a non-member function so that it can be used in a
@@ -103,9 +115,9 @@ def extract_from_root(filename, definitions,
 
     ##FiXME make logger.critical end program!
     if nevents is not None:
-        data = branch.array(entrystop=nevents)
+        data = _array_rd(branch, entry_stop=nevents)
     else:
-        data = branch.array()
+        data = _array_rd(branch)
 
     # check for dimensionality
     multidim = False
@@ -154,17 +166,22 @@ def extract_from_root(filename, definitions,
         Logger.debug("Grabbing multidimensional data from root-tree for {}".format(definitions[i]))
         del data
         if nevents is None:
-            data = branch.array() #this will be a jagged array now!
+            data = _array_rd(branch)
+            #data = branch.array() #this will be a jagged array now!
         else:
-            data = branch.array(entrystop=nevents)
+            data = _array_rd(branch, entry_stop=nevents)
+            #data = branch.array(entry_stop=nevents)
         del branch
-        if (len(data[0])):
-            if isinstance(data[0][0], TVector3.TVector3):
-                Logger.info("Found TVector3 data, treating appropriatly")
-                data =  pd.Series([np.array([i.x,i.y,i.z], dtype=dtype) for i in data])
-            if isinstance(data[0][0], TLorentzVector.TLorentzVector):
-                Logger.info("Found TLorentzVector data, treating appropriatly")
-                data =  pd.Series([np.array([i.x,i.y,i.z,i.t], dtype=dtype) for i in data])
+        Logger.warn("uproot_methods is incompatible with uproot 4. Can not detect vector types!")
+        #if (len(data[0])):
+        #    if isinstance(data[0][0], TVector3.TVector3):
+        #        Logger.info("Found TVector3 data, treating appropriatly")
+        #        data =  pd.Series([np.array([i.x,i.y,i.z], dtype=dtype) for i in data])
+        #    if isinstance(data[0][0], TLorentzVector.TLorentzVector):
+        #        Logger.info("Found TLorentzVector data, treating appropriatly")
+        #        data =  pd.Series([np.array([i.x,i.y,i.z,i.t], dtype=dtype) for i in data])
+        if False:
+            pass
         else: # probably number then    
             data = pd.Series([np.asarray(i,dtype=dtype) for i in data])
     
@@ -178,18 +195,15 @@ def extract_from_root(filename, definitions,
     else:
         Logger.debug("Grabbing scalar data from root-tree for {}".format(definitions[i]))
         # convert in cases of TVector3/TLorentzVector
-
-        if isinstance(data[0], TVector3.TVector3):
-            Logger.debug("Found TVector3")
-            data =  pd.Series([np.array([i.x,i.y,i.z], dtype=dtype) for i in data])
-        elif isinstance(data[0], TLorentzVector.TLorentzVector):
-            Logger.debug("Found TLorentzVector")
-            data =  pd.Series([np.array([i.x,i.y,i.z, i.t], dtype=dtype) for i in data])
-        else:
+        ##if isinstance(data[0], TVector3.TVector3):
+        if hasattr(data,"fX"): # this is then some root vector type
+            Logger.debug("Found cern root vector type")
+            data = pd.Series([np.array([i.fX, i.fY, i.fZ], dtype=dtype) for i in data])
+        else: # this should be "real scalar data
             try:
                 #FIXME: why is that asarray needed?
-                #data = pd.Series(np.asarray(data,dtype=dtype))
-                data = pd.Series(data,dtype=dtype)
+                data = pd.Series(np.asarray(data,dtype=dtype))
+                #data = pd.Series(data,dtype=dtype)
             except TypeError: # data consist of some object
                 data = pd.Series(data) 
         Logger.debug("Got {} elements for {}".format(len(data), definitions[i]))

@@ -117,7 +117,8 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
 
         for v in list(self.vardict.keys()):
             # omit parameters
-            if self.vardict[v].role == variables.VariableRole.PARAMETER:
+            if self.vardict[v].role in (variables.VariableRole.PARAMETER,
+                                        variables.VariableRole.PARAMETERARRAY):
                 Logger.debug("Omitting parameter {} from length calculation".format(v))
                 continue 
 
@@ -270,13 +271,18 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
             return h2
         return fig
 
-    def distribution(self, varname, bins=None,\
-                     color=None, alpha=0.5,\
-                     fig=None, xlabel=None,\
+    def distribution(self,\
+                     varname,\
+                     bins=None,\
+                     color=None,\
+                     alpha=0.5,\
+                     fig=None,\
+                     xlabel=None,\
                      norm=False,\
                      filled=None,\
                      legend=True,\
-                     style="line", log=False,
+                     style="line",\
+                     log=False,
                      transform=None,
                      extra_weights=None,
                      figure_factory=None,
@@ -509,6 +515,12 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
                 Logger.debug("Cutting on {}".format(varname))
                 # special treatement if variable
                 # is an array
+                try:
+                    evalhasarray = hasattr(self.vardict[varname]._data[0],"__iter__")
+                except IndexError:
+                    Logger.warning('Caught index error!')
+                    #raise ValueError
+                    evalhasarray = True
                 if (self[varname].ndim == 2) or (len(self[varname].shape) == 2):
                     Logger.warning("Cut on array variable {} can be only applied inline!".format(varname))
                     Logger.warning("Conditions can not be applied to array variable!")
@@ -519,7 +531,7 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
                 # in the case of a jagged array, it will be recognized as 
                 # one dimensional.
                 # However, the entries of the array are iterables
-                elif hasattr(self.vardict[varname]._data[0],"__iter__"):
+                elif evalhasarray:
                     #Logger.warning("Cut on jagged array for variable {}! Can only be applied inplace!".format(varname))
                     Logger.warning("Conditions can not be applied to array variable! However, this will happen in a future version...")
                     Logger.warning("Cut on jagged array for varialbe {} is currently an experimental feature".format(varname))
@@ -755,7 +767,8 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
             raise KeyError("{} not found!".format(varkey))
 
         # a single value for the parameters - no len available
-        if self.vardict[varkey].role == variables.VariableRole.PARAMETER:
+        if self.vardict[varkey].role in (variables.VariableRole.PARAMETER,\
+                                         variables.VariableRole.PARAMETERARRAY):
             return self.vardict[varkey].data
 
         if len(self.vardict[varkey].data) and len(self.cutmask) and not uncut:
@@ -806,7 +819,8 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
             # multi cpu readout!
             #self.vardict[varname].data = variables.harvest(self.files,self.vardict[varname].definitions)
             direct_trafo = None
-            if self.vardict[varname].role == variables.VariableRole.PARAMETER:
+            if self.vardict[varname].role in (variables.VariableRole.PARAMETER,\
+                                              variables.VariableRole.PARAMETERARRAY):
                 # we need to apply  the transformation directly at readout
                 direct_trafo = self.vardict[varname].transform
             future_to_varname[executor.submit(variables.harvest,\
@@ -849,7 +863,8 @@ class AbstractBaseCategory(metaclass=abc.ABCMeta):
             # reading the file out, in case it is some object which does not support 
             # the numpy mechanism, e.g. root histogram (which is non-picklable) and needs 
             # to be transformed first.
-            if not self.vardict[varname].role == variables.VariableRole.PARAMETER:
+            if not self.vardict[varname].role in (variables.VariableRole.PARAMETER,
+                                                  variables.VariableRole.PARAMETERARRAY):
                 if not (self.vardict[varname].transform is None):
                     data = data.map(self.vardict[varname].transform)
             #data = self.vardict[varname].transform(data)

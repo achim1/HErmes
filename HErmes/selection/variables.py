@@ -14,7 +14,6 @@ from ..utils import files as f
 from ..utils import Logger
 from copy import deepcopy as copy
 
-from collections import Sequence
 from itertools import chain, count
 
 DEFAULT_BINS = 70
@@ -486,7 +485,7 @@ class AbstractBaseVariable(metaclass=abc.ABCMeta):
             # check again
             level = _depth(self._data)
             if level != self._data.ndim:
-                Logger.warning(f"Discrepancy in dimensionality found {level} VS {self._data.ndmin}")
+                Logger.warning(f"Discrepancy in dimensionality found {level} VS {self._data.ndim}")
                 return level
         return self._data.ndim
 

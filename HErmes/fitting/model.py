@@ -136,7 +136,7 @@ def create_minuit_pardict(fn, startparams, errors, limits, errordef):
         mindict[k] = startparams[i]
         if not errors is None: mindict["error_" + k] = errors[i]
         if not limits is None: mindict["limit_" + k] = (limits[i][0], limits[i][1])
-    mindict["errordef"] = errordef
+    #mindict["errordef"] = errordef
     return mindict
 
 class Model(object):
@@ -582,7 +582,8 @@ class Model(object):
             hesse = m.hesse()
 
             self.errors = dict()
-            for k in hesse:
+            #for k in hesse:
+            for k in m.params:
                 self.errors[k.name] = k.error
             #self.errors = m.errors
 
@@ -739,7 +740,7 @@ class Model(object):
             horizontalalignment='center',
             verticalalignment='center',
             transform=ax.transAxes)
-        if log: ax.set_yscale("symlog", linthreshy=1)
+        if log: ax.set_yscale("symlog", linthresh=1)
         #sb.despine()
         return fig
 

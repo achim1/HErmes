@@ -38,7 +38,7 @@ class IceCubeGeometry(object):
 
         mask = (self.geo['om'] == dom) & (self.geo['string'] == string)
         position = self.geo[mask]
-        pos      = np.array([np.float(position['x']),np.float(position['y']),np.float(position['z'])])
+        pos      = np.array([float(position['x']),float(position['y']),float(position['z'])])
         return pos
 
     def __del__(self):

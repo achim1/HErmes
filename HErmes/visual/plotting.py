@@ -605,12 +605,23 @@ class VariableDistributionPlot(object):
                                   }
                    }
         log = False
+
+        scattercolor = 'k'
+        color        = 'gray'
         if "linestyle" in cfg: 
             color = cfg["linestyle"].pop('color')
+            # FIXME - color should not appear twice here
+            # don't know why
+            if 'c' in cfg['linestyle']:
+                Logger.warning("Found deprecated keyword 'c' for color in linestyle. Ignoring.")
+                cfg['linestyle'].pop('c')
             if isinstance(color, int):
                 color = self.color_palette[color]
         if 'scatterstyle' in cfg:
             scattercolor = cfg["scatterstyle"].pop('color')
+            if 'c' in cfg['scatterstyle']:
+                Logger.warning("Found deprecated keyword 'c' for color in scatterstyle. Ignoring.")
+                cfg['scatterstyle'].pop('c')
 
             if isinstance(scattercolor,int):
                 scattercolor = self.color_palette[scattercolor]
@@ -666,7 +677,7 @@ class VariableDistributionPlot(object):
             tuple (float,float) : the min and max of the ratio
         """
         ratio,total_ratio,total_ratio_errors,label = self.histratios[name]
-        ratio.scatter(c="k", marker="o", markersize=3)
+        ratio.scatter(color="k", marker="o", markersize=3)
         axes.hlines(total_ratio,axes.get_xlim()[0],axes.get_xlim()[1],linestyle="--")
         if total_ratio_errors is not None:
             axes.hlines(total_ratio + total_ratio_errors,axes.get_xlim()[0],axes.get_xlim()[1],linestyle=":")

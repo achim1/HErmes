@@ -135,7 +135,13 @@ def create_minuit_pardict(fn, startparams, errors, limits, errordef):
     for i,k in enumerate(parnames):
         mindict[k] = startparams[i]
         if not errors is None: mindict["error_" + k] = errors[i]
-        if not limits is None: mindict["limit_" + k] = (limits[i][0], limits[i][1])
+        if not limits is None:
+             mindict["limit_" + k] = (limits[i][0], limits[i][1])
+        # FIXME due to api change to 2.0.0 in iminuit,
+        # append always a limit
+        else:
+            mindict['limit_' + k] = (None,None)
+            
     #mindict["errordef"] = errordef
     return mindict
 
@@ -566,7 +572,37 @@ class Model(object):
             # TODO: this is a vast improvement. Clean up the rest of
             #       the code
             errorfunc = icost.LeastSquares(self.xs, self.data, _errs, concated)
+
+            # FIXME due to the api change in iminuit,
+            # we now have to disentangle the limits 
+            # from the parameters
+            # the new api takes the model as first
+            # and then the start values as following arguments
+            # the params dict contains the startparams as well as 
+            # the limits and errors
+            local_limits = dict()
+            to_remove = []
+            for k in params:
+                if k.startswith('limit_'):
+                    __, val  = k.split('_')
+                    local_limits[val] = params[k]
+                    to_remove.append(k)
+            for k in to_remove:
+                params.pop(k)
+            m_local_limits = [(None,None)]*len(params.keys())
             m = iminuit.Minuit(errorfunc, **params)
+            for k in params:
+                pos = m.var2pos[k]
+                # check if this param has a limit, 
+                # otherwise always use (None, None)
+                if k in local_limits:
+                    m_local_limits[pos]= local_limits[k]
+            
+
+            if local_limits:
+                m.limits = m_local_limits
+            # end api > 2.0 patch
+
             m.migrad()
             values = m.values
             if not silent: print (values, "result")

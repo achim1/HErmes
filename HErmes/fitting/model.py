@@ -654,8 +654,8 @@ class Model(object):
             # calculate the chi2
             chi2 = (funcs.calculate_reduced_chi_square(self.norm*self.data, self.norm * self(self.xs, *parameters), self.data_errs))
         # this is only for the least-square case!
-        self.chi2_ndf = m.fval/(len(self.data) - m.nfit)
-        #self.chi2_ndf = chi2/self.ndf
+        #self.chi2_ndf = m.fval/(len(self.data) - m.nfit)
+        self.chi2_ndf = chi2/self.ndf
         if not silent: print(f'Got degrees of freedom {self.ndf} and chi2 {chi2} - reduced chi2 {self.chi2_ndf}')
 
         # FIXME: new feature
@@ -702,6 +702,7 @@ class Model(object):
                     model_alpha=.3,\
                     add_parameter_text=((r"$\mu_{{SPE}}$& {:4.2e}\\",0),),
                     histostyle="scatter",
+                    convert_fwhm_to_sigma=False,
                     datacolor="k",
                     modelcolor=default_color):
         """
@@ -754,11 +755,11 @@ class Model(object):
 
         the_xs = np.linspace(min(self.xs), max(self.xs),100000)
         #ax.plot(self.xs, self.prediction(self.xs), color=default_color, alpha=model_alpha)
-        ax.plot(the_xs, self.prediction(the_xs), color=default_color, alpha=model_alpha)
+        ax.plot(the_xs, self.prediction(the_xs), color=modelcolor, alpha=model_alpha)
         for comp in self.components:
             ax.plot(self.xs, comp(self.xs), linestyle=":", lw=1, color="k")
-
-        infotext += "$\chi^2/ndf$ & {:4.2f}\\\\".format(self.chi2_ndf)
+        if self.chi2_ndf != 0:
+            infotext += "$\chi^2/ndf$ & {:4.2f}\\\\".format(self.chi2_ndf)
 
         ax.set_ylim(ymin=ymin)
         ax.set_xlim(xmax=xmax)
@@ -770,7 +771,13 @@ class Model(object):
         if self.distribution is not None:
             infotext += " entries & {}\\\\".format(self.distribution.stats.nentries)
         if add_parameter_text is not None:
-            for partext in add_parameter_text:
+            for jj,partext in enumerate(add_parameter_text):
+                # FIXME - this is super ugly and works only 
+                # with fwhm_gauss
+                if convert_fwhm_to_sigma:
+                    if jj == 1:
+                        infotext += partext[0].format(self.best_fit_params[partext[1]]/2.355)
+                        continue
                 infotext += partext[0].format(self.best_fit_params[partext[1]])
             #infotext += r"$\mu_{{SPE}}$& {:4.2e}\\".format(self.best_fit_params[mu_spe_is_par])
         infotext += "\end{tabular}"

@@ -33,7 +33,6 @@ from ..utils import Logger
 
 from . import categories as c
 from . import dataset as ds
-from ..icecube_goodies import weighting as wgt
 from ..analysis import fluxes as fluxes
 
 def load_dataset(config,
@@ -106,7 +105,6 @@ def load_dataset(config,
                                                    only_nfiles=only_nfiles,\
                                                    ending=thiscat["file_type"])
 
-            #weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]]
             if not "model" in thiscat:
                 models[cat] = None
                 model_args[cat] = [None]
@@ -128,7 +126,6 @@ def load_dataset(config,
                                       sanitizer=sanitizer,\
                                       ending=thiscat["file_type"])
             #models[cat] = float(thiscat["livetime"])
-            #weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]]
             
         elif thiscat["datatype"] == "reweighted":
             pass
@@ -143,7 +140,6 @@ def load_dataset(config,
             #if thiscat["model"]:
             #    fluxclass, flux = thiscat["model"].split(".")
             #    models[cat] = getattr(dict(inspect.getmembers(fluxes))[fluxclass],flux)
-            #    weightfunctions[cat] = dict(inspect.getmembers(wgt))[thiscat["model_method"]]
         elif thiscat["datatype"] in ["data", "simulation"]:
             pass
         else:

@@ -37,7 +37,7 @@ Explore datasets with ease with a focus on interactivity and rapidity."
 
 #parse the requirements.txt file
 # FIXME: this might not be the best way
-install_requires = []
+install_requires = ['sphinx', 'sphinx_rtd_theme']
 with pathlib.Path('requirements.txt').open() as requirements_txt:
     for line in requirements_txt.readlines():
         if line.startswith('#'):
@@ -69,7 +69,6 @@ setup(name='HErmes-py',
       version=version,
       python_requires='>=3.6.0',
       description='Highly efficient, rapid multipurpose event selection',
-      #long_description='Manages bookkeeping for different simulation datasets, developed for the use with IceCube data',
       long_description=long_description,
       author='Achim Stoessl',
       author_email="achim.stoessl@gmail.com",
@@ -91,13 +90,12 @@ setup(name='HErmes-py',
               ],
       keywords=["event selection", "physics",\
                 "hep", "particle physics"\
-                "astrophysics", "icecube"],
+                "astrophysics", "data analysis"],
       tests_require=tests_require,
-      packages=['HErmes','HErmes.icecube_goodies',\
+      packages=['HErmes',\
                 'HErmes.visual', 'HErmes.utils',\
                 'HErmes.selection', 'HErmes.fitting',\
                 'HErmes.analysis'],
       #scripts=[],
-      package_data={'HErmes': [ 'utils/PATTERNS.cfg',\
-                                "icecube_goodies/geometry_ic86.h5"]}
+      package_data={'HErmes': [ 'utils/PATTERNS.cfg']}
       )

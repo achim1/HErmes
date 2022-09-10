@@ -60,8 +60,6 @@ Each point in the *datacube* can be adressed by its coordinates (A,1,2,..) and t
 
 The HErmes project provides everything to go from files to a working datacube as quickly as possible. As filtering is important from an early stage on, it provides also a set of routines which allow filtering and cross-checking the results.
 
-As a bonus, it allows for easy-weighting on the fly for IceCube analysis.
-
 #Examples
 
 ##Shortcut - the `load_dataset` routine
@@ -144,8 +142,6 @@ mc_p_ze = v.Variable("mc_p_zen",definitions=[("MCPrimary","zenith"),("mostEnerge
 
 
 ### getting variables and weighting
-
-The weighting which is provided with the module is specific for IceCube and needs the icetray software. However, it could be extended easily to other experiments.
 
 
 ### cutting

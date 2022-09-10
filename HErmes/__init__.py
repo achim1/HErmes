@@ -13,14 +13,12 @@ The HErmes modules provides the following submodules:
 
 - `visual` : Data visualization.
 
-- `icecube_goodies` : Weighting for icecube datasets.
-
 - `analysis` : convenient functions for data analysis and working with distributions.
 
 """
 
-__version__ = '0.1.6'
-__all__ = ["fitting", "icecube_goodies", "utils",\
+__version__ = '0.1.7'
+__all__ = ["fitting", "utils",\
            "selection", "visual", "analysis"]
 
 import os.path

@@ -44,14 +44,14 @@ def test_create_arrow():
     import pylab as p
     import matplotlib
 
-    fig = p.Figure()
+    fig = p.figure()
     ax = fig.gca()
     ax = pltplt.create_arrow(ax, 1, 1, .2, .2, 5,\
                  width = .1, shape="right",\
                  fc="k", ec="k",\
                  alpha=1., log=False)
-    assert len(ax.artists) == 1
-    assert isinstance(ax.artists[0], matplotlib.patches.FancyArrow)
+    assert len(ax.patches) == 1
+    assert isinstance(ax.patches[0], matplotlib.patches.FancyArrow)
 
     fig = p.figure()
     ax = fig.gca()
@@ -59,8 +59,8 @@ def test_create_arrow():
                  width = .1, shape="left",\
                  fc="k", ec="k",\
                  alpha=1., log=True)
-    assert len(ax.artists) == 1
-    assert isinstance(ax.artists[0], matplotlib.patches.FancyArrow)
+    assert len(ax.patches) == 1
+    assert isinstance(ax.patches[0], matplotlib.patches.FancyArrow)
 
 
 def test_VariableDistributionPlot():

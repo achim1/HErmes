@@ -5,18 +5,18 @@ Subpackages
 -----------
 
 .. toctree::
+   :maxdepth: 4
 
-    HErmes.analysis
-    HErmes.fitting
-    HErmes.icecube_goodies
-    HErmes.visual
-    HErmes.selection
-    HErmes.utils
+   HErmes.analysis
+   HErmes.fitting
+   HErmes.selection
+   HErmes.utils
+   HErmes.visual
 
 Module contents
 ---------------
 
 .. automodule:: HErmes
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:

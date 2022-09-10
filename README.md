@@ -3,6 +3,8 @@
 [![Build Status](https://travis-ci.org/achim1/HErmes.svg?branch=develop)](https://travis-ci.org/achim1/HErmes)
 [![Docs](https://readthedocs.org/projects/hermes-python/badge/?version=latest)](http://hermes-python.readthedocs.io/en/latest/?badge=latest)
 
+** This branch contains specific code depending on software for the IceCube experiment. Please use the master branch for general use**
+
 # HErmes
 
 *Highly efficient rapid multipurpose event selection toolset with a focus on high energy physics analysis tasks* 

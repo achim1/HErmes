@@ -546,7 +546,7 @@ class Model(object):
 
         startparams = self.startparams
 
-        if not silent: print("Using start params...", startparams)
+        if not silent: Logger.info("Using start params... {startparams}")
 
         fitkwargs = {"maxfev": 1000000, "xtol": 1e-10, "ftol": 1e-10}
         if "bounds" in kwargs:
@@ -564,7 +564,8 @@ class Model(object):
             if self.data_errs is None:
                 # FIXME - this is stupid, however we need something
                 # to work with
-                Logger.warn('No errors given. Will use 1!. This might be wrong (most likely).') 
+                if not silent:
+                    Logger.warn('No errors given. Will use 1!. This might be wrong (most likely).') 
                 _errs = 1
             else:
                 _errs = self.data_errs
@@ -605,10 +606,10 @@ class Model(object):
 
             m.migrad()
             values = m.values
-            if not silent: print (values, "result")
+            if not silent: Logger.info(f'Result: {values}')
             parameters=[]
             for k in sorted(m.var2pos, key=m.var2pos.get):
-                if not silent : print (k)
+                if not silent : Logger.info(k)
                 parameters.append(m.values[k])
             #self.covariance_matrix = m.covariance
             # use hesse() to calculate parabolic errors
@@ -638,8 +639,7 @@ class Model(object):
                 for j,entry in enumerate(row):
                     if i == j:
                         self.errors.append(np.sqrt(entry))
-        if not silent: print("Fit yielded parameters", parameters)
-        if (not silent) and (not use_minuit): print("{:4.2f} NANs in covariance matrix".format(len(self.covariance_matrix[np.isnan(np.asarray(covariance_matrix))])))
+        if not silent: Logger.info(f"Fit yielded parameters {parameters}")
 
         # simple GOF
         #norm = 1
@@ -656,14 +656,14 @@ class Model(object):
         # this is only for the least-square case!
         #self.chi2_ndf = m.fval/(len(self.data) - m.nfit)
         self.chi2_ndf = chi2/self.ndf
-        if not silent: print(f'Got degrees of freedom {self.ndf} and chi2 {chi2} - reduced chi2 {self.chi2_ndf}')
+        if not silent: Logger.info(f'Got degrees of freedom {self.ndf} and chi2 {chi2} - reduced chi2 {self.chi2_ndf}')
 
         # FIXME: new feature
         #for cmp in self.components:
         #    thischi2 = (calculate_chi_square(h.bincontent, norm * cmp(h.bincenters)))
         #    self.chi2_ndf_components.append(thischi2/nbins)
-        if not silent and use_minuit: print("Function value at minimum {:4.2e}".format(m.fval))
-        if not silent: print("Obtained chi2 : {:4.2f}; ndf : {:4.2f}; chi2/ndf {:4.2f}".format(chi2, self.ndf, self.chi2_ndf))
+        if not silent and use_minuit: Logger.info(f"Function value at minimum {m.fval:4.2e}")
+        if not silent: Logger.info(f"Obtained chi2 : {chi2:4.2f}; ndf : {self.ndf:4.2f}; chi2/ndf {self.chi2_ndf:4.2f}")
         if not silent: print("##########################################")
         self.best_fit_params = parameters
         if debug_minuit:
@@ -781,7 +781,6 @@ class Model(object):
                 infotext += partext[0].format(self.best_fit_params[partext[1]])
             #infotext += r"$\mu_{{SPE}}$& {:4.2e}\\".format(self.best_fit_params[mu_spe_is_par])
         infotext += "\end{tabular}"
-        print (infotext)
         ax.text(0.9, 0.9, infotext,
             horizontalalignment='center',
             verticalalignment='center',

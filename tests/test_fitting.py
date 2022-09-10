@@ -4,6 +4,11 @@ import matplotlib
 
 matplotlib.use('Agg')
 
+import matplotlib.pyplot as plt
+plt.rcParams.update({
+    "text.usetex": False
+    })
+
 from HErmes.fitting import fit, model, functions
 
 def funcfactory():
@@ -153,7 +158,7 @@ def test_gauss():
     gaussmod.fit_to_data(errordef=1)
     fig = gaussmod.plot_result(xmax=5)
     fig.savefig("ptestgauss.png")
-    assert 0.5 < gaussmod.chi2_ndf < 1.2
+    assert 0.5 < gaussmod.chi2_ndf < 1.5
     assert -0.1 < gaussmod.best_fit_params[0] < .1
     assert .18 < gaussmod.best_fit_params[1] < .22
 

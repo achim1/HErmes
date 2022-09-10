@@ -42,7 +42,9 @@ jobs:
           pkg-manager: pip
       - run:
           name: Install dependencies
-          command: sudo apt install hdf5-tools
+          command: 
+            sudo apt update
+            sudo apt install hdf5-tools
       - run:
           name: Run tests
           # This assumes pytest is installed via the install-package step above

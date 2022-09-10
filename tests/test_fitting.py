@@ -1,9 +1,13 @@
 import pytest
 import numpy as np
 import matplotlib
+import warnings
 
 matplotlib.use('Agg')
 
+# for the test, we do not want to 
+# depend on a latex installation
+# FIXME: This does not work in CIRCLE-CI
 import matplotlib.pyplot as plt
 plt.rcParams.update({
     "text.usetex": False
@@ -157,7 +161,10 @@ def test_gauss():
 
     gaussmod.fit_to_data(errordef=1)
     fig = gaussmod.plot_result(xmax=5)
-    fig.savefig("ptestgauss.png")
+    try:
+        fig.savefig("ptestgauss.png")
+    except RuntimeError as e:
+        warnings.warn(f'Could not save png file, raised RuntimeError {e}')
     assert 0.5 < gaussmod.chi2_ndf < 1.5
     assert -0.1 < gaussmod.best_fit_params[0] < .1
     assert .18 < gaussmod.best_fit_params[1] < .22

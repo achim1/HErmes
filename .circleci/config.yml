@@ -41,9 +41,11 @@ jobs:
           args: .
           pkg-manager: pip
       - run:
+          name: Update apt
+          command: sudo apt update
+      - run:
           name: Install dependencies
           command: 
-            sudo apt update
             sudo apt install hdf5-tools
       - run:
           name: Run tests
